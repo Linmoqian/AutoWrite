@@ -36,6 +36,15 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
 
   const [isHovered, setIsHovered] = useState(false);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // 如果点击的是按钮或拖拽手柄，不跳转
+    if ((e.target as HTMLElement).closest('button') ||
+        (e.target as HTMLElement).closest('[aria-label="拖拽排序"]')) {
+      return;
+    }
+    router.push(`/novels/${novel.id}`);
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -49,11 +58,12 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
   return (
     <div
       ref={setNodeRef}
+      onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         'card-enter card-glow-effect group relative rounded-2xl overflow-hidden',
-        'cursor-grab active:cursor-grabbing',
+        'cursor-pointer',
         'transition-all duration-300 ease-out',
         isDragging && 'opacity-50 scale-105 rotate-2 z-50 shadow-2xl shadow-purple-500/20',
         !isDragging && 'hover:scale-[1.02] hover:-translate-y-1'
@@ -88,10 +98,7 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
           {/* 标题行 */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h3
-                onClick={() => router.push(`/novels/${novel.id}`)}
-                className="font-semibold text-text-primary truncate text-base cursor-pointer hover:text-accent transition-colors"
-              >
+              <h3 className="font-semibold text-text-primary truncate text-base">
                 {novel.title}
               </h3>
               <div className="flex items-center gap-2 mt-1.5">
