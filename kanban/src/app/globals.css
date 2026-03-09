@@ -1,40 +1,335 @@
 @import "tailwindcss";
 
+/* ============================================
+   魔法墨水主题 - 小说创作看板
+   ============================================ */
+
 @theme {
-  /* 看板状态颜色 */
-  --color-kanban-todo: #f97316;
-  --color-kanban-writing: #3b82f6;
+  /* 主色调 - 深邃紫 */
+  --color-void: #0a0a0f;
+  --color-abyss: #12121a;
+  --color-surface: #1a1a24;
+  --color-elevated: #24242f;
+
+  /* 墨水色 */
+  --color-ink: #2d2d3a;
+  --color-ink-light: #3d3d4a;
+
+  /* 状态色 - 饱和度更高 */
+  --color-kanban-todo: #f59e0b;
+  --color-kanban-writing: #6366f1;
   --color-kanban-reviewing: #a855f7;
-  --color-kanban-published: #22c55e;
-  
-  /* 背景和前景色 */
-  --color-background: #0f172a;
-  --color-foreground: #f8fafc;
+  --color-kanban-published: #10b981;
+
+  /* 强调色 */
+  --color-accent: #8b5cf6;
+  --color-accent-glow: rgba(139, 92, 246, 0.4);
+
+  /* 文字色 */
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
 }
 
-/* 基础样式 */
+/* ============================================
+   基础样式
+   ============================================ */
+
+:root {
+  color-scheme: dark;
+}
+
 body {
-  color: var(--color-foreground);
-  background: var(--color-background);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-void);
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-/* 自定义滚动条 */
+/* 标题字体 */
+.font-display {
+  font-family: var(--font-serif), serif;
+}
+
+/* ============================================
+   动画减弱支持
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Focus 状态
+   ============================================ */
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   粒子背景容器
+   ============================================ */
+
+.particles-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 漂浮粒子 */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float linear infinite;
+  will-change: transform;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(100vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) translateX(20px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 光晕背景 */
+.glow-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: pulse-glow 8s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   卡片入场动画
+   ============================================ */
+
+.card-enter {
+  animation: card-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes card-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 卡片悬停光晕 */
+.card-glow-effect {
+  position: relative;
+}
+
+.card-glow-effect::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: conic-gradient(
+    from 180deg,
+    transparent,
+    var(--color-accent),
+    transparent 30%
+  );
+  border-radius: inherit;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  animation: rotate-glow 4s linear infinite paused;
+}
+
+.card-glow-effect:hover::before {
+  opacity: 0.6;
+  animation-play-state: running;
+}
+
+@keyframes rotate-glow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   进度条动画
+   ============================================ */
+
+.progress-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    left: 100%;
+  }
+}
+
+/* ============================================
+   拖拽效果
+   ============================================ */
+
+.dragging-particle {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  pointer-events: none;
+  z-index: 9999;
+  animation: particle-fade 0.6s ease-out forwards;
+}
+
+@keyframes particle-fade {
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   滚动条
+   ============================================ */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 3px;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(139, 92, 246, 0.4);
+}
+
+/* ============================================
+   列背景
+   ============================================ */
+
+.kanban-column-bg {
+  background: linear-gradient(
+    180deg,
+    rgba(26, 26, 36, 0.8) 0%,
+    rgba(18, 18, 26, 0.6) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+/* ============================================
+   按钮样式
+   ============================================ */
+
+.btn-primary {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 30px rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   输入框样式
+   ============================================ */
+
+.input-field {
+  background: rgba(45, 45, 58, 0.5);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  transition: all 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* ============================================
+   模态框动画
+   ============================================ */
+
+.modal-backdrop {
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }

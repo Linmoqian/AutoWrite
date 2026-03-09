@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -16,9 +16,21 @@ import { STATUS_ORDER, type Novel, type NovelStatus } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { SearchFilter } from './SearchFilter';
 import { NovelModal } from './NovelModal';
+import { cn } from '@/lib/utils';
 
 export function KanbanBoard() {
-  const { novels, searchQuery, selectedGenre, moveNovel, setSearchQuery, setSelectedGenre, addNovel, updateNovel, deleteNovel } = useKanbanStore();
+  const {
+    novels,
+    searchQuery,
+    selectedGenre,
+    moveNovel,
+    setSearchQuery,
+    setSelectedGenre,
+    addNovel,
+    updateNovel,
+    deleteNovel,
+  } = useKanbanStore();
+
   const [activeNovel, setActiveNovel] = useState<Novel | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingNovel, setEditingNovel] = useState<Novel | null>(null);
@@ -37,65 +49,117 @@ export function KanbanBoard() {
   }, [novels, searchQuery, selectedGenre]);
 
   const novelsByStatus = useMemo(() => {
-    const grouped: Record<NovelStatus, Novel[]> = { todo: [], writing: [], reviewing: [], published: [] };
-    filteredNovels.forEach((novel) => { grouped[novel.status].push(novel); });
+    const grouped: Record<NovelStatus, Novel[]> = {
+      todo: [],
+      writing: [],
+      reviewing: [],
+      published: [],
+    };
+    filteredNovels.forEach((novel) => {
+      grouped[novel.status].push(novel);
+    });
     return grouped;
   }, [filteredNovels]);
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const novel = novels.find((n) => n.id === event.active.id);
     if (novel) setActiveNovel(novel);
-  };
+  }, [novels]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { over } = event;
     setActiveNovel(null);
     if (over && STATUS_ORDER.includes(over.id as NovelStatus)) {
       moveNovel(event.active.id as string, over.id as NovelStatus);
     }
-  };
+  }, [moveNovel]);
 
-  const handleAddNovel = (status: NovelStatus) => {
+  const handleAddNovel = useCallback((status: NovelStatus) => {
     setEditingNovel(null);
     setDefaultStatus(status);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleEditNovel = (novel: Novel) => {
+  const handleEditNovel = useCallback((novel: Novel) => {
     setEditingNovel(novel);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleDeleteNovel = (novelId: string) => {
-    if (confirm('确定要删除这本小说吗？')) deleteNovel(novelId);
-  };
+  const handleDeleteNovel = useCallback((novelId: string) => {
+    const novel = novels.find((n) => n.id === novelId);
+    if (confirm(`确定要删除《${novel?.title}》吗？此操作不可撤销。`)) {
+      deleteNovel(novelId);
+    }
+  }, [novels, deleteNovel]);
 
-  const handleSaveNovel = (novel: Novel) => {
-    if (editingNovel) updateNovel(novel);
-    else addNovel(novel);
-  };
+  const handleSaveNovel = useCallback((novel: Novel) => {
+    if (editingNovel) {
+      updateNovel(novel);
+    } else {
+      addNovel(novel);
+    }
+  }, [editingNovel, updateNovel, addNovel]);
 
   return (
-    <div className="h-full flex flex-col">
-      <SearchFilter searchQuery={searchQuery} selectedGenre={selectedGenre} onSearchChange={setSearchQuery} onGenreChange={setSelectedGenre} />
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex-1 flex gap-6 overflow-x-auto pb-4">
-          {STATUS_ORDER.map((status) => (
-            <KanbanColumn key={status} id={status} novels={novelsByStatus[status]} onAddNovel={handleAddNovel} onEditNovel={handleEditNovel} onDeleteNovel={handleDeleteNovel} />
+    <main className="h-full flex flex-col p-6 relative z-10">
+      {/* 搜索筛选 */}
+      <SearchFilter
+        searchQuery={searchQuery}
+        selectedGenre={selectedGenre}
+        onSearchChange={setSearchQuery}
+        onGenreChange={setSelectedGenre}
+      />
+
+      {/* 看板主体 */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 flex gap-6 overflow-x-auto pb-4 px-1">
+          {STATUS_ORDER.map((status, index) => (
+            <div
+              key={status}
+              className="card-enter"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <KanbanColumn
+                id={status}
+                novels={novelsByStatus[status]}
+                onAddNovel={handleAddNovel}
+                onEditNovel={handleEditNovel}
+                onDeleteNovel={handleDeleteNovel}
+              />
+            </div>
           ))}
         </div>
+
+        {/* 拖拽浮层 */}
         <DragOverlay>
           {activeNovel && (
-            <div className="rotate-3">
-              <div className="bg-slate-800 rounded-lg p-4 border border-blue-500 shadow-xl">
-                <h3 className="font-medium text-white">{activeNovel.title}</h3>
-                <p className="text-sm text-slate-400 mt-1">{activeNovel.theme}</p>
+            <div className="rotate-3 scale-105">
+              <div className={cn(
+                'bg-surface/95 backdrop-blur-xl rounded-2xl p-4 border-2',
+                'shadow-2xl shadow-purple-500/30',
+                'border-accent'
+              )}>
+                <h3 className="font-semibold text-text-primary">{activeNovel.title}</h3>
+                <p className="text-sm text-text-secondary mt-1">{activeNovel.theme}</p>
               </div>
             </div>
           )}
         </DragOverlay>
       </DndContext>
-      <NovelModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSave={handleSaveNovel} novel={editingNovel} defaultStatus={defaultStatus} />
-    </div>
+
+      {/* 模态框 */}
+      <NovelModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveNovel}
+        novel={editingNovel}
+        defaultStatus={defaultStatus}
+      />
+    </main>
   );
 }
