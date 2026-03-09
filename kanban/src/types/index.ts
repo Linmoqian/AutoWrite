@@ -5,12 +5,11 @@ export type NovelStatus = 'todo' | 'writing' | 'reviewing' | 'published';
 // 细粒度工作流状态
 export type WorkflowStatus =
   | 'outline'          // 大纲阶段
-  | 'outline_review'   // 大纲人工审核
+  | 'outline_review'   // 大纲审核
   | 'character_design' // 角色设计
   | 'writing'          // 写作中
   | 'ai_review'        // AI 审核
-  | 'human_review'     // 人工审核
-  | 'finalized'        // 已定稿
+  | 'human_finalization' // 人工审核定稿
   | 'published';       // 已发布
 
 // 章节接口
@@ -107,11 +106,10 @@ export const GENRE_OPTIONS = [
 // 工作流步骤配置
 export const WORKFLOW_STEPS: { status: WorkflowStatus; label: string; description: string }[] = [
   { status: 'outline', label: '大纲', description: '生成故事大纲' },
-  { status: 'outline_review', label: '大纲审核', description: '人工审核大纲' },
+  { status: 'outline_review', label: '大纲审核', description: '审核大纲' },
   { status: 'character_design', label: '角色设计', description: '设计主要角色' },
   { status: 'writing', label: '写作', description: 'AI 自动写作' },
   { status: 'ai_review', label: 'AI 审核', description: '机器审核内容' },
-  { status: 'human_review', label: '人工审核', description: '人工审核定稿' },
-  { status: 'finalized', label: '已定稿', description: '最终版本' },
+  { status: 'human_finalization', label: '审核定稿', description: '人工审核并定稿' },
   { status: 'published', label: '已发布', description: '发布到平台' },
 ];
