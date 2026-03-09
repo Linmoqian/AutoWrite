@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__web-search-prime__web_search_prime",
+      "mcp__context7__resolve-library-id",
+      "mcp__web-reader__webReader",
+      "mcp__context7__query-docs",
+      "mcp__filesystem__list_allowed_directories",
+      "mcp__filesystem__create_directory",
+      "WebSearch"
+    ]
+  }
+}
