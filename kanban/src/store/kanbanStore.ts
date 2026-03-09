@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { KanbanState, Chapter, Character } from '@/types';
+import { sampleNovels, sampleChapters, sampleCharacters } from '@/lib/sampleData';
 
 export const useKanbanStore = create<KanbanState>()(
   persist(
@@ -96,6 +97,22 @@ export const useKanbanStore = create<KanbanState>()(
           ),
         })),
     }),
-    { name: 'kanban-storage' }
+    {
+      name: 'kanban-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // 初始化示例数据（仅当没有数据时）
+          if (state.novels.length === 0) {
+            state.setNovels(sampleNovels);
+          }
+          if (state.chapters.length === 0) {
+            sampleChapters.forEach((chapter) => state.addChapter(chapter));
+          }
+          if (state.characters.length === 0) {
+            sampleCharacters.forEach((character) => state.addCharacter(character));
+          }
+        }
+      },
+    }
   )
 );
