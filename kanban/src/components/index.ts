@@ -3,3 +3,8 @@ export { KanbanColumn } from './KanbanColumn';
 export { KanbanBoard } from './KanbanBoard';
 export { SearchFilter } from './SearchFilter';
 export { NovelModal } from './NovelModal';
+export { ChapterModal } from './ChapterModal';
+export { ChapterList } from './ChapterList';
+export { ParticleBackground } from './ParticleBackground';
+export { GlowOrbs } from './GlowOrbs';
+export { WorkflowProgress } from './WorkflowProgress';
