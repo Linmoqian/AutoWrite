@@ -2,6 +2,40 @@
 
 export type NovelStatus = 'todo' | 'writing' | 'reviewing' | 'published';
 
+// 细粒度工作流状态
+export type WorkflowStatus =
+  | 'outline'          // 大纲阶段
+  | 'outline_review'   // 大纲人工审核
+  | 'character_design' // 角色设计
+  | 'writing'          // 写作中
+  | 'ai_review'        // AI 审核
+  | 'human_review'     // 人工审核
+  | 'finalized'        // 已定稿
+  | 'published';       // 已发布
+
+// 章节接口
+export interface Chapter {
+  id: string;
+  novelId: string;
+  number: number;
+  title: string;
+  content: string;
+  wordCount: number;
+  status: 'draft' | 'reviewing' | 'finalized';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 角色接口
+export interface Character {
+  id: string;
+  novelId: string;
+  name: string;
+  role: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+  description: string;
+  traits: string[];
+}
+
 export interface Novel {
   id: string;
   title: string;
@@ -10,6 +44,9 @@ export interface Novel {
   targetChapters: number;
   writtenChapters: number;
   status: NovelStatus;
+  workflowStatus: WorkflowStatus;
+  outline?: string;
+  characters?: Character[];
   createdAt: string;
   updatedAt: string;
   wordCount: number;
@@ -51,3 +88,15 @@ export const GENRE_OPTIONS = [
   { value: 'yanqing', label: '言情' },
   { value: 'kehuan', label: '科幻' },
 ] as const;
+
+// 工作流步骤配置
+export const WORKFLOW_STEPS: { status: WorkflowStatus; label: string; description: string }[] = [
+  { status: 'outline', label: '大纲', description: '生成故事大纲' },
+  { status: 'outline_review', label: '大纲审核', description: '人工审核大纲' },
+  { status: 'character_design', label: '角色设计', description: '设计主要角色' },
+  { status: 'writing', label: '写作', description: 'AI 自动写作' },
+  { status: 'ai_review', label: 'AI 审核', description: '机器审核内容' },
+  { status: 'human_review', label: '人工审核', description: '人工审核定稿' },
+  { status: 'finalized', label: '已定稿', description: '最终版本' },
+  { status: 'published', label: '已发布', description: '发布到平台' },
+];
