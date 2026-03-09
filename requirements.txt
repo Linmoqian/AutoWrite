@@ -21,6 +21,10 @@ python-dotenv>=1.0.0
 # 终端美化输出
 rich>=13.0.0
 
+# Web API 框架
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
 # 测试框架
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
