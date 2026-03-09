@@ -62,6 +62,8 @@ export interface Column {
 
 export interface KanbanState {
   novels: Novel[];
+  chapters: Chapter[];
+  characters: Character[];
   searchQuery: string;
   selectedGenre: string | null;
   setNovels: (novels: Novel[]) => void;
@@ -71,6 +73,19 @@ export interface KanbanState {
   addNovel: (novel: Novel) => void;
   updateNovel: (novel: Novel) => void;
   deleteNovel: (novelId: string) => void;
+  // 章节管理
+  addChapter: (chapter: Chapter) => void;
+  updateChapter: (chapter: Chapter) => void;
+  deleteChapter: (chapterId: string) => void;
+  getChaptersByNovelId: (novelId: string) => Chapter[];
+  // 角色管理
+  addCharacter: (character: Character) => void;
+  updateCharacter: (character: Character) => void;
+  deleteCharacter: (characterId: string) => void;
+  getCharactersByNovelId: (novelId: string) => Character[];
+  // 小说扩展方法
+  updateNovelWorkflowStatus: (novelId: string, status: WorkflowStatus) => void;
+  updateNovelOutline: (novelId: string, outline: string) => void;
 }
 
 export const COLUMN_CONFIG: Record<NovelStatus, { title: string; color: string }> = {
