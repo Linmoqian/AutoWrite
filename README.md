@@ -183,6 +183,46 @@ environment.yml            # Conda 环境
 3. **生成速度**: 每章 3000 字约需 5-10 分钟（取决于模型和硬件）
 4. **内容审核**: 生成的内容建议人工审核后再发布
 
+## 看板前端
+
+独立的 Next.js 看板应用，用于可视化管理小说创作进度。
+
+### 启动
+
+```bash
+# 1. 启动后端 API 服务器
+python run_api.py
+
+# 2. 启动前端开发服务器 (另一个终端)
+cd kanban
+npm install
+npm run dev
+```
+
+访问 http://localhost:3005 即可使用看板界面。
+
+### API 端点
+
+后端 API 运行在 http://localhost:8000，提供以下端点：
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/novels` | GET | 获取小说列表 |
+| `/api/novels` | POST | 创建小说 |
+| `/api/novels/{id}` | GET | 获取小说详情 |
+| `/api/novels/{id}` | PATCH | 更新小说 |
+| `/api/novels/{id}` | DELETE | 删除小说 |
+| `/api/novels/{id}/chapters` | GET/POST | 章节 CRUD |
+| `/api/novels/{id}/characters` | GET/POST | 角色 CRUD |
+
+### 工作流状态
+
+看板支持 4 个状态列：
+- **待写** (todo): 初始状态
+- **撰写中** (writing): 正在创作
+- **审核中** (reviewing): 等待审核
+- **已发布** (published): 已完成发布
+
 ## 开发
 
 **运行测试**:
@@ -193,6 +233,14 @@ pytest tests/ -v
 **检查代码**:
 ```bash
 ruff check auto_novel/
+```
+
+**前端开发**:
+```bash
+cd kanban
+npx tsc --noEmit  # 类型检查
+npm run lint      # 代码检查
+npm run build     # 生产构建
 ```
 
 ## License
