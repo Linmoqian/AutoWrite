@@ -217,11 +217,14 @@ npm run dev
 
 ### 工作流状态
 
-看板支持 4 个状态列：
-- **待写** (todo): 初始状态
-- **撰写中** (writing): 正在创作
-- **审核中** (reviewing): 等待审核
-- **已发布** (published): 已完成发布
+看板支持 7 步工作流：
+1. **大纲** (outline): 生成故事大纲
+2. **大纲审核** (outline_review): 审核大纲
+3. **角色设计** (character_design): 设计主要角色
+4. **写作** (writing): AI 自动写作
+5. **AI 审核** (ai_review): 机器审核内容
+6. **审核定稿** (human_finalization): 人工审核并定稿
+7. **已发布** (published): 发布到平台
 
 ## 开发
 

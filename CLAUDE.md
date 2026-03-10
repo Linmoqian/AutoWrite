@@ -119,9 +119,9 @@ ruff check auto_novel/
 
 ```
 data/
-├── novels/           # 小说状态文件
+├── novels/           # 小说状态文件（API + CLI 共用）
 │   └── {novel_id}/
-│       └── state.json
+│       └── state.json   # 小说元数据、章节、角色
 ├── novels.json       # 守护进程配置
 └── fanqie_cookies.json  # 番茄小说登录态
 ```
@@ -173,10 +173,38 @@ kanban/src/
 └── lib/              # 工具函数
 ```
 
-### 看板状态流转
+### 看板工作流
+
+7 步精细化工作流：
+```
+大纲 → 大纲审核 → 角色设计 → 写作 → AI 审核 → 审核定稿 → 已发布
+```
+
+拖拽卡片跨列移动时自动更新状态，数据通过 FastAPI 持久化到 `data/json/` 目录。
+
+### 前端组件
+
+| 组件 | 功能 |
+|------|------|
+| `KanbanBoard.tsx` | 主看板（DndContext 拖拽） |
+| `KanbanColumn.tsx` | 列容器（useDroppable） |
+| `NovelCard.tsx` | 小说卡片（useSortable） |
+| `NovelModal.tsx` | 创建/编辑小说弹窗 |
+| `ChapterList.tsx` | 章节列表 |
+| `ChapterModal.tsx` | 章节编辑弹窗 |
+| `WorkflowProgress.tsx` | 工作流进度条 |
+| `SearchFilter.tsx` | 搜索过滤 |
+| `ParticleBackground.tsx` | 粒子背景 |
+| `GlowOrbs.tsx` | 光晕效果 |
+
+### API 模块
+
+后端 FastAPI 模块结构：
 
 ```
-待写(todo) → 撰写中(writing) → 审核中(reviewing) → 已发布(published)
+auto_novel/api/
+├── app.py       # FastAPI 应用入口（CORS 配置）
+├── routes.py    # CRUD 路由
+├── schemas.py   # Pydantic 数据模型
+└── storage.py   # JSON 文件存储操作
 ```
-
-拖拽卡片跨列移动时自动更新状态，数据持久化到 localStorage。
