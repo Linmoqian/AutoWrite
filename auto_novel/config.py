@@ -30,3 +30,13 @@ class Config:
 
 # 全局配置实例
 config = Config()
+
+
+def get_llm_client():
+    """获取 LLM 客户端实例"""
+    from auto_novel.models.ollama_client import OllamaClient, OllamaConfig
+
+    ollama_config = OllamaConfig(
+        host=config.ollama_host, model=config.ollama_model
+    )
+    return OllamaClient(ollama_config)
