@@ -3,19 +3,16 @@
 import { useEffect } from 'react';
 import { KanbanBoard, ParticleBackground, GlowOrbs } from '@/components';
 import { useKanbanStore } from '@/store';
-import { sampleNovels } from '@/lib/sampleData';
 import { BookOpen, Sparkles, PenTool, Feather } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Home() {
-  const { novels, setNovels } = useKanbanStore();
+  const { novels, loadNovels } = useKanbanStore();
 
-  // 初始化示例数据（仅客户端，仅一次）
+  // 从 API 加载数据
   useEffect(() => {
-    if (novels.length === 0) {
-      setNovels(sampleNovels);
-    }
-  }, [novels.length, setNovels]);
+    loadNovels();
+  }, [loadNovels]);
 
   const stats = {
     total: novels.length,

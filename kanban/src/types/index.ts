@@ -43,8 +43,8 @@ export interface Chapter {
   content: string;
   wordCount: number;
   status: ChapterStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 角色接口
@@ -68,8 +68,8 @@ export interface Novel {
   workflowStatus: WorkflowStatus;
   outline?: string;
   characters?: Character[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   wordCount: number;
   description?: string;
 }
@@ -87,6 +87,11 @@ export interface KanbanState {
   characters: Character[];
   searchQuery: string;
   selectedGenre: string | null;
+  // 数据加载方法
+  loadNovels: () => Promise<void>;
+  loadChapters: (novelId: string) => Promise<void>;
+  loadCharacters: (novelId: string) => Promise<void>;
+  // 小说管理
   setNovels: (novels: Novel[]) => void;
   moveNovel: (novelId: string, newStatus: NovelStatus) => void;
   setSearchQuery: (query: string) => void;

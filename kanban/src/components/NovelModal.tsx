@@ -61,8 +61,8 @@ function ModalContent({ onClose, onSave, novel, defaultStatus = NovelStatus.TODO
       description: formData.description,
       status: formData.status || defaultStatus,
       workflowStatus: formData.workflowStatus || getDefaultWorkflowStatus(formData.status || defaultStatus),
-      createdAt: novel?.createdAt || now,
-      updatedAt: now,
+      createdAt: novel?.createdAt || now.toISOString(),
+      updatedAt: now.toISOString(),
     };
     onSave(newNovel);
     onClose();

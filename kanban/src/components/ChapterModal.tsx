@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Save, FileText } from 'lucide-react';
 import type { Chapter } from '@/types';
+import { ChapterStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface ChapterModalProps {
@@ -50,7 +51,7 @@ function ModalContent({
       title: `第${chapterNumber}章`,
       content: '',
       wordCount: 0,
-      status: 'draft',
+      status: ChapterStatus.DRAFT,
     }
   );
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +75,7 @@ function ModalContent({
       title: formData.title!,
       content: formData.content || '',
       wordCount: currentWordCount,
-      status: formData.status || 'draft',
+      status: formData.status || ChapterStatus.DRAFT,
       createdAt: chapter?.createdAt || now,
       updatedAt: now,
     };
