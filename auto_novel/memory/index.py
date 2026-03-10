@@ -1,10 +1,27 @@
 # auto_novel/memory/index.py
 import json
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from dataclasses import asdict
+from datetime import datetime
 
 from .base import WorldIndex, CharacterIndex, ChapterIndex
+
+
+def _serialize_chapter_index(chapter: ChapterIndex) -> Dict[str, Any]:
+    """序列化 ChapterIndex，处理 datetime"""
+    data = asdict(chapter)
+    if isinstance(data.get('timestamp'), datetime):
+        data['timestamp'] = data['timestamp'].isoformat()
+    return data
+
+
+def _deserialize_chapter_index(data: Dict[str, Any]) -> ChapterIndex:
+    """反序列化 ChapterIndex，恢复 datetime"""
+    if 'timestamp' in data and data['timestamp']:
+        if isinstance(data['timestamp'], str):
+            data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+    return ChapterIndex(**data)
 
 
 class IndexStore:
@@ -37,7 +54,7 @@ class IndexStore:
 
         for novel_id, ch_data in data.get("chapters", {}).items():
             self._chapter_indices[novel_id] = [
-                ChapterIndex(**c) for c in ch_data
+                _deserialize_chapter_index(c) for c in ch_data
             ]
 
     def _save_all(self):
@@ -51,7 +68,7 @@ class IndexStore:
                 for k, chars in self._character_indices.items()
             },
             "chapters": {
-                k: [asdict(c) for c in chapters]
+                k: [_serialize_chapter_index(c) for c in chapters]
                 for k, chapters in self._chapter_indices.items()
             }
         }
