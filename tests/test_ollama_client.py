@@ -1,6 +1,7 @@
 """Ollama 客户端测试模块"""
 
 import pytest
+from unittest.mock import AsyncMock, patch
 
 from auto_novel.models.ollama_client import OllamaClient, OllamaConfig
 
@@ -49,3 +50,29 @@ class TestOllamaClient:
         assert hasattr(client, "config")
         assert hasattr(client, "host")
         assert hasattr(client, "model")
+
+    @pytest.mark.asyncio
+    async def test_ollama_health_check_failure(self):
+        """测试 Ollama 服务不可用时的健康检查"""
+        client = OllamaClient()
+
+        # mock aiohttp 异常
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_get.side_effect = Exception("Connection refused")
+
+            result = await client.check_health()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_ollama_health_check_success(self):
+        """测试 Ollama 服务可用时的健康检查"""
+        client = OllamaClient()
+
+        # mock 成功响应
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_response = AsyncMock()
+            mock_response.status = 200
+            mock_get.return_value.__aenter__.return_value = mock_response
+
+            result = await client.check_health()
+            assert result is True
