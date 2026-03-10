@@ -96,33 +96,33 @@ function ModalContent({
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 bg-void/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="modal-backdrop fixed inset-0 bg-void/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onKeyDown={handleKeyDown}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className="modal-content bg-surface/95 backdrop-blur-xl rounded-3xl p-8 w-full max-w-2xl border border-white/5 shadow-2xl shadow-black/50">
+      <div className="modal-content bg-surface/95 backdrop-blur-xl rounded-2xl p-6 w-full max-w-2xl border border-border shadow-2xl">
         {/* 头部 */}
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <header className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-12 h-12 rounded-2xl flex items-center justify-center',
-                'bg-gradient-to-br from-purple-500/20 to-blue-500/20'
+                'w-10 h-10 rounded-xl flex items-center justify-center',
+                'bg-indigo-500/10'
               )}
             >
-              <FileText size={22} className="text-accent" aria-hidden="true" />
+              <FileText size={18} className="text-accent" aria-hidden="true" />
             </div>
             <div>
               <h2
                 id="modal-title"
-                className="text-xl font-semibold text-text-primary font-display"
+                className="text-lg font-semibold text-text-primary"
               >
                 {chapter ? '编辑章节' : '添加新章节'}
               </h2>
-              <p className="text-sm text-text-muted mt-0.5">
+              <p className="text-xs text-text-muted mt-0.5">
                 {chapter ? `第${chapter.number}章` : `第${chapterNumber}章`}
               </p>
             </div>
@@ -130,25 +130,25 @@ function ModalContent({
           <button
             onClick={onClose}
             className={cn(
-              'p-2.5 rounded-xl transition-all duration-200',
+              'p-2 rounded-lg transition-all duration-200',
               'text-text-muted hover:text-text-primary',
               'hover:bg-white/5'
             )}
             aria-label="关闭"
           >
-            <X size={20} aria-hidden="true" />
+            <X size={18} aria-hidden="true" />
           </button>
         </header>
 
         {/* 表单 */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* 章节标题 */}
           <div>
             <label
               htmlFor="chapter-title"
-              className="block text-sm font-medium text-text-secondary mb-2"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
-              章节标题 <span className="text-purple-400">*</span>
+              章节标题 <span className="text-accent">*</span>
             </label>
             <input
               ref={titleInputRef}
@@ -157,7 +157,7 @@ function ModalContent({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 input-field rounded-xl text-text-primary placeholder-text-muted focus:outline-none"
+              className="w-full px-3.5 py-2.5 input-field rounded-lg text-text-primary placeholder-text-muted focus:outline-none text-sm"
               placeholder="输入章节标题…"
               required
               autoComplete="off"
@@ -168,7 +168,7 @@ function ModalContent({
           <div className="relative">
             <label
               htmlFor="chapter-content"
-              className="block text-sm font-medium text-text-secondary mb-2"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
               章节内容
             </label>
@@ -178,12 +178,12 @@ function ModalContent({
               name="content"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full px-4 py-3 input-field rounded-xl text-text-primary placeholder-text-muted focus:outline-none resize-none min-h-[300px]"
+              className="w-full px-3.5 py-2.5 input-field rounded-lg text-text-primary placeholder-text-muted focus:outline-none resize-none min-h-[280px] text-sm"
               placeholder="开始撰写章节内容…"
-              rows={15}
+              rows={14}
             />
             {/* 字数统计 */}
-            <div className="absolute bottom-3 right-3 text-xs text-text-muted bg-surface/80 px-2 py-1 rounded-md">
+            <div className="absolute bottom-2.5 right-2.5 text-[11px] text-text-muted bg-elevated/80 px-2 py-1 rounded">
               {currentWordCount} 字
             </div>
           </div>
@@ -192,7 +192,7 @@ function ModalContent({
           <div>
             <label
               htmlFor="chapter-status"
-              className="block text-sm font-medium text-text-secondary mb-2"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
               章节状态
             </label>
@@ -206,7 +206,7 @@ function ModalContent({
                   status: e.target.value as Chapter['status'],
                 })
               }
-              className="w-full px-4 py-3 input-field rounded-xl text-text-primary focus:outline-none appearance-none cursor-pointer"
+              className="w-full px-3.5 py-2.5 input-field rounded-lg text-text-primary focus:outline-none appearance-none cursor-pointer text-sm"
             >
               {CHAPTER_STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -217,12 +217,12 @@ function ModalContent({
           </div>
 
           {/* 按钮 */}
-          <footer className="flex justify-end gap-3 pt-4">
+          <footer className="flex justify-end gap-3 pt-3">
             <button
               type="button"
               onClick={onClose}
               className={cn(
-                'px-6 py-3 rounded-xl font-medium',
+                'px-4 py-2.5 rounded-lg font-medium text-sm',
                 'text-text-secondary hover:text-text-primary',
                 'hover:bg-white/5 transition-all duration-200'
               )}
@@ -231,9 +231,9 @@ function ModalContent({
             </button>
             <button
               type="submit"
-              className="btn-primary px-6 py-3 rounded-xl font-medium text-white flex items-center gap-2"
+              className="btn-primary px-4 py-2.5 rounded-lg font-medium text-sm text-white flex items-center gap-2"
             >
-              <Save size={16} aria-hidden="true" />
+              <Save size={14} aria-hidden="true" />
               {chapter ? '保存更改' : '保存章节'}
             </button>
           </footer>

@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Edit2, Sparkles } from 'lucide-react';
+import { GripVertical, Trash2, Edit2, Sparkles, Scroll } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { Novel } from '@/types';
 import { cn, formatDate, formatWordCount } from '@/lib/utils';
@@ -16,11 +16,27 @@ interface NovelCardProps {
   onDelete?: (novelId: string) => void;
 }
 
-const statusGradients: Record<NovelStatus, string> = {
-  todo: 'from-amber-500 to-orange-500',
-  writing: 'from-blue-500 to-indigo-500',
-  reviewing: 'from-purple-500 to-pink-500',
-  published: 'from-emerald-500 to-teal-500',
+const statusStyles: Record<NovelStatus, { gradient: string; bg: string; text: string }> = {
+  todo: {
+    gradient: 'from-amber-600 to-orange-700',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-300',
+  },
+  writing: {
+    gradient: 'from-sky-600 to-blue-700',
+    bg: 'bg-sky-500/10',
+    text: 'text-sky-300',
+  },
+  reviewing: {
+    gradient: 'from-purple-600 to-violet-700',
+    bg: 'bg-purple-500/10',
+    text: 'text-purple-300',
+  },
+  published: {
+    gradient: 'from-emerald-600 to-teal-700',
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-300',
+  },
 };
 
 export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps) {
@@ -48,12 +64,12 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    animationDelay: `${index * 0.08}s`,
+    animationDelay: `${index * 0.05}s`,
   };
 
   const genreLabel = GENRE_OPTIONS.find((g) => g.value === novel.genre)?.label || novel.genre;
   const progress = Math.min(100, Math.max(0, (novel.writtenChapters / novel.targetChapters) * 100));
-  const gradient = statusGradients[novel.status];
+  const statusStyle = statusStyles[novel.status];
 
   return (
     <div
@@ -62,21 +78,28 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        'card-enter card-glow-effect group relative rounded-2xl overflow-hidden',
-        'cursor-pointer',
+        'card-enter group relative rounded-xl overflow-hidden',
+        'cursor-pointer select-none',
         'transition-all duration-300 ease-out',
-        isDragging && 'opacity-50 scale-105 rotate-2 z-50 shadow-2xl shadow-purple-500/20',
-        !isDragging && 'hover:scale-[1.02] hover:-translate-y-1'
+        isDragging && 'opacity-60 scale-[1.03] rotate-1 z-50 shadow-2xl shadow-black/50',
+        !isDragging && 'hover:scale-[1.01] hover:-translate-y-0.5'
       )}
       style={style}
     >
-      {/* 卡片背景 */}
-      <div className="relative bg-surface/80 backdrop-blur-sm p-4 border border-white/5">
-        {/* 顶部渐变边框 */}
+      {/* 卡片主体 */}
+      <div className={cn(
+        'relative bg-surface/90 backdrop-blur-sm p-4',
+        'border border-border group-hover:border-border-hover',
+        'transition-all duration-300'
+      )}>
+        {/* 顶部状态色条 - 墨迹渐变 */}
         <div className={cn(
-          'absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r opacity-60',
-          gradient
+          'absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
+          statusStyle.gradient
         )} />
+
+        {/* 左侧装饰边 */}
+        <div className="absolute left-0 top-6 bottom-4 w-0.5 bg-gradient-to-b from-transparent via-gold/20 to-transparent" />
 
         {/* 拖拽手柄 */}
         <div
@@ -84,7 +107,7 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
           {...listeners}
           className={cn(
             'absolute -left-1 top-1/2 -translate-y-1/2 p-2',
-            'text-text-muted hover:text-accent cursor-grab',
+            'text-text-muted hover:text-accent cursor-grab active:cursor-grabbing',
             'rounded-lg hover:bg-white/5 transition-all duration-200',
             isHovered && 'text-text-secondary'
           )}
@@ -94,23 +117,23 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
         </div>
 
         {/* 内容区 */}
-        <div className="ml-6">
+        <div className="ml-5">
           {/* 标题行 */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-text-primary truncate text-base">
+              <h3 className="font-semibold text-text-primary truncate text-base tracking-wide">
                 {novel.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex items-center gap-2 mt-2">
+                {/* 类型标签 - 印章风格 */}
                 <span className={cn(
-                  'px-2 py-0.5 rounded-full text-xs font-medium',
-                  'bg-gradient-to-r',
-                  gradient,
-                  'text-white/90'
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  statusStyle.bg,
+                  statusStyle.text
                 )}>
                   {genreLabel}
                 </span>
-                <span className="text-sm text-text-muted">{novel.theme}</span>
+                <span className="text-xs text-text-muted">{novel.theme}</span>
               </div>
             </div>
 
@@ -121,17 +144,23 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
             )}>
               <button
                 onClick={() => onEdit?.(novel)}
-                className="p-2 text-text-muted hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all duration-200"
+                className={cn(
+                  'p-1.5 rounded-lg transition-all duration-200',
+                  'text-text-muted hover:text-sky-400 hover:bg-sky-400/10'
+                )}
                 aria-label={`编辑《${novel.title}》`}
               >
-                <Edit2 size={15} aria-hidden="true" />
+                <Edit2 size={14} aria-hidden="true" />
               </button>
               <button
                 onClick={() => onDelete?.(novel.id)}
-                className="p-2 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all duration-200"
+                className={cn(
+                  'p-1.5 rounded-lg transition-all duration-200',
+                  'text-text-muted hover:text-red-400 hover:bg-red-400/10'
+                )}
                 aria-label={`删除《${novel.title}》`}
               >
-                <Trash2 size={15} aria-hidden="true" />
+                <Trash2 size={14} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -139,32 +168,33 @@ export function NovelCard({ novel, index = 0, onEdit, onDelete }: NovelCardProps
           {/* 进度信息 */}
           <div className="mt-4 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
+              <Scroll size={14} className="text-text-muted" aria-hidden="true" />
               <span className="text-text-secondary font-medium">{novel.writtenChapters}</span>
               <span className="text-text-muted">/</span>
               <span className="text-text-muted">{novel.targetChapters}</span>
               <span className="text-text-muted ml-0.5">章</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Sparkles size={12} className="text-amber-400" aria-hidden="true" />
+              <Sparkles size={12} className="text-gold" aria-hidden="true" />
               <span className="text-text-secondary font-medium">{formatWordCount(novel.wordCount)}</span>
             </div>
           </div>
 
-          {/* 进度条 */}
-          <div className="mt-3 h-1.5 bg-ink/50 rounded-full overflow-hidden">
+          {/* 进度条 - 墨迹风格 */}
+          <div className="mt-3 h-1.5 bg-ink/60 rounded-full overflow-hidden">
             <div
               className={cn(
                 'h-full rounded-full progress-bar transition-all duration-500 ease-out',
                 'bg-gradient-to-r',
-                gradient
+                statusStyle.gradient
               )}
               style={{ width: `${progress}%` }}
             />
           </div>
 
           {/* 更新时间 */}
-          <p className="mt-3 text-xs text-text-muted flex items-center gap-1.5">
-            <span className="w-1 h-1 rounded-full bg-text-muted/50" />
+          <p className="mt-3 text-xs text-text-muted flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-gold/50" />
             {formatDate(novel.updatedAt)}
           </p>
         </div>

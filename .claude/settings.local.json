@@ -7,7 +7,16 @@
       "mcp__context7__query-docs",
       "mcp__filesystem__list_allowed_directories",
       "mcp__filesystem__create_directory",
-      "WebSearch"
+      "WebSearch",
+      "mcp__filesystem__read_text_file",
+      "Bash(dir D:\\\\project\\\\WriteOnMac:*)",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__playwright__playwright_navigate",
+      "mcp__playwright__playwright_screenshot",
+      "mcp__playwright__playwright_close",
+      "Bash(test:*)",
+      "Bash(curl:*)",
+      "mcp__filesystem__read_file"
     ]
   }
 }

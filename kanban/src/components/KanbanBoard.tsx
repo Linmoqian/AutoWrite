@@ -12,7 +12,7 @@ import {
   closestCorners,
 } from '@dnd-kit/core';
 import { useKanbanStore } from '@/store';
-import { STATUS_ORDER, type Novel, type NovelStatus } from '@/types';
+import { STATUS_ORDER, NovelStatus, type Novel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { SearchFilter } from './SearchFilter';
 import { NovelModal } from './NovelModal';
@@ -34,7 +34,7 @@ export function KanbanBoard() {
   const [activeNovel, setActiveNovel] = useState<Novel | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingNovel, setEditingNovel] = useState<Novel | null>(null);
-  const [defaultStatus, setDefaultStatus] = useState<NovelStatus>('todo');
+  const [defaultStatus, setDefaultStatus] = useState<NovelStatus>(NovelStatus.TODO);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -50,10 +50,10 @@ export function KanbanBoard() {
 
   const novelsByStatus = useMemo(() => {
     const grouped: Record<NovelStatus, Novel[]> = {
-      todo: [],
-      writing: [],
-      reviewing: [],
-      published: [],
+      [NovelStatus.TODO]: [],
+      [NovelStatus.WRITING]: [],
+      [NovelStatus.REVIEWING]: [],
+      [NovelStatus.PUBLISHED]: [],
     };
     filteredNovels.forEach((novel) => {
       grouped[novel.status].push(novel);

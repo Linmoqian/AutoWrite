@@ -1,34 +1,42 @@
 @import "tailwindcss";
 
 /* ============================================
-   魔法墨水主题 - 小说创作看板
+   东方墨韵 · 现代书斋
+   小说创作看板 - 独特美学设计
    ============================================ */
 
+/* Google Fonts 通过 layout.tsx 加载 */
 @theme {
-  /* 主色调 - 深邃紫 */
-  --color-void: #0a0a0f;
-  --color-abyss: #12121a;
-  --color-surface: #1a1a24;
-  --color-elevated: #24242f;
+  /* 背景色层级 - 温暖的深色调 */
+  --color-void: #0c0a09;
+  --color-abyss: #1c1917;
+  --color-surface: #292524;
+  --color-elevated: #44403c;
+  --color-ink: #1c1917;
 
-  /* 墨水色 */
-  --color-ink: #2d2d3a;
-  --color-ink-light: #3d3d4a;
+  /* 边框色 */
+  --color-border: rgba(254, 243, 199, 0.08);
+  --color-border-hover: rgba(254, 243, 199, 0.15);
 
-  /* 状态色 - 饱和度更高 */
+  /* 文字色 - 温暖的米白色 */
+  --color-text-primary: #fef3c7;
+  --color-text-secondary: #d6d3d1;
+  --color-text-muted: #a8a29e;
+
+  /* 强调色 - 朱砂红 */
+  --color-accent: #dc2626;
+  --color-accent-hover: #ef4444;
+  --color-accent-glow: rgba(220, 38, 38, 0.4);
+
+  /* 金色点缀 */
+  --color-gold: #f59e0b;
+  --color-gold-dim: #b45309;
+
+  /* 状态色 - 更符合东方美学 */
   --color-kanban-todo: #f59e0b;
-  --color-kanban-writing: #6366f1;
+  --color-kanban-writing: #0ea5e9;
   --color-kanban-reviewing: #a855f7;
   --color-kanban-published: #10b981;
-
-  /* 强调色 */
-  --color-accent: #8b5cf6;
-  --color-accent-glow: rgba(139, 92, 246, 0.4);
-
-  /* 文字色 */
-  --color-text-primary: #f4f4f5;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
 }
 
 /* ============================================
@@ -40,16 +48,40 @@
 }
 
 body {
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), "Noto Serif SC", serif;
   color: var(--color-text-primary);
   background: var(--color-void);
   min-height: 100vh;
   overflow: hidden;
 }
 
-/* 标题字体 */
+/* 标题字体 - 书法风格 */
 .font-display {
-  font-family: var(--font-serif), serif;
+  font-family: var(--font-display), "Ma Shan Zheng", "ZCOOL XiaoWei", serif;
+  letter-spacing: 0.1em;
+}
+
+/* ============================================
+   宣纸纹理背景
+   ============================================ */
+
+.paper-texture {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(254, 243, 199, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(245, 158, 11, 0.015) 0%, transparent 50%);
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  mix-blend-mode: overlay;
 }
 
 /* ============================================
@@ -76,10 +108,10 @@ body {
 }
 
 /* ============================================
-   粒子背景容器
+   墨迹粒子背景
    ============================================ */
 
-.particles-bg {
+.ink-particles {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -87,74 +119,79 @@ body {
   overflow: hidden;
 }
 
-/* 漂浮粒子 */
-.particle {
+.ink-particle {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  animation: float linear infinite;
+  background: radial-gradient(circle, rgba(254, 243, 199, 0.15) 0%, transparent 70%);
+  animation: ink-float linear infinite;
   will-change: transform;
 }
 
-@keyframes float {
+@keyframes ink-float {
   0% {
-    transform: translateY(100vh) translateX(0) rotate(0deg);
+    transform: translateY(100vh) translateX(0) scale(0.5);
     opacity: 0;
   }
   10% {
-    opacity: 1;
+    opacity: 0.6;
   }
   90% {
-    opacity: 1;
+    opacity: 0.6;
   }
   100% {
-    transform: translateY(-100px) translateX(20px) rotate(360deg);
+    transform: translateY(-100px) translateX(30px) scale(1);
     opacity: 0;
   }
 }
 
-/* 光晕背景 */
+/* 光晕背景 - 更温暖的色调 */
 .glow-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.3;
+  filter: blur(120px);
   pointer-events: none;
-  animation: pulse-glow 8s ease-in-out infinite;
+  animation: pulse-glow 12s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.3;
+    opacity: 0.12;
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.5;
+    transform: scale(1.15);
+    opacity: 0.18;
   }
 }
 
 /* ============================================
-   卡片入场动画
+   卡片入场动画 - 墨迹展开效果
    ============================================ */
 
 .card-enter {
-  animation: card-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: ink-spread 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   opacity: 0;
 }
 
-@keyframes card-slide-in {
-  from {
+@keyframes ink-spread {
+  0% {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: scale(0.9) translateY(16px);
+    filter: blur(4px);
   }
-  to {
+  60% {
+    opacity: 0.8;
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1) translateY(0);
+    filter: blur(0);
   }
 }
 
-/* 卡片悬停光晕 */
+/* 卡片悬停光效 */
 .card-glow-effect {
   position: relative;
 }
@@ -162,33 +199,20 @@ body {
 .card-glow-effect::before {
   content: '';
   position: absolute;
-  inset: -2px;
-  background: conic-gradient(
-    from 180deg,
-    transparent,
-    var(--color-accent),
-    transparent 30%
-  );
+  inset: -1px;
   border-radius: inherit;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.1) 0%, transparent 50%);
   opacity: 0;
-  z-index: -1;
   transition: opacity 0.3s ease;
-  animation: rotate-glow 4s linear infinite paused;
+  z-index: -1;
 }
 
 .card-glow-effect:hover::before {
-  opacity: 0.6;
-  animation-play-state: running;
-}
-
-@keyframes rotate-glow {
-  to {
-    transform: rotate(360deg);
-  }
+  opacity: 1;
 }
 
 /* ============================================
-   进度条动画
+   进度条动画 - 墨迹流动
    ============================================ */
 
 .progress-bar {
@@ -206,34 +230,34 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.3),
+    rgba(254, 243, 199, 0.3),
     transparent
   );
-  animation: shimmer 2s infinite;
+  animation: ink-flow 3s infinite;
 }
 
-@keyframes shimmer {
+@keyframes ink-flow {
   to {
     left: 100%;
   }
 }
 
 /* ============================================
-   拖拽效果
+   拖拽效果 - 墨点拖尾
    ============================================ */
 
 .dragging-particle {
   position: fixed;
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
   pointer-events: none;
   z-index: 9999;
-  animation: particle-fade 0.6s ease-out forwards;
+  animation: ink-drop 0.6s ease-out forwards;
 }
 
-@keyframes particle-fade {
+@keyframes ink-drop {
   to {
     transform: scale(0);
     opacity: 0;
@@ -241,12 +265,12 @@ body {
 }
 
 /* ============================================
-   滚动条
+   滚动条 - 更精致
    ============================================ */
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -254,40 +278,63 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.2);
-  border-radius: 4px;
+  background: rgba(254, 243, 199, 0.1);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.4);
+  background: rgba(254, 243, 199, 0.2);
 }
 
 /* ============================================
-   列背景
+   列背景 - 宣纸质感
    ============================================ */
 
 .kanban-column-bg {
   background: linear-gradient(
     180deg,
-    rgba(26, 26, 36, 0.8) 0%,
-    rgba(18, 18, 26, 0.6) 100%
+    rgba(28, 25, 23, 0.7) 0%,
+    rgba(28, 25, 23, 0.5) 100%
   );
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.1);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    inset 0 1px 0 rgba(254, 243, 199, 0.03),
+    0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================
-   按钮样式
+   按钮样式 - 印章风格
    ============================================ */
 
 .btn-primary {
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
-  transition: all 0.2s ease;
+  background: linear-gradient(135deg, var(--color-accent) 0%, #b91c1c 100%);
+  box-shadow:
+    0 2px 8px rgba(220, 38, 38, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.25s ease;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 30px rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent) 100%);
+  box-shadow:
+    0 4px 16px rgba(220, 38, 38, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--color-gold-dim) 0%, var(--color-gold) 100%);
+  box-shadow:
+    0 2px 8px rgba(245, 158, 11, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.25s ease;
+}
+
+.btn-secondary:hover {
+  box-shadow:
+    0 4px 16px rgba(245, 158, 11, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -296,18 +343,20 @@ body {
    ============================================ */
 
 .input-field {
-  background: rgba(45, 45, 58, 0.5);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  transition: all 0.2s ease;
+  background: rgba(28, 25, 23, 0.6);
+  border: 1px solid var(--color-border);
+  transition: all 0.25s ease;
 }
 
 .input-field:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  box-shadow:
+    0 0 0 3px rgba(220, 38, 38, 0.1),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
-   模态框动画
+   模态框动画 - 卷轴展开
    ============================================ */
 
 .modal-backdrop {
@@ -320,16 +369,112 @@ body {
 }
 
 .modal-content {
-  animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: scroll-unfold 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes modal-pop {
-  from {
+@keyframes scroll-unfold {
+  0% {
     opacity: 0;
-    transform: scale(0.9) translateY(10px);
+    transform: scaleY(0.8) translateY(20px);
   }
-  to {
+  60% {
+    transform: scaleY(1.02) translateY(-4px);
+  }
+  100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scaleY(1) translateY(0);
   }
+}
+
+/* ============================================
+   装饰性边框
+   ============================================ */
+
+.decorative-border {
+  position: relative;
+}
+
+.decorative-border::before,
+.decorative-border::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--color-gold);
+  opacity: 0.3;
+}
+
+.decorative-border::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.decorative-border::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+/* ============================================
+   状态指示器动画
+   ============================================ */
+
+.status-pulse {
+  animation: status-breathe 2s ease-in-out infinite;
+}
+
+@keyframes status-breathe {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   标题装饰线
+   ============================================ */
+
+.title-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.title-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-accent) 0%, transparent 100%);
+}
+
+/* ============================================
+   印章效果
+   ============================================ */
+
+.seal-stamp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  transform: rotate(-2deg);
+}
+
+.seal-stamp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0.1;
 }

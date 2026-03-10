@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus, BookOpen } from 'lucide-react';
+import { Plus, Scroll } from 'lucide-react';
 import type { Novel, NovelStatus } from '@/types';
 import { COLUMN_CONFIG } from '@/types';
 import { NovelCard } from './NovelCard';
@@ -16,49 +16,69 @@ interface KanbanColumnProps {
   onDeleteNovel?: (novelId: string) => void;
 }
 
+const columnStyles: Record<NovelStatus, { gradient: string; text: string; ring: string }> = {
+  todo: {
+    gradient: 'from-amber-500/20 to-orange-500/10',
+    text: 'text-amber-400',
+    ring: 'ring-amber-500/30',
+  },
+  writing: {
+    gradient: 'from-sky-500/20 to-blue-500/10',
+    text: 'text-sky-400',
+    ring: 'ring-sky-500/30',
+  },
+  reviewing: {
+    gradient: 'from-purple-500/20 to-violet-500/10',
+    text: 'text-purple-400',
+    ring: 'ring-purple-500/30',
+  },
+  published: {
+    gradient: 'from-emerald-500/20 to-teal-500/10',
+    text: 'text-emerald-400',
+    ring: 'ring-emerald-500/30',
+  },
+};
+
 export function KanbanColumn({ id, novels, onAddNovel, onEditNovel, onDeleteNovel }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const config = COLUMN_CONFIG[id];
   const novelIds = novels.map((n) => n.id);
+  const style = columnStyles[id];
 
   return (
     <div className="flex flex-col min-w-[340px] max-w-[340px]">
       {/* 列头部 */}
       <header className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-3">
-          {/* 状态图标 */}
+          {/* 状态图标 - 卷轴风格 */}
           <div className={cn(
-            'relative w-8 h-8 rounded-xl flex items-center justify-center',
+            'relative w-9 h-9 rounded-lg flex items-center justify-center',
             'bg-gradient-to-br',
-            id === 'todo' && 'from-amber-500/20 to-orange-500/20',
-            id === 'writing' && 'from-blue-500/20 to-indigo-500/20',
-            id === 'reviewing' && 'from-purple-500/20 to-pink-500/20',
-            id === 'published' && 'from-emerald-500/20 to-teal-500/20',
+            style.gradient,
+            'ring-1',
+            style.ring
           )}>
-            <BookOpen size={16} className={cn(
-              id === 'todo' && 'text-amber-400',
-              id === 'writing' && 'text-blue-400',
-              id === 'reviewing' && 'text-purple-400',
-              id === 'published' && 'text-emerald-400',
-            )} aria-hidden="true" />
+            <Scroll size={18} className={cn(style.text)} aria-hidden="true" />
             {/* 脉冲效果 */}
-            <div className={cn(
-              'absolute inset-0 rounded-xl animate-ping',
-              id === 'todo' && 'bg-amber-500/20',
-              id === 'writing' && 'bg-blue-500/20',
-              id === 'reviewing' && 'bg-purple-500/20',
-              id === 'published' && 'bg-emerald-500/20',
-            )} style={{ animationDuration: '3s' }} />
+            <div
+              className={cn(
+                'absolute inset-0 rounded-lg animate-ping opacity-20',
+                style.gradient
+              )}
+              style={{ animationDuration: '3s' }}
+            />
           </div>
 
-          <h2 className="font-semibold text-text-primary tracking-wide">
+          {/* 列标题 */}
+          <h2 className="font-semibold text-text-primary tracking-wider font-display">
             {config.title}
           </h2>
 
           {/* 计数徽章 */}
           <span className={cn(
             'text-xs font-medium px-2.5 py-1 rounded-full',
-            'bg-surface border border-white/5 text-text-secondary'
+            'bg-surface/80 border border-border text-text-secondary',
+            'shadow-sm'
           )}>
             {novels.length}
           </span>
@@ -68,9 +88,11 @@ export function KanbanColumn({ id, novels, onAddNovel, onEditNovel, onDeleteNove
         <button
           onClick={() => onAddNovel?.(id)}
           className={cn(
-            'p-2 rounded-xl transition-all duration-200',
+            'p-2 rounded-lg transition-all duration-200',
             'text-text-muted hover:text-text-primary',
-            'hover:bg-surface border border-transparent hover:border-white/5'
+            'bg-surface/40 hover:bg-surface/80',
+            'border border-transparent hover:border-border',
+            'hover:shadow-sm'
           )}
           aria-label={`添加新小说到「${config.title}」`}
         >
@@ -84,7 +106,7 @@ export function KanbanColumn({ id, novels, onAddNovel, onEditNovel, onDeleteNove
         className={cn(
           'flex-1 p-3 rounded-2xl min-h-[200px] kanban-column-bg',
           'transition-all duration-300 ease-out',
-          isOver && 'border-accent/30 bg-accent/5'
+          isOver && 'border-accent/30 bg-accent/5 ring-1 ring-accent/20'
         )}
       >
         <SortableContext items={novelIds} strategy={verticalListSortingStrategy}>
@@ -103,24 +125,26 @@ export function KanbanColumn({ id, novels, onAddNovel, onEditNovel, onDeleteNove
 
         {/* 空状态 */}
         {novels.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 text-text-muted">
+          <div className="flex flex-col items-center justify-center h-44 text-text-muted">
             <div className={cn(
-              'w-14 h-14 rounded-2xl flex items-center justify-center mb-3',
-              'bg-surface border border-white/5'
+              'w-16 h-16 rounded-2xl flex items-center justify-center mb-4',
+              'bg-surface/60 border border-border'
             )}>
-              <BookOpen size={24} className="text-text-muted/50" aria-hidden="true" />
+              <Scroll size={28} className="text-text-muted/40" aria-hidden="true" />
             </div>
-            <p className="text-sm text-text-muted/70">暂无小说</p>
+            <p className="text-sm text-text-muted/70 tracking-wide">暂无作品</p>
             <button
               onClick={() => onAddNovel?.(id)}
               className={cn(
-                'mt-3 text-sm text-accent hover:text-accent/80',
-                'transition-colors duration-200',
-                'flex items-center gap-1.5'
+                'mt-4 px-4 py-2 rounded-lg text-sm',
+                'bg-surface/60 hover:bg-surface text-text-secondary hover:text-text-primary',
+                'border border-border hover:border-border-hover',
+                'transition-all duration-200',
+                'flex items-center gap-2'
               )}
             >
               <Plus size={14} aria-hidden="true" />
-              添加第一本
+              开始创作
             </button>
           </div>
         )}

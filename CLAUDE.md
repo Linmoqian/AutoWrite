@@ -125,3 +125,58 @@ data/
 ├── novels.json       # 守护进程配置
 └── fanqie_cookies.json  # 番茄小说登录态
 ```
+
+---
+
+## Kanban 前端 (Next.js)
+
+独立的前端看板应用，用于管理小说创作进度。
+
+### 常用命令
+
+```bash
+cd kanban
+
+# 开发服务器
+npm run dev
+
+# 类型检查
+npx tsc --noEmit
+
+# 代码检查
+npm run lint
+
+# 生产构建
+npm run build
+```
+
+### 技术栈
+
+- **Next.js 16** App Router + TypeScript
+- **Tailwind CSS 4** 样式
+- **@dnd-kit** 拖拽排序
+- **zustand** 状态管理（persist 中间件 + localStorage）
+- **lucide-react** 图标
+
+### 核心结构
+
+```
+kanban/src/
+├── app/              # Next.js 页面
+├── components/       # React 组件
+│   ├── KanbanBoard.tsx   # 主看板（DndContext）
+│   ├── KanbanColumn.tsx  # 列容器（useDroppable）
+│   ├── NovelCard.tsx     # 卡片（useSortable）
+│   └── NovelModal.tsx    # 创建/编辑弹窗
+├── store/            # zustand store（kanbanStore.ts）
+├── types/            # TypeScript 类型
+└── lib/              # 工具函数
+```
+
+### 看板状态流转
+
+```
+待写(todo) → 撰写中(writing) → 审核中(reviewing) → 已发布(published)
+```
+
+拖拽卡片跨列移动时自动更新状态，数据持久化到 localStorage。

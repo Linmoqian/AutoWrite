@@ -18,7 +18,7 @@ export const useKanbanStore = create<KanbanState>()(
         set((state) => ({
           novels: state.novels.map((novel) =>
             novel.id === novelId
-              ? { ...novel, status: newStatus, updatedAt: new Date().toISOString() }
+              ? { ...novel, status: newStatus, updatedAt: new Date() }
               : novel
           ),
         })),
@@ -83,7 +83,7 @@ export const useKanbanStore = create<KanbanState>()(
         set((state) => ({
           novels: state.novels.map((n) =>
             n.id === novelId
-              ? { ...n, workflowStatus: status, updatedAt: new Date().toISOString() }
+              ? { ...n, workflowStatus: status, updatedAt: new Date() }
               : n
           ),
         })),
@@ -92,7 +92,7 @@ export const useKanbanStore = create<KanbanState>()(
         set((state) => ({
           novels: state.novels.map((n) =>
             n.id === novelId
-              ? { ...n, outline, updatedAt: new Date().toISOString() }
+              ? { ...n, outline, updatedAt: new Date() }
               : n
           ),
         })),

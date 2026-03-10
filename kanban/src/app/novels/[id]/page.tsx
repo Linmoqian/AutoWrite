@@ -5,21 +5,20 @@ import { useKanbanStore } from '@/store';
 import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
-  BookOpen,
   PenTool,
   Sparkles,
   Plus,
   FileText,
   Users,
-  Calendar,
   Target,
+  Scroll,
 } from 'lucide-react';
 import { cn, formatDate, formatWordCount } from '@/lib/utils';
 import { GENRE_OPTIONS, WORKFLOW_STEPS, type Novel } from '@/types';
 
 export default function NovelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { novels, chapters, getChaptersByNovelId } = useKanbanStore();
+  const { novels, getChaptersByNovelId } = useKanbanStore();
   const [novel, setNovel] = useState<Novel | null>(null);
   const [novelId, setNovelId] = useState<string | null>(null);
 
@@ -38,15 +37,21 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
 
   if (!novel) {
     return (
-      <div className="min-h-screen bg-void flex items-center justify-center">
-        <div className="text-center">
-          <BookOpen size={48} className="mx-auto text-text-muted mb-4" />
-          <p className="text-text-muted">小说不存在或正在加载中...</p>
+      <div className="min-h-screen bg-void flex items-center justify-center relative">
+        <div className="paper-texture" aria-hidden="true" />
+        <div className="text-center relative z-10">
+          <Scroll size={48} className="mx-auto text-text-muted mb-4 opacity-60" />
+          <p className="text-text-muted tracking-wide">作品不存在或正在加载中...</p>
           <button
             onClick={() => router.push('/')}
-            className="mt-4 px-4 py-2 bg-surface/80 rounded-lg text-text-primary hover:bg-surface transition-colors"
+            className={cn(
+              'mt-6 px-5 py-2.5 rounded-xl text-sm',
+              'bg-surface/80 border border-border',
+              'text-text-primary hover:bg-surface',
+              'transition-all duration-200'
+            )}
           >
-            返回首页
+            返回书斋
           </button>
         </div>
       </div>
@@ -59,36 +64,42 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
   const currentWorkflowStep = WORKFLOW_STEPS.findIndex((s) => s.status === novel.workflowStatus);
 
   return (
-    <div className="min-h-screen bg-void p-8">
+    <div className="min-h-screen bg-void p-8 relative">
+      {/* 背景纹理 */}
+      <div className="paper-texture" aria-hidden="true" />
+
       {/* 顶部导航栏 */}
-      <header className="mb-8">
+      <header className="mb-8 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/')}
               className={cn(
                 'p-3 rounded-xl transition-all duration-200',
-                'bg-surface/80 border border-white/5',
-                'hover:bg-surface hover:border-white/10',
+                'bg-surface/60 border border-border',
+                'hover:bg-surface/80 hover:border-border-hover',
                 'text-text-muted hover:text-text-primary'
               )}
-              aria-label="返回首页"
+              aria-label="返回书斋"
             >
               <ArrowLeft size={20} aria-hidden="true" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-text-primary">{novel.title}</h1>
-              <p className="text-sm text-text-muted mt-1">小说详情与创作管理</p>
+              <h1 className="text-3xl font-bold text-text-primary tracking-wider font-display">
+                {novel.title}
+              </h1>
+              <p className="text-sm text-text-muted mt-1 flex items-center gap-2">
+                <span className="w-6 h-px bg-gradient-to-r from-gold to-transparent" />
+                小说详情与创作管理
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               className={cn(
-                'px-4 py-2.5 rounded-xl transition-all duration-200',
-                'bg-gradient-to-r from-purple-500 to-blue-600',
-                'text-white font-medium',
-                'hover:shadow-lg hover:shadow-purple-500/25',
+                'btn-primary px-5 py-2.5 rounded-xl text-sm font-medium',
+                'text-white',
                 'flex items-center gap-2'
               )}
             >
@@ -97,10 +108,8 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
             </button>
             <button
               className={cn(
-                'px-4 py-2.5 rounded-xl transition-all duration-200',
-                'bg-surface/80 border border-white/5',
-                'text-text-primary font-medium',
-                'hover:bg-surface hover:border-white/10',
+                'btn-secondary px-5 py-2.5 rounded-xl text-sm font-medium',
+                'text-amber-950',
                 'flex items-center gap-2'
               )}
             >
@@ -112,23 +121,27 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
       </header>
 
       {/* 主内容区 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
         {/* 左侧：小说基本信息 */}
         <div className="lg:col-span-1 space-y-6">
           {/* 基本信息卡片 */}
-          <div className="bg-surface/80 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-              <BookOpen size={18} className="text-accent" aria-hidden="true" />
+          <div className={cn(
+            'bg-surface/80 backdrop-blur-sm rounded-2xl border border-border p-6',
+            'relative overflow-hidden'
+          )}>
+            {/* 装饰角 */}
+            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-gold/25" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-gold/25" />
+
+            <h2 className="text-lg font-semibold text-text-primary mb-5 flex items-center gap-2 tracking-wide">
+              <Scroll size={18} className="text-accent" aria-hidden="true" />
               基本信息
             </h2>
 
             <div className="space-y-4">
               <InfoRow label="类型" value={genreLabel} />
               <InfoRow label="主题" value={novel.theme} />
-              <InfoRow
-                label="进度"
-                value={`${novel.writtenChapters} / ${novel.targetChapters} 章`}
-              />
+              <InfoRow label="进度" value={`${novel.writtenChapters} / ${novel.targetChapters} 章`} />
               <InfoRow label="总字数" value={formatWordCount(novel.wordCount)} />
               <InfoRow label="创建时间" value={formatDate(novel.createdAt)} />
               <InfoRow label="更新时间" value={formatDate(novel.updatedAt)} />
@@ -140,9 +153,9 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
                 <span className="text-text-muted">创作进度</span>
                 <span className="text-text-secondary font-medium">{progress.toFixed(1)}%</span>
               </div>
-              <div className="h-2 bg-ink/50 rounded-full overflow-hidden">
+              <div className="h-2 bg-ink/60 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-600 transition-all duration-500"
+                  className="h-full rounded-full progress-bar bg-gradient-to-r from-accent to-gold transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -151,9 +164,13 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* 简介卡片 */}
           {novel.description && (
-            <div className="bg-surface/80 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-              <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-                <FileText size={18} className="text-accent" aria-hidden="true" />
+            <div className={cn(
+              'bg-surface/80 backdrop-blur-sm rounded-2xl border border-border p-6',
+              'relative'
+            )}>
+              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-gold/25" />
+              <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2 tracking-wide">
+                <FileText size={18} className="text-gold" aria-hidden="true" />
                 小说简介
               </h2>
               <p className="text-text-secondary text-sm leading-relaxed">{novel.description}</p>
@@ -164,14 +181,18 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
         {/* 右侧：工作流和章节 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 工作流进度 */}
-          <div className="bg-surface/80 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-              <Target size={18} className="text-accent" aria-hidden="true" />
+          <div className={cn(
+            'bg-surface/80 backdrop-blur-sm rounded-2xl border border-border p-6',
+            'relative'
+          )}>
+            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-gold/25" />
+            <h2 className="text-lg font-semibold text-text-primary mb-5 flex items-center gap-2 tracking-wide">
+              <Target size={18} className="text-gold" aria-hidden="true" />
               工作流进度
             </h2>
 
             {/* 工作流步骤 */}
-            <div className="flex items-center justify-between relative">
+            <div className="flex items-center justify-between relative py-2">
               {WORKFLOW_STEPS.map((step, index) => {
                 const isActive = index === currentWorkflowStep;
                 const isCompleted = index < currentWorkflowStep;
@@ -180,17 +201,17 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
                   <div key={step.status} className="flex flex-col items-center relative z-10">
                     <div
                       className={cn(
-                        'w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300',
-                        isCompleted && 'bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50',
-                        isActive && 'bg-purple-500/20 text-purple-400 border-2 border-purple-500/50 animate-pulse',
-                        !isCompleted && !isActive && 'bg-ink/50 text-text-muted border-2 border-white/5'
+                        'w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300',
+                        isCompleted && 'bg-emerald-500/15 text-emerald-400 border-2 border-emerald-500/40',
+                        isActive && 'bg-accent/15 text-accent border-2 border-accent/40 status-pulse',
+                        !isCompleted && !isActive && 'bg-ink/40 text-text-muted border-2 border-border'
                       )}
                     >
                       {index + 1}
                     </div>
                     <span
                       className={cn(
-                        'mt-2 text-xs text-center max-w-[60px]',
+                        'mt-2 text-xs text-center max-w-[64px] leading-tight',
                         isActive ? 'text-text-primary font-medium' : 'text-text-muted'
                       )}
                     >
@@ -201,32 +222,36 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
               })}
 
               {/* 连接线 */}
-              <div className="absolute top-5 left-0 right-0 h-0.5 bg-ink/50 -z-0" />
+              <div className="absolute top-[30px] left-0 right-0 h-0.5 bg-border -z-0" />
               <div
-                className="absolute top-5 left-0 h-0.5 bg-gradient-to-r from-emerald-500 to-purple-500 transition-all duration-500 -z-0"
+                className="absolute top-[30px] left-0 h-0.5 bg-gradient-to-r from-emerald-500 to-accent transition-all duration-500 -z-0"
                 style={{ width: `${(currentWorkflowStep / (WORKFLOW_STEPS.length - 1)) * 100}%` }}
               />
             </div>
 
             {/* 当前状态描述 */}
-            <div className="mt-4 p-3 rounded-xl bg-ink/30 border border-white/5">
+            <div className="mt-5 p-4 rounded-xl bg-ink/30 border border-border">
               <p className="text-sm text-text-secondary">
                 当前阶段：
-                <span className="text-accent font-medium ml-1">
+                <span className="text-accent font-semibold ml-1.5">
                   {WORKFLOW_STEPS[currentWorkflowStep]?.label || '未知'}
                 </span>
                 <span className="text-text-muted ml-2">
-                  - {WORKFLOW_STEPS[currentWorkflowStep]?.description || ''}
+                  — {WORKFLOW_STEPS[currentWorkflowStep]?.description || ''}
                 </span>
               </p>
             </div>
           </div>
 
           {/* 章节列表 */}
-          <div className="bg-surface/80 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-                <FileText size={18} className="text-accent" aria-hidden="true" />
+          <div className={cn(
+            'bg-surface/80 backdrop-blur-sm rounded-2xl border border-border p-6',
+            'relative'
+          )}>
+            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-gold/25" />
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2 tracking-wide">
+                <FileText size={18} className="text-gold" aria-hidden="true" />
                 章节列表
                 <span className="text-sm font-normal text-text-muted ml-2">
                   ({novelChapters.length} 章)
@@ -234,9 +259,9 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
               </h2>
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-lg transition-all duration-200',
-                  'bg-purple-500/20 text-purple-400',
-                  'hover:bg-purple-500/30',
+                  'px-3.5 py-1.5 rounded-lg transition-all duration-200',
+                  'bg-accent/10 text-accent border border-accent/20',
+                  'hover:bg-accent/20',
                   'flex items-center gap-1.5 text-sm'
                 )}
               >
@@ -246,14 +271,14 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {novelChapters.length > 0 ? (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="space-y-2 max-h-[380px] overflow-y-auto">
                 {novelChapters.map((chapter) => (
                   <div
                     key={chapter.id}
                     className={cn(
-                      'p-3 rounded-xl transition-all duration-200',
-                      'bg-ink/30 border border-white/5',
-                      'hover:bg-ink/50 hover:border-white/10',
+                      'p-3.5 rounded-xl transition-all duration-200',
+                      'bg-ink/30 border border-border',
+                      'hover:bg-ink/50 hover:border-border-hover',
                       'cursor-pointer'
                     )}
                   >
@@ -266,10 +291,10 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
                         <span className="text-xs text-text-muted">{formatWordCount(chapter.wordCount)}</span>
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded-full text-xs',
-                            chapter.status === 'finalized' && 'bg-emerald-500/20 text-emerald-400',
-                            chapter.status === 'reviewing' && 'bg-amber-500/20 text-amber-400',
-                            chapter.status === 'draft' && 'bg-blue-500/20 text-blue-400'
+                            'px-2 py-0.5 rounded-full text-xs font-medium',
+                            chapter.status === 'finalized' && 'bg-emerald-500/15 text-emerald-400',
+                            chapter.status === 'reviewing' && 'bg-amber-500/15 text-amber-400',
+                            chapter.status === 'draft' && 'bg-sky-500/15 text-sky-400'
                           )}
                         >
                           {chapter.status === 'finalized' && '已定稿'}
@@ -283,25 +308,29 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             ) : (
               <div className="py-12 text-center">
-                <FileText size={40} className="mx-auto text-text-muted mb-3 opacity-50" />
+                <FileText size={40} className="mx-auto text-text-muted mb-4 opacity-40" />
                 <p className="text-text-muted">暂无章节</p>
-                <p className="text-text-muted text-sm mt-1">点击上方按钮开始创作第一章</p>
+                <p className="text-text-muted text-sm mt-2">点击上方按钮开始创作第一章</p>
               </div>
             )}
           </div>
 
           {/* 角色列表（占位） */}
-          <div className="bg-surface/80 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-                <Users size={18} className="text-accent" aria-hidden="true" />
+          <div className={cn(
+            'bg-surface/80 backdrop-blur-sm rounded-2xl border border-border p-6',
+            'relative'
+          )}>
+            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-gold/25" />
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2 tracking-wide">
+                <Users size={18} className="text-gold" aria-hidden="true" />
                 角色管理
               </h2>
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-lg transition-all duration-200',
-                  'bg-purple-500/20 text-purple-400',
-                  'hover:bg-purple-500/30',
+                  'px-3.5 py-1.5 rounded-lg transition-all duration-200',
+                  'bg-accent/10 text-accent border border-accent/20',
+                  'hover:bg-accent/20',
                   'flex items-center gap-1.5 text-sm'
                 )}
               >
@@ -310,8 +339,8 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
               </button>
             </div>
 
-            <div className="py-8 text-center">
-              <Users size={40} className="mx-auto text-text-muted mb-3 opacity-50" />
+            <div className="py-10 text-center">
+              <Users size={40} className="mx-auto text-text-muted mb-4 opacity-40" />
               <p className="text-text-muted">角色管理功能开发中...</p>
             </div>
           </div>
@@ -324,7 +353,7 @@ export default function NovelDetailPage({ params }: { params: Promise<{ id: stri
 // 信息行组件
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between py-1">
       <span className="text-text-muted text-sm">{label}</span>
       <span className="text-text-secondary font-medium">{value}</span>
     </div>

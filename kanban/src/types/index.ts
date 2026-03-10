@@ -1,16 +1,38 @@
 // kanban/src/types/index.ts
 
-export type NovelStatus = 'todo' | 'writing' | 'reviewing' | 'published';
+// 小说状态枚举
+export enum NovelStatus {
+  TODO = 'todo',
+  WRITING = 'writing',
+  REVIEWING = 'reviewing',
+  PUBLISHED = 'published',
+}
 
-// 细粒度工作流状态
-export type WorkflowStatus =
-  | 'outline'          // 大纲阶段
-  | 'outline_review'   // 大纲审核
-  | 'character_design' // 角色设计
-  | 'writing'          // 写作中
-  | 'ai_review'        // AI 审核
-  | 'human_finalization' // 人工审核定稿
-  | 'published';       // 已发布
+// 细粒度工作流状态枚举
+export enum WorkflowStatus {
+  OUTLINE = 'outline', // 大纲阶段
+  OUTLINE_REVIEW = 'outline_review', // 大纲审核
+  CHARACTER_DESIGN = 'character_design', // 角色设计
+  WRITING = 'writing', // 写作中
+  AI_REVIEW = 'ai_review', // AI 审核
+  HUMAN_FINALIZATION = 'human_finalization', // 人工审核定稿
+  PUBLISHED = 'published', // 已发布
+}
+
+// 章节状态枚举
+export enum ChapterStatus {
+  DRAFT = 'draft',
+  REVIEWING = 'reviewing',
+  FINALIZED = 'finalized',
+}
+
+// 角色类型枚举
+export enum CharacterRole {
+  PROTAGONIST = 'protagonist',
+  ANTAGONIST = 'antagonist',
+  SUPPORTING = 'supporting',
+  MINOR = 'minor',
+}
 
 // 章节接口
 export interface Chapter {
@@ -20,9 +42,9 @@ export interface Chapter {
   title: string;
   content: string;
   wordCount: number;
-  status: 'draft' | 'reviewing' | 'finalized';
-  createdAt: string;
-  updatedAt: string;
+  status: ChapterStatus;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // 角色接口
@@ -30,7 +52,7 @@ export interface Character {
   id: string;
   novelId: string;
   name: string;
-  role: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+  role: CharacterRole;
   description: string;
   traits: string[];
 }
@@ -46,8 +68,8 @@ export interface Novel {
   workflowStatus: WorkflowStatus;
   outline?: string;
   characters?: Character[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
   wordCount: number;
   description?: string;
 }
@@ -88,13 +110,18 @@ export interface KanbanState {
 }
 
 export const COLUMN_CONFIG: Record<NovelStatus, { title: string; color: string }> = {
-  todo: { title: '待写', color: 'bg-kanban-todo' },
-  writing: { title: '撰写中', color: 'bg-kanban-writing' },
-  reviewing: { title: '审核中', color: 'bg-kanban-reviewing' },
-  published: { title: '已发布', color: 'bg-kanban-published' },
+  [NovelStatus.TODO]: { title: '待写', color: 'bg-kanban-todo' },
+  [NovelStatus.WRITING]: { title: '撰写中', color: 'bg-kanban-writing' },
+  [NovelStatus.REVIEWING]: { title: '审核中', color: 'bg-kanban-reviewing' },
+  [NovelStatus.PUBLISHED]: { title: '已发布', color: 'bg-kanban-published' },
 };
 
-export const STATUS_ORDER: NovelStatus[] = ['todo', 'writing', 'reviewing', 'published'];
+export const STATUS_ORDER: NovelStatus[] = [
+  NovelStatus.TODO,
+  NovelStatus.WRITING,
+  NovelStatus.REVIEWING,
+  NovelStatus.PUBLISHED,
+];
 
 export const GENRE_OPTIONS = [
   { value: 'xuanhuan', label: '玄幻' },
@@ -105,11 +132,11 @@ export const GENRE_OPTIONS = [
 
 // 工作流步骤配置
 export const WORKFLOW_STEPS: { status: WorkflowStatus; label: string; description: string }[] = [
-  { status: 'outline', label: '大纲', description: '生成故事大纲' },
-  { status: 'outline_review', label: '大纲审核', description: '审核大纲' },
-  { status: 'character_design', label: '角色设计', description: '设计主要角色' },
-  { status: 'writing', label: '写作', description: 'AI 自动写作' },
-  { status: 'ai_review', label: 'AI 审核', description: '机器审核内容' },
-  { status: 'human_finalization', label: '审核定稿', description: '人工审核并定稿' },
-  { status: 'published', label: '已发布', description: '发布到平台' },
+  { status: WorkflowStatus.OUTLINE, label: '大纲', description: '生成故事大纲' },
+  { status: WorkflowStatus.OUTLINE_REVIEW, label: '大纲审核', description: '审核大纲' },
+  { status: WorkflowStatus.CHARACTER_DESIGN, label: '角色设计', description: '设计主要角色' },
+  { status: WorkflowStatus.WRITING, label: '写作', description: 'AI 自动写作' },
+  { status: WorkflowStatus.AI_REVIEW, label: 'AI 审核', description: '机器审核内容' },
+  { status: WorkflowStatus.HUMAN_FINALIZATION, label: '审核定稿', description: '人工审核并定稿' },
+  { status: WorkflowStatus.PUBLISHED, label: '已发布', description: '发布到平台' },
 ];
