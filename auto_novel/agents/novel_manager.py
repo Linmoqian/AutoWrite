@@ -14,7 +14,7 @@ class NovelManager:
     def __init__(self):
         self.llm_client = get_llm_client()
 
-    def create_novel(self, title: str, genre: str, theme: str) -> NovelState:
+    async def create_novel(self, title: str, genre: str, theme: str) -> NovelState:
         """创建新小说"""
         novel_id = str(uuid.uuid4())[:8]
         return NovelState(
@@ -24,7 +24,7 @@ class NovelManager:
             theme=theme,
         )
 
-    def build_world(self, state: NovelState) -> NovelState:
+    async def build_world(self, state: NovelState) -> NovelState:
         """构建世界观"""
         prompt = f"""你是一位资深的小说世界观设计师。请为以下小说构建详细的世界观设定。
 
@@ -41,12 +41,12 @@ class NovelManager:
 
 请用流畅的文字描述，字数在500-800字之间。"""
 
-        response = self.llm_client.generate(prompt)
+        response = await self.llm_client.generate(prompt)
         state.world_info = response.strip()
         state.updated_at = __import__("datetime").datetime.now()
         return state
 
-    def create_main_character(
+    async def create_main_character(
         self,
         state: NovelState,
         character_name: str,
@@ -72,7 +72,7 @@ class NovelManager:
 
 请用生动的文字描述，每个角色描述在300-500字之间。"""
 
-        response = self.llm_client.generate(prompt)
+        response = await self.llm_client.generate(prompt)
         character = Character(
             name=character_name,
             role=role,
@@ -82,7 +82,7 @@ class NovelManager:
         state.add_character(character)
         return state
 
-    def generate_outline(self, state: NovelState, total_chapters: int) -> NovelState:
+    async def generate_outline(self, state: NovelState, total_chapters: int) -> NovelState:
         """生成大纲"""
         # 获取主角信息
         main_chars = state.get_main_characters()
@@ -115,14 +115,14 @@ class NovelManager:
 
 ...依此类推"""
 
-        response = self.llm_client.generate(prompt)
+        response = await self.llm_client.generate(prompt)
         outline = self._parse_outline(response)
         state.outline = outline
         state.total_chapters_planned = total_chapters
         state.updated_at = __import__("datetime").datetime.now()
         return state
 
-    def write_chapter(self, state: NovelState, chapter_num: int) -> NovelState:
+    async def write_chapter(self, state: NovelState, chapter_num: int) -> NovelState:
         """撰写章节"""
         if chapter_num < 1 or chapter_num > state.total_chapters_planned:
             raise ValueError(f"章节号 {chapter_num} 超出范围")
@@ -170,7 +170,7 @@ class NovelManager:
 
 现在请直接输出章节内容（不需要标题）："""
 
-        response = self.llm_client.generate(prompt)
+        response = await self.llm_client.generate(prompt)
         content = response.strip()
         word_count = len(content.replace("\n", "").replace(" ", ""))
 
@@ -180,7 +180,7 @@ class NovelManager:
 {content}
 
 摘要："""
-        summary = self.llm_client.generate(summary_prompt).strip()
+        summary = await self.llm_client.generate(summary_prompt).strip()
 
         chapter = Chapter(
             number=chapter_num,

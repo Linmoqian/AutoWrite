@@ -9,7 +9,6 @@ from typing import Optional
 from ..agents.novel_manager import NovelManager
 from ..agents.novel_state import NovelState
 from ..publisher.fanqie_publisher import FanqiePublisher
-from ..models.ollama_client import OllamaClient
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ class NovelJob:
         self.state = novel_state
         self.book_id = book_id
         self.auto_publish = auto_publish
-        self.manager = NovelManager(OllamaClient())
+        self.manager = NovelManager()
         self.publisher: Optional[FanqiePublisher] = None
 
         if auto_publish:

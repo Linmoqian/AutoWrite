@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass
 from dotenv import load_dotenv
+from functools import lru_cache
 
 load_dotenv()
 
@@ -30,6 +31,18 @@ class Config:
 
 # 全局配置实例
 config = Config()
+
+
+@lru_cache(maxsize=1)
+def get_ollama_host() -> str:
+    """获取 Ollama 服务地址
+
+    使用 lru_cache 缓存结果，避免重复读取环境变量。
+
+    Returns:
+        Ollama 服务地址，格式如 http://localhost:11434
+    """
+    return os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 
 def get_llm_client():

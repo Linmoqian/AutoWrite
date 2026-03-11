@@ -194,3 +194,31 @@ class NovelDetailResponse(NovelResponse):
 
     chapters: List[ChapterResponse] = Field(default_factory=list, description="章节列表")
     characters: List[CharacterResponse] = Field(default_factory=list, description="角色列表")
+
+
+# =============================================================================
+# Ollama 模型相关
+# =============================================================================
+
+
+class OllamaModelResponse(BaseModel):
+    """Ollama 模型响应"""
+
+    name: str = Field(..., description="模型名称")
+    size: int = Field(..., ge=0, description="模型大小（字节）")
+    digest: str = Field(..., description="模型摘要")
+    modifiedAt: str = Field(..., description="最后修改时间 ISO 格式")
+
+
+class OllamaModelListResponse(BaseModel):
+    """Ollama 模型列表响应"""
+
+    models: List[OllamaModelResponse] = Field(default_factory=list, description="模型列表")
+    total: int = Field(..., ge=0, description="总数")
+
+
+class OllamaHealthResponse(BaseModel):
+    """Ollama 健康检查响应"""
+
+    healthy: bool = Field(..., description="服务是否健康")
+    host: str = Field(..., description="Ollama 服务地址")
