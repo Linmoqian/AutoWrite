@@ -63,7 +63,7 @@ store.add_chapter({
     "title": "第一章",
     "content": "张三开始修仙...",
     "summary": "开始修仙之路",
-    "characters": ["张三"]
+    "characters": ["张三"]  # 出场角色列表，建议明确指定
 })
 
 # 构建AI生成上下文
@@ -72,6 +72,28 @@ window = store.build_context_window(chapter_num=2, current_goal="突破第一层
 # 传递给 LLM
 prompt = build_prompt(window)
 ```
+
+## 角色索引
+
+### add_chapter 时的 characters 字段
+
+调用 `store.add_chapter()` 时，`characters` 字段用于记录本章出场的角色列表：
+
+```python
+store.add_chapter({
+    "number": 1,
+    "title": "第一章",
+    "content": "张三开始修仙...",
+    "summary": "开始修仙之路",
+    "characters": ["张三", "李四"]  # 建议明确指定出场角色
+})
+```
+
+- **建议**: 明确指定出场角色列表，确保索引准确
+- **自动抽取**: 如果 `characters` 为空或未提供，系统会尝试从正文中自动抽取中文人名
+  - 使用常见姓氏模式匹配（如"张三"、"李四"等2-3字人名）
+  - 最多抽取 5 个可能的候选人名
+  - **注意**: 自动抽取可能不准确，建议在创作时明确维护角色列表
 
 ## API 参考
 

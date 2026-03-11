@@ -119,6 +119,9 @@ class IndexStore:
     def query_chapters_by_character(
         self, novel_id: str, character_name: str
     ) -> List[ChapterIndex]:
-        """查询某角色出现的章节"""
+        """查询某角色出现的章节（按章节号排序）"""
         chapters = self.load_chapter_indices(novel_id)
-        return [c for c in chapters if character_name in c.characters]
+        return sorted(
+            [c for c in chapters if character_name in c.characters],
+            key=lambda x: x.number
+        )

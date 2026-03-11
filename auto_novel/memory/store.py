@@ -141,9 +141,12 @@ class MemoryStore:
                     brief = self.compressor.compress_character(char_dict[idx.name])
                     main_characters[idx.name] = brief
 
-        # 构建最近章节摘要
+        # 构建最近章节摘要（按章节号排序）
         chapter_indices = self.index_store.load_chapter_indices(self.novel_id)
-        recent_indices = chapter_indices[-max_recent:] if chapter_indices else []
+        recent_indices = (
+            sorted(chapter_indices, key=lambda x: x.number)[-max_recent:]
+            if chapter_indices else []
+        )
 
         recent_summaries = [c.summary for c in recent_indices if c.summary]
         recent_summary = self.compressor.compress_summary_chain(

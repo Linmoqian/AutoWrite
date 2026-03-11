@@ -154,7 +154,15 @@ class ContextCompressor:
         summary: str = "",
         characters: List[str] = None,
     ) -> ChapterIndex:
-        """构建章节索引"""
+        """构建章节索引
+
+        Args:
+            number: 章节号
+            title: 章节标题
+            content: 章节正文（用于关键词和场景提取）
+            summary: 章节摘要（优先用于关键词提取）
+            characters: 出场角色列表。如果为空，系统将尝试从正文中自动抽取中文人名
+        """
         # 提取关键词作为关键事件
         keywords = self.extract_keywords(summary or content, top_k=5)
 
@@ -162,6 +170,43 @@ class ContextCompressor:
         locations = []
         location_patterns = re.findall(r'(?:在|来到|进入|来到)([^，。]{2,8})', content)
         locations = list(set(location_patterns))[:3]
+
+        # 处理角色列表：如果未提供，尝试从正文中抽取中文人名
+        if not characters or len(characters) == 0:
+            # 简单的中文人名模式：常见姓氏 + 1-2个汉字
+            # 包含了最常见的150个中文姓氏（按人口排序）
+            common_surnames = (
+                '王李张刘陈杨黄赵周吴徐孙胡朱高林何郭马罗梁宋郑谢韩唐冯于董萧'
+                '程曹袁邓许傅沈曾彭吕苏卢蒋蔡贾丁魏薛叶阎余潘杜戴夏钟汪田任姜'
+                '范方石姚谭廖邹熊金陆郝孔白崔康毛邱秦江史顾侯邵孟龙万段漕钱汤尹黎'
+                '易常武乔贺赖龚文覃谈苗任申温季董杜童鱼范关辛牟'
+                '赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华'
+                '金魏陶姜戚谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞'
+            )
+            # 常见动词/介词，跟在人名后面的
+            common_verbs = '来去到说看听想做是生在把被让叫问告诉回答点头微笑'
+            # 匹配2字人名（姓氏+1字名），后面跟标点、空格、连接词或动词
+            two_char_pattern = r'([' + common_surnames + r'][一-龥])([，。！？、：;""\s与和等及同跟' + common_verbs + r'])'
+            two_char_matches = re.findall(two_char_pattern, content)
+
+            # 匹配3字人名（姓氏+2字名），后面跟标点、空格、连接词或动词
+            # 注意：3字名限制为常见人名用字，减少误匹配
+            common_name_chars = '建国强军华文平志伟东海波明永刚国亮建平辉'
+            three_char_pattern = r'([' + common_surnames + r'][' + common_name_chars + r']{2})([，。！？、：;""\s与和等及同跟' + common_verbs + r'])'
+            three_char_matches = re.findall(three_char_pattern, content)
+
+            # 收集结果
+            extracted = []
+            for match in two_char_matches:
+                if isinstance(match, tuple) and match[0]:
+                    extracted.append(match[0])
+            for match in three_char_matches:
+                if isinstance(match, tuple) and match[0]:
+                    extracted.append(match[0])
+
+            # 去重并限制数量
+            extracted = list(set(extracted))[:5]
+            characters = extracted  # 将抽取的结果赋值给 characters
 
         return ChapterIndex(
             number=number,

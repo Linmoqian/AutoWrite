@@ -212,3 +212,66 @@ def test_get_statistics(temp_dir):
     assert stats["total_characters"] == 1
     assert stats["total_words"] == 200  # "内容" * 100 = 2*100
     assert stats["world_name"] == "测试世界"
+
+
+def test_context_window_respects_chapter_order(temp_dir):
+    """验证乱序添加章节后 context_window 正确按章节号排序"""
+    store = MemoryStore(novel_id="test_novel", data_dir=temp_dir)
+
+    # 初始化世界
+    world_info = {
+        "world_name": "修仙世界",
+        "background": "灵气复苏",
+        "elements": {},
+        "locations": [],
+        "power_system": {}
+    }
+    store.initialize_world("xuanhuan", "修仙", world_info)
+
+    # 乱序添加章节
+    for num in [5, 1, 3, 2, 4]:
+        store.add_chapter({
+            "number": num,
+            "title": f"第{num}章",
+            "content": f"第{num}章内容" * 10,
+            "summary": f"第{num}章摘要",
+            "characters": []
+        })
+
+    # 构建上下文，最近3章应该是 3,4,5 而不是添加顺序(5,1,3的最后3个)
+    window = store.build_context_window(chapter_num=6, max_recent=3)
+
+    # 验证 recent_summary 包含正确的章节
+    # 按章节号排序后取最后3章：3,4,5
+    assert "第3章摘要" in window.recent_summary
+    assert "第4章摘要" in window.recent_summary
+    assert "第5章摘要" in window.recent_summary
+
+    # 验证不包含第1章和第2章（因为只取最后3章）
+    assert "第1章摘要" not in window.recent_summary
+    assert "第2章摘要" not in window.recent_summary
+
+
+def test_query_character_appearances_sorted(temp_dir):
+    """验证 query_character_appearances 返回结果按章节号排序"""
+    store = MemoryStore(novel_id="test_novel", data_dir=temp_dir)
+
+    # 乱序添加章节，角色"张三"出现在第1、3、5章
+    for num in [5, 1, 3, 2, 4]:
+        store.add_chapter({
+            "number": num,
+            "title": f"第{num}章",
+            "content": f"第{num}章内容",
+            "summary": f"第{num}章摘要",
+            "characters": ["张三"] if num in [1, 3, 5] else []
+        })
+
+    appearances = store.query_character_appearances("张三")
+
+    # 验证返回了3个章节
+    assert len(appearances) == 3
+
+    # 验证按章节号排序：1, 3, 5
+    assert appearances[0].number == 1
+    assert appearances[1].number == 3
+    assert appearances[2].number == 5
