@@ -1,7 +1,33 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Loader2, ChevronDown, ChevronUp, Scroll, ArrowDown } from "lucide-react"
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react"
+
+// ============================================================================
+// 类型定义
+// ============================================================================
+
+interface OllamaModel {
+  name: string
+  size: number
+  digest: string
+  modifiedAt: string
+}
+
+interface WriteRequest {
+  prompt: string
+  system?: string
+  novel_id: string
+  chapter_num: number
+  model?: string
+}
+
+interface SSEChunk {
+  thinking?: string
+  content?: string
+  done?: boolean
+  error?: string
+}
 
 // ============================================================================
 // 类型定义
@@ -47,7 +73,6 @@ export default function WritePage() {
   const [chapterNum, setChapterNum] = useState(1)
 
   // 引用
-  const contentRef = useRef<HTMLDivElement>(null)
   const isUserScrollingRef = useRef(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -76,12 +101,12 @@ export default function WritePage() {
   }, [fetchModels])
 
   // ============================================================================
-  // 滚动控制
+  // 页面滚动控制
   // ============================================================================
 
   const scrollToBottom = useCallback(() => {
-    if (contentRef.current && autoScroll) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight
+    if (autoScroll && !isUserScrollingRef.current) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })
     }
   }, [autoScroll])
 
@@ -89,23 +114,32 @@ export default function WritePage() {
     scrollToBottom()
   }, [content, thinking, scrollToBottom])
 
-  const handleScroll = () => {
-    if (!contentRef.current) return
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      const scrollY = window.scrollY
+      const scrollHeight = document.documentElement.scrollHeight
+      const innerHeight = window.innerHeight
+      const isAtBottom = scrollHeight - scrollY - innerHeight < 100
 
-    const { scrollTop, scrollHeight, clientHeight } = contentRef.current
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
+      if (!isAtBottom && autoScroll) {
+        isUserScrollingRef.current = true
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current)
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          isUserScrollingRef.current = false
+        }, 2000)
+      }
+    }
 
-    // 用户手动滚动时暂停自动滚动
-    if (!isAtBottom && autoScroll) {
-      isUserScrollingRef.current = true
+    window.addEventListener("scroll", handleWindowScroll)
+    return () => {
+      window.removeEventListener("scroll", handleWindowScroll)
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
       }
-      scrollTimeoutRef.current = setTimeout(() => {
-        isUserScrollingRef.current = false
-      }, 2000)
     }
-  }
+  }, [autoScroll])
 
   // ============================================================================
   // 写作逻辑
@@ -367,33 +401,28 @@ export default function WritePage() {
                   }`}
                   title={autoScroll ? "点击关闭自动滚动" : "点击开启自动滚动"}
                 >
-                  <Scroll className="w-4 h-4" />
-                  自动滚动
+                  {autoScroll ? "自动滚动中" : "已暂停滚动"}
                 </button>
+                {!autoScroll && (
+                  <button
+                    onClick={() => {
+                      isUserScrollingRef.current = false
+                      scrollToBottom()
+                    }}
+                    className="flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-sm transition-colors"
+                  >
+                    滚到底部
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* 内容显示区 */}
-            <div
-              ref={contentRef}
-              onScroll={handleScroll}
-              className="max-h-96 overflow-y-auto scrollbar-thin p-4 bg-slate-900/50 rounded-lg border border-slate-700/50"
-            >
+            {/* 内容显示区 - 全页面滚动，无固定高度 */}
+            <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
               <pre className="whitespace-pre-wrap text-slate-200 font-sans leading-relaxed">
                 {content}
               </pre>
             </div>
-
-            {/* 滚动到底部按钮 */}
-            {!autoScroll && (
-              <button
-                onClick={scrollToBottom}
-                className="mt-4 flex items-center justify-center gap-2 w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
-              >
-                <ArrowDown className="w-4 h-4" />
-                滚动到底部
-              </button>
-            )}
           </div>
         )}
       </div>
