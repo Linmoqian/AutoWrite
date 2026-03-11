@@ -22,39 +22,6 @@ interface WriteRequest {
   model?: string
 }
 
-interface SSEChunk {
-  thinking?: string
-  content?: string
-  done?: boolean
-  error?: string
-}
-
-// ============================================================================
-// 类型定义
-// ============================================================================
-
-interface OllamaModel {
-  name: string
-  size: number
-  digest: string
-  modifiedAt: string
-}
-
-interface WriteRequest {
-  prompt: string
-  system?: string
-  novel_id: string
-  chapter_num: number
-  model?: string
-}
-
-interface SSEChunk {
-  thinking?: string
-  content?: string
-  done?: boolean
-  error?: string
-}
-
 // ============================================================================
 // 主组件
 // ============================================================================
@@ -188,26 +155,34 @@ export default function WritePage() {
         const lines = buffer.split("\n")
         buffer = lines.pop() || ""
 
+        let currentEventType: "thinking" | "content" | "done" | "error" | null = null
+
         for (const line of lines) {
+          // 追踪事件类型
+          if (line.startsWith("event:")) {
+            const eventType = line.slice(6).trim()
+            if (eventType === "thinking" || eventType === "content" || eventType === "done" || eventType === "error") {
+              currentEventType = eventType
+            }
+            continue
+          }
+
           if (line.startsWith("data: ")) {
             try {
-              const data: SSEChunk = JSON.parse(line.slice(6))
+              const data = JSON.parse(line.slice(6))
 
-              if (data.error) {
-                setContent((prev) => prev + `\n[错误: ${data.error}]`)
+              if (data.error || currentEventType === "error") {
+                setContent((prev) => prev + `\n[错误: ${data.error || data.content}]`)
                 setIsWriting(false)
                 return
               }
 
-              if (data.thinking) {
-                setThinking((prev) => prev + data.thinking)
-              }
-
-              if (data.content) {
+              // 根据事件类型分发内容
+              if (currentEventType === "thinking" && data.content) {
+                setThinking((prev) => prev + data.content)
+              } else if (currentEventType === "content" && data.content) {
                 setContent((prev) => prev + data.content)
-              }
-
-              if (data.done) {
+              } else if (currentEventType === "done" || data.done) {
                 setIsWriting(false)
                 return
               }
