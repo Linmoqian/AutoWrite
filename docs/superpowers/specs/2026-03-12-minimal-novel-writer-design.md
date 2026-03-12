@@ -15,7 +15,7 @@
 
 ```
 novel/
-├── write.py           # 唯一脚本（~300行）
+├── write.py           # 唯一脚本（~400行）
 ├── novel.md           # 元数据 + 世界观 + 角色
 ├── outline.md         # 章节大纲
 ├── context.md         # 运行时上下文（自动维护）
@@ -128,21 +128,51 @@ python write.py chapter [编号]           # 写指定章节
 python write.py run                      # 一键跑完全流程
 ```
 
+## 配置管理
+
+配置通过环境变量管理，无需配置文件：
+
+```bash
+OLLAMA_HOST=http://localhost:11434  # Ollama 服务地址
+OLLAMA_MODEL=deepseek-r1:7b         # 默认模型
+OLLAMA_TIMEOUT=300                  # 超时时间（秒）
+```
+
+也可在 `novel.md` 的 YAML front matter 中覆盖模型配置。
+
 ## 核心代码结构
 
 ```python
 # write.py 简化结构
 
+import os
+import sys
+import time
+import shutil
 import ollama
 import yaml
 from pathlib import Path
 
+# ========== 配置 ==========
+MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:7b")
+TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "300"))
+
 # ========== Ollama 调用 ==========
-def generate(prompt: str, context: str = "") -> str:
-    """调用 Ollama 生成文本"""
+def generate(prompt: str, context: str = "", retries: int = 3) -> str:
+    """调用 Ollama 生成文本，带重试"""
     full_prompt = f"{context}\n\n{prompt}" if context else prompt
-    response = ollama.chat(model=MODEL, messages=[{"role": "user", "content": full_prompt}])
-    return response["message"]["content"]
+    for attempt in range(retries):
+        try:
+            response = ollama.chat(
+                model=MODEL,
+                messages=[{"role": "user", "content": full_prompt}],
+                options={"num_ctx": 4096}
+            )
+            return response["message"]["content"]
+        except Exception as e:
+            if attempt == retries - 1:
+                raise RuntimeError(f"Ollama 调用失败: {e}")
+            time.sleep(2 ** attempt)  # 指数退避
 
 # ========== 文件操作 ==========
 def read_novel() -> dict: ...
@@ -248,6 +278,40 @@ def update_context(chapter_num: int, new_content: str):
 **关键约束**：
 - 上下文总长度控制在 ~2000 字以内
 - 最近5章摘要滚动更新
+- 上下文文件保持 Markdown 格式，便于调试查看
+
+## 错误处理
+
+### Ollama 调用失败
+
+核心代码中的 `generate()` 函数已包含重试机制（见上文），关键参数：
+- **重试次数**：3 次
+- **退避策略**：指数退避（2^attempt 秒）
+- **上下文窗口**：4096 tokens
+
+### 文件操作
+
+- **原子写入**：先写临时文件，再 rename
+- **写入前备份**：生成 `.bak` 文件
+
+```python
+def write_file(path: Path, content: str):
+    """原子写入文件"""
+    backup = path.with_suffix(".bak")
+    if path.exists():
+        shutil.copy(path, backup)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.rename(path)
+```
+
+### AI 输出校验
+
+| 场景 | 处理方式 |
+|------|----------|
+| 章节字数偏差 > 20% | 警告但接受，记录日志 |
+| 摘要生成失败 | 使用原文前 200 字作为摘要 |
+| 解析错误 | 保留原始输出，跳过结构化提取 |
 
 ## 提示词模板
 
@@ -337,17 +401,17 @@ CHAPTER_PROMPT = """
 | 语言 | Python 3.10+ | 类型提示、pathlib |
 | LLM | Ollama | 本地运行，`ollama` SDK |
 | 存储 | Markdown + YAML | 人类可读，git 友好 |
-| 依赖 | 仅 `ollama` | 最小化依赖 |
+| 依赖 | `ollama`, `pyyaml` | 最小化依赖（pip install ollama pyyaml） |
 
 ## 与现有系统对比
 
 | 维度 | 现有系统 | 新系统 |
 |------|----------|--------|
-| 代码量 | ~2000行 | ~300行 |
+| 代码量 | ~2000行 | ~400行 |
 | 存储格式 | JSON | Markdown |
 | 记忆系统 | 三层架构 | 单文件摘要 |
 | 模块数 | 10+ | 1 |
-| 依赖 | Playwright/FastAPI/... | 仅 ollama |
+| 依赖 | Playwright/FastAPI/... | ollama + pyyaml |
 
 ## 不在范围内
 
