@@ -4,11 +4,13 @@ sys.path.insert(0, "novel")
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from write import (
     parse_yaml_front_matter, build_yaml_front_matter,
     write_file, read_file, write_novel, read_novel,
     write_outline, read_outline, get_chapter_outline,
-    write_context, read_context, read_context_dict
+    write_context, read_context, read_context_dict,
+    generate, WORLD_PROMPT, CHARACTER_PROMPT, OUTLINE_PROMPT, CHAPTER_PROMPT
 )
 
 
@@ -174,3 +176,72 @@ class TestContextFileOps:
         text = read_context()
         assert "第4章摘要" in text
         assert "林凡：筑基" in text
+
+
+class TestOllamaGenerate:
+    """测试 Ollama 生成函数"""
+
+    @patch("ollama.chat")
+    def test_generate_simple(self, mock_chat):
+        """简单生成"""
+        mock_chat.return_value = {"message": {"content": "生成的文本"}}
+        result = generate("测试提示词")
+        assert result == "生成的文本"
+
+    @patch("ollama.chat")
+    def test_generate_with_context(self, mock_chat):
+        """带上下文生成"""
+        mock_chat.return_value = {"message": {"content": "结果"}}
+        result = generate("提示词", context="背景信息")
+        assert result == "结果"
+        call_args = mock_chat.call_args
+        assert "背景信息" in call_args[1]["messages"][0]["content"]
+
+    @patch("ollama.chat")
+    def test_generate_retry_on_failure(self, mock_chat):
+        """失败时重试"""
+        mock_chat.side_effect = [
+            Exception("网络错误"),
+            Exception("超时"),
+            {"message": {"content": "成功"}}
+        ]
+        result = generate("测试", retries=3)
+        assert result == "成功"
+        assert mock_chat.call_count == 3
+
+    @patch("ollama.chat")
+    def test_generate_fail_after_retries(self, mock_chat):
+        """重试后仍失败抛出异常"""
+        mock_chat.side_effect = Exception("持续失败")
+        with pytest.raises(RuntimeError, match="Ollama 调用失败"):
+            generate("测试", retries=2)
+
+
+class TestPromptTemplates:
+    """测试提示词模板"""
+
+    def test_world_prompt(self):
+        """世界观提示词"""
+        prompt = WORLD_PROMPT.format(genre="玄幻", theme="修仙")
+        assert "玄幻" in prompt
+        assert "修仙" in prompt
+
+    def test_character_prompt(self):
+        """角色提示词"""
+        prompt = CHARACTER_PROMPT.format(world="测试世界观")
+        assert "测试世界观" in prompt
+        assert "主角" in prompt
+
+    def test_outline_prompt(self):
+        """大纲提示词"""
+        prompt = OUTLINE_PROMPT.format(world="世界观", characters="角色", total_chapters=100)
+        assert "100章" in prompt
+
+    def test_chapter_prompt(self):
+        """章节提示词"""
+        prompt = CHAPTER_PROMPT.format(
+            context="上下文", num=1, title="测试章节",
+            outline_detail="大纲详情", words=3000, style="玄幻"
+        )
+        assert "第1章" in prompt
+        assert "3000字" in prompt

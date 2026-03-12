@@ -1,9 +1,93 @@
 """YAML front matter 解析与构建模块"""
 
+import os
+import time
 import shutil
 import yaml
 from pathlib import Path
 from typing import Tuple, Optional
+
+import ollama
+
+# 配置
+MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:7b")
+TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "300"))
+
+
+def generate(prompt: str, context: str = "", retries: int = 3) -> str:
+    """调用 Ollama 生成文本，带重试"""
+    full_prompt = f"{context}\n\n{prompt}" if context else prompt
+
+    for attempt in range(retries):
+        try:
+            response = ollama.chat(
+                model=MODEL,
+                messages=[{"role": "user", "content": full_prompt}],
+                options={"num_ctx": 4096}
+            )
+            return response["message"]["content"]
+        except Exception as e:
+            if attempt == retries - 1:
+                raise RuntimeError(f"Ollama 调用失败: {e}")
+            time.sleep(2 ** attempt)  # 指数退避
+
+
+# ========== 提示词模板 ==========
+
+WORLD_PROMPT = """请为一部{genre}类型的小说创建世界观设定。
+
+主题：{theme}
+要求：
+1. 修炼/能力体系（3-5个等级）
+2. 世界背景（势力分布、历史背景）
+3. 特色元素（2-3个独特的设定）
+4. 字数：500-800字
+
+直接输出世界观内容，不要有标题和额外说明。"""
+
+CHARACTER_PROMPT = """基于以下世界观，创建小说角色：
+
+{world}
+
+要求创建：
+1. 主角（1人）：要有独特的金手指或优势
+2. 重要配角（2-3人）：与主角有明确关系
+
+每个角色包含：姓名、身份、性格、与主角关系、目标
+
+直接输出角色信息，用列表格式。"""
+
+OUTLINE_PROMPT = """基于以下设定，生成小说大纲：
+
+## 世界观
+{world}
+
+## 角色
+{characters}
+
+## 要求
+- 总章数：{total_chapters}章
+- 分卷规划（每卷20-30章）
+- 每章一行，格式：章节号. 标题
+- 主线清晰，有起承转合
+
+直接输出大纲，按卷分组。"""
+
+CHAPTER_PROMPT = """{context}
+
+## 本章任务
+第{num}章：{title}
+
+## 大纲描述
+{outline_detail}
+
+## 要求
+- 字数：{words}字
+- 风格：{style}
+- 场景描写细腻，对话生动
+- 章末留悬念或转折
+
+直接输出章节正文内容。"""
 
 
 NOVEL_FILE = Path("novel.md")
