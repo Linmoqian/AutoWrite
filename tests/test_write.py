@@ -4,7 +4,12 @@ sys.path.insert(0, "novel")
 
 import pytest
 from pathlib import Path
-from write import parse_yaml_front_matter, build_yaml_front_matter, write_file, read_file, write_novel, read_novel
+from write import (
+    parse_yaml_front_matter, build_yaml_front_matter,
+    write_file, read_file, write_novel, read_novel,
+    write_outline, read_outline, get_chapter_outline,
+    write_context, read_context, read_context_dict
+)
 
 
 class TestYAMLParsing:
@@ -90,3 +95,82 @@ class TestNovelFileOps:
 
         # 检查备份文件存在
         assert Path("novel.md.bak").exists()
+
+
+class TestOutlineFileOps:
+    """测试大纲文件操作"""
+
+    def test_write_and_read_outline(self, tmp_path):
+        """写入并读取 outline.md"""
+        os.chdir(tmp_path)
+
+        outline = [
+            {"volume": "第一卷", "chapters": [
+                {"num": 1, "title": "穿越"},
+                {"num": 2, "title": "拜师"}
+            ]},
+            {"volume": "第二卷", "chapters": [
+                {"num": 21, "title": "大比"}
+            ]}
+        ]
+
+        write_outline(outline)
+        result = read_outline()
+
+        assert len(result) == 2
+        assert result[0]["volume"] == "第一卷"
+        assert len(result[0]["chapters"]) == 2
+        assert result[0]["chapters"][0]["title"] == "穿越"
+
+    def test_get_chapter_outline(self, tmp_path):
+        """获取指定章节的大纲"""
+        os.chdir(tmp_path)
+
+        outline = [
+            {"volume": "第一卷", "chapters": [
+                {"num": 1, "title": "穿越"},
+                {"num": 2, "title": "拜师"}
+            ]}
+        ]
+        write_outline(outline)
+
+        assert get_chapter_outline(1) == "穿越"
+        assert get_chapter_outline(2) == "拜师"
+        assert get_chapter_outline(999) is None
+
+
+class TestContextFileOps:
+    """测试上下文文件操作"""
+
+    def test_write_and_read_context(self, tmp_path):
+        """写入并读取 context.md"""
+        os.chdir(tmp_path)
+
+        context = {
+            "current_chapter": 5,
+            "recent_summaries": ["第1章摘要", "第2章摘要"],
+            "character_states": ["林凡：筑基期"],
+            "pending_plots": ["神秘传承的来历"]
+        }
+
+        write_context(context)
+        result = read_context_dict()
+
+        assert result["current_chapter"] == 5
+        assert len(result["recent_summaries"]) == 2
+
+    def test_read_context_as_text(self, tmp_path):
+        """读取 context.md 作为文本（用于 Prompt）"""
+        os.chdir(tmp_path)
+
+        context = {
+            "current_chapter": 5,
+            "recent_summaries": ["第4章摘要"],
+            "character_states": ["林凡：筑基"],
+            "pending_plots": ["伏笔1"]
+        }
+        write_context(context)
+
+        text = read_context()
+        assert "第4章摘要" in text
+        assert "林凡：筑基" in text
