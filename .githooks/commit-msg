@@ -1,0 +1,21 @@
+#!/bin/bash
+# commitlint: 强制 Conventional Commits 规范
+
+commit_msg=$(cat "$1")
+pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,50}$"
+
+if [[ ! "$commit_msg" =~ $pattern ]]; then
+    echo "错误: 提交信息不符合 Conventional Commits 规范"
+    echo ""
+    echo "格式: <type>(<scope>): <description>"
+    echo ""
+    echo "类型: feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert"
+    echo "范围: 可选，如 novel-lite, api, cli"
+    echo "描述: 简洁中文，不超过50字"
+    echo ""
+    echo "示例:"
+    echo "  feat(novel-lite): 添加章节生成功能"
+    echo "  fix: 修复大纲解析错误"
+    echo "  docs: 更新使用说明"
+    exit 1
+fi
