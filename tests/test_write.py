@@ -1,8 +1,10 @@
+import os
 import sys
 sys.path.insert(0, "novel")
 
 import pytest
-from write import parse_yaml_front_matter, build_yaml_front_matter
+from pathlib import Path
+from write import parse_yaml_front_matter, build_yaml_front_matter, write_file, read_file, write_novel, read_novel
 
 
 class TestYAMLParsing:
@@ -44,3 +46,47 @@ title: 测试
         assert "count: 10" in result
         assert result.startswith("---\n")
         assert result.endswith("\n---\n")
+
+
+class TestNovelFileOps:
+    """测试小说文件操作"""
+
+    def test_write_and_read_novel(self, tmp_path):
+        """写入并读取 novel.md"""
+        os.chdir(tmp_path)
+
+        data = {
+            "title": "测试小说",
+            "genre": "xuanhuan",
+            "theme": "修仙",
+            "target_chapters": 100,
+            "words_per_chapter": 3000,
+            "model": "deepseek-r1:7b",
+            "world": "测试世界观",
+            "characters": "测试角色"
+        }
+
+        write_novel(data)
+        result = read_novel()
+
+        assert result["title"] == "测试小说"
+        assert result["genre"] == "xuanhuan"
+        assert result["world"] == "测试世界观"
+
+    def test_read_novel_not_exist(self, tmp_path):
+        """读取不存在的文件返回空字典"""
+        os.chdir(tmp_path)
+        result = read_novel()
+        assert result == {}
+
+    def test_write_creates_backup(self, tmp_path):
+        """写入时创建备份"""
+        os.chdir(tmp_path)
+
+        # 第一次写入
+        write_novel({"title": "第一版"})
+        # 第二次写入
+        write_novel({"title": "第二版"})
+
+        # 检查备份文件存在
+        assert Path("novel.md.bak").exists()
