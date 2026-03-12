@@ -391,3 +391,51 @@ def parse_outline_text(text: str) -> list:
     if current_volume:
         outline.append(current_volume)
     return outline
+
+
+def gen_chapter(chapter_num: int) -> str:
+    """生成章节"""
+    novel = read_novel()
+    context = read_context()
+    chapter_title = get_chapter_outline(chapter_num)
+    if not chapter_title:
+        raise ValueError(f"未找到第 {chapter_num} 章的大纲")
+    prompt = CHAPTER_PROMPT.format(
+        context=context,
+        num=chapter_num,
+        title=chapter_title,
+        outline_detail=f"第{chapter_num}章：{chapter_title}",
+        words=novel.get("words_per_chapter", 3000),
+        style=f"{novel.get('genre', '玄幻')}类型，{novel.get('theme', '')}主题"
+    )
+    content = generate(prompt)
+    write_chapter_file(chapter_num, chapter_title, content)
+    update_context(chapter_num, content)
+    return content
+
+
+def write_chapter_file(num: int, title: str, content: str) -> None:
+    """写入章节文件"""
+    CHAPTERS_DIR.mkdir(exist_ok=True)
+    meta = {
+        "chapter": num, "title": title,
+        "words": len(content),
+        "created": datetime.now().strftime("%Y-%m-%d")
+    }
+    file_content = build_yaml_front_matter(meta) + f"\n# 第{num}章 {title}\n\n{content}"
+    filename = f"{num:03d}-{title[:10]}.md"
+    write_file(CHAPTERS_DIR / filename, file_content)
+
+
+def update_context(chapter_num: int, new_content: str) -> None:
+    """更新上下文"""
+    context = read_context_dict()
+    try:
+        summary = generate(f"请用200字概括以下章节的剧情：\n{new_content[:2000]}")
+    except Exception:
+        summary = new_content[:200]
+    summaries = context.get("recent_summaries", [])
+    summaries.append(f"第{chapter_num}章：{summary}")
+    context["recent_summaries"] = summaries[-5:]
+    context["current_chapter"] = chapter_num
+    write_context(context)

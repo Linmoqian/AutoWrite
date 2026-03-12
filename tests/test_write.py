@@ -11,7 +11,8 @@ from write import (
     write_outline, read_outline, get_chapter_outline,
     write_context, read_context, read_context_dict,
     generate, WORLD_PROMPT, CHARACTER_PROMPT, OUTLINE_PROMPT, CHAPTER_PROMPT,
-    gen_world, gen_character, gen_outline, parse_outline_text
+    gen_world, gen_character, gen_outline, parse_outline_text,
+    CHAPTERS_DIR, gen_chapter
 )
 
 
@@ -287,3 +288,50 @@ class TestPromptTemplates:
         )
         assert "第1章" in prompt
         assert "3000字" in prompt
+
+
+class TestChapterGeneration:
+    """测试章节生成"""
+
+    @patch("write.generate")
+    def test_gen_chapter(self, mock_gen, tmp_path):
+        """生成章节"""
+        os.chdir(tmp_path)
+        write_novel({
+            "title": "测试", "genre": "玄幻", "theme": "修仙",
+            "words_per_chapter": 3000,
+            "world": "测试世界观", "characters": "测试角色"
+        })
+        write_outline([{"volume": "第一卷", "chapters": [{"num": 1, "title": "穿越"}]}])
+        mock_gen.return_value = "第一章正文内容..." * 500
+        gen_chapter(1)
+        assert (CHAPTERS_DIR / "001-穿越.md").exists()
+
+    @patch("write.generate")
+    def test_update_context_after_chapter(self, mock_gen, tmp_path):
+        """写章节后更新上下文"""
+        os.chdir(tmp_path)
+        mock_gen.side_effect = ["章节正文" * 100, "本章摘要：主角穿越"]
+        write_novel({"title": "测试", "genre": "玄幻"})
+        write_outline([{"volume": "第一卷", "chapters": [{"num": 1, "title": "测试"}]}])
+        write_context({"current_chapter": 0, "recent_summaries": []})
+        gen_chapter(1)
+        ctx = read_context_dict()
+        assert ctx["current_chapter"] == 1
+        assert len(ctx["recent_summaries"]) == 1
+
+    @patch("write.generate")
+    def test_context_keeps_only_5_summaries(self, mock_gen, tmp_path):
+        """上下文只保留最近5章摘要"""
+        os.chdir(tmp_path)
+        write_context({
+            "current_chapter": 5,
+            "recent_summaries": ["摘要1", "摘要2", "摘要3", "摘要4", "摘要5"]
+        })
+        mock_gen.side_effect = ["章节内容", "新摘要"]
+        write_novel({"title": "测试"})
+        write_outline([{"volume": "第一卷", "chapters": [{"num": 6, "title": "测试"}]}])
+        gen_chapter(6)
+        ctx = read_context_dict()
+        assert len(ctx["recent_summaries"]) == 5
+        assert "摘要1" not in ctx["recent_summaries"]
