@@ -4,6 +4,14 @@
 commit_msg=$(cat "$1")
 pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,50}$"
 
+# 检查 AI 生成内容
+if echo "$commit_msg" | grep -qi "co-authored-by.*claude\|co-authored-by.*anthropic\|generated.*claude\|generated.*anthropic\|🤖"; then
+    echo "错误: 提交信息包含 AI 生成标记"
+    echo ""
+    echo "禁止内容: Co-Authored-By: Claude, Generated with Claude Code, 🤖 等"
+    exit 1
+fi
+
 if [[ ! "$commit_msg" =~ $pattern ]]; then
     echo "错误: 提交信息不符合 Conventional Commits 规范"
     echo ""
