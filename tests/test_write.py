@@ -1,5 +1,7 @@
 import os
 import sys
+import subprocess
+import shutil
 sys.path.insert(0, "novel")
 
 import pytest
@@ -335,3 +337,31 @@ class TestChapterGeneration:
         ctx = read_context_dict()
         assert len(ctx["recent_summaries"]) == 5
         assert "摘要1" not in ctx["recent_summaries"]
+
+
+class TestCLI:
+    """测试命令行接口"""
+
+    def test_cli_help(self):
+        """帮助信息"""
+        # 获取项目根目录的 novel 文件夹路径
+        novel_dir = Path(__file__).parent.parent / "novel"
+        result = subprocess.run(
+            ["python", "write.py", "--help"],
+            cwd=novel_dir,
+            capture_output=True,
+            text=True
+        )
+        assert "new" in result.stdout or "usage" in result.stdout.lower()
+
+    def test_cli_status_no_novel(self, tmp_path):
+        """无小说时查看状态"""
+        novel_dir = Path(__file__).parent.parent / "novel"
+        shutil.copy(novel_dir / "write.py", tmp_path / "write.py")
+        result = subprocess.run(
+            ["python", "write.py", "status"],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True
+        )
+        assert "未找到" in result.stdout or "请先运行" in result.stdout

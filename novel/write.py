@@ -439,3 +439,132 @@ def update_context(chapter_num: int, new_content: str) -> None:
     context["recent_summaries"] = summaries[-5:]
     context["current_chapter"] = chapter_num
     write_context(context)
+
+
+# ========== CLI 命令入口 ==========
+
+import argparse
+
+
+def cmd_new(args):
+    """创建新小说"""
+    from datetime import datetime
+    data = {
+        "title": args.title,
+        "genre": args.genre or "xuanhuan",
+        "theme": args.theme or "修仙",
+        "target_chapters": args.chapters or 100,
+        "words_per_chapter": 3000,
+        "model": MODEL,
+        "created": datetime.now().strftime("%Y-%m-%d")
+    }
+    write_novel(data)
+    write_context({"current_chapter": 0, "recent_summaries": []})
+    print(f"✓ 创建小说: {args.title}")
+
+
+def cmd_world(args):
+    """生成世界观"""
+    print("正在生成世界观...")
+    world = gen_world()
+    print(f"✓ 世界观生成完成 ({len(world)}字)")
+
+
+def cmd_character(args):
+    """生成角色"""
+    print("正在生成角色...")
+    characters = gen_character()
+    print(f"✓ 角色生成完成 ({len(characters)}字)")
+
+
+def cmd_outline(args):
+    """生成大纲"""
+    print("正在生成大纲...")
+    gen_outline()
+    print("✓ 大纲生成完成")
+
+
+def cmd_chapter(args):
+    """生成章节"""
+    print(f"正在生成第 {args.num} 章...")
+    content = gen_chapter(args.num)
+    print(f"✓ 第 {args.num} 章生成完成 ({len(content)}字)")
+
+
+def cmd_next(args):
+    """生成下一章"""
+    context = read_context_dict()
+    next_num = context.get("current_chapter", 0) + 1
+    print(f"正在生成第 {next_num} 章...")
+    content = gen_chapter(next_num)
+    print(f"✓ 第 {next_num} 章生成完成 ({len(content)}字)")
+
+
+def cmd_status(args):
+    """查看状态"""
+    novel = read_novel()
+    if not novel:
+        print("未找到小说，请先运行: python write.py new")
+        return
+    context = read_context_dict()
+    print(f"📖 {novel.get('title', '未命名')}")
+    print(f"   类型: {novel.get('genre', '-')} | 主题: {novel.get('theme', '-')}")
+    print(f"   进度: {context.get('current_chapter', 0)} / {novel.get('target_chapters', '?')} 章")
+
+
+def cmd_run(args):
+    """一键全流程"""
+    print("=== 开始完整创作流程 ===")
+    print("\n[1/5] 生成世界观...")
+    gen_world()
+    print("\n[2/5] 生成角色...")
+    gen_character()
+    print("\n[3/5] 生成大纲...")
+    gen_outline()
+    print("\n[4/5] 生成第一章...")
+    gen_chapter(1)
+    print("\n[5/5] 完成！")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="极简本地小说创作系统")
+    subparsers = parser.add_subparsers(dest="command", help="命令")
+
+    p_new = subparsers.add_parser("new", help="创建新小说")
+    p_new.add_argument("title", help="小说标题")
+    p_new.add_argument("--genre", "-g", help="类型")
+    p_new.add_argument("--theme", "-t", help="主题")
+    p_new.add_argument("--chapters", "-c", type=int, help="目标章节数")
+    p_new.set_defaults(func=cmd_new)
+
+    p_world = subparsers.add_parser("world", help="生成世界观")
+    p_world.set_defaults(func=cmd_world)
+
+    p_char = subparsers.add_parser("character", help="生成角色")
+    p_char.set_defaults(func=cmd_character)
+
+    p_outline = subparsers.add_parser("outline", help="生成大纲")
+    p_outline.set_defaults(func=cmd_outline)
+
+    p_chapter = subparsers.add_parser("chapter", help="生成指定章节")
+    p_chapter.add_argument("num", type=int, help="章节号")
+    p_chapter.set_defaults(func=cmd_chapter)
+
+    p_next = subparsers.add_parser("next", help="生成下一章")
+    p_next.set_defaults(func=cmd_next)
+
+    p_status = subparsers.add_parser("status", help="查看状态")
+    p_status.set_defaults(func=cmd_status)
+
+    p_run = subparsers.add_parser("run", help="一键全流程")
+    p_run.set_defaults(func=cmd_run)
+
+    args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
