@@ -265,9 +265,9 @@ CHAPTERS_DIR = Path("chapters")
 def write_file(path: Path, content: str) -> None:
     """原子写入文件，带备份"""
     if path.exists():
-        backup = path.with_suffix(path.suffix + ".bak")
+        backup = Path(str(path) + ".bak")
         shutil.copy(path, backup)
-    tmp = path.with_suffix(".tmp")
+    tmp = Path(str(path) + ".tmp")
     tmp.write_text(content, encoding="utf-8")
     tmp.rename(path)
 
@@ -1043,6 +1043,9 @@ git commit -m "feat(novel): 实现世界观/角色/大纲生成流程"
 
 ```python
 # 添加到 tests/test_write.py
+from write import CHAPTERS_DIR, gen_chapter, read_context_dict
+
+
 class TestChapterGeneration:
     """测试章节生成"""
 
@@ -1123,10 +1126,13 @@ pytest tests/test_write.py::TestChapterGeneration -v
 ```
 Expected: FAIL
 
-- [ ] **Step 3: 实现章节生成函数**
+- [ ] **Step 3a: 实现 gen_chapter 和 write_chapter_file**
 
 ```python
 # 添加到 novel/write.py
+from datetime import datetime
+
+
 def gen_chapter(chapter_num: int) -> str:
     """生成章节"""
     novel = read_novel()
@@ -1167,8 +1173,12 @@ def write_chapter_file(num: int, title: str, content: str) -> None:
     filename = f"{num:03d}-{title[:10]}.md"  # 限制文件名长度
 
     write_file(CHAPTERS_DIR / filename, file_content)
+```
 
+- [ ] **Step 3b: 实现 update_context**
 
+```python
+# 添加到 novel/write.py
 def update_context(chapter_num: int, new_content: str) -> None:
     """更新上下文"""
     context = read_context_dict()
@@ -1219,6 +1229,7 @@ git commit -m "feat(novel): 实现章节生成与上下文更新"
 ```python
 # 添加到 tests/test_write.py
 import subprocess
+import shutil
 
 
 class TestCLI:
@@ -1226,23 +1237,24 @@ class TestCLI:
 
     def test_cli_new(self, tmp_path):
         """创建新小说"""
-        os.chdir(tmp_path)
+        # 复制脚本到临时目录
+        shutil.copy(Path("novel/write.py"), tmp_path / "write.py")
 
         result = subprocess.run(
             ["python", "write.py", "new", "测试小说", "--genre", "玄幻", "--theme", "修仙"],
-            cwd="novel",
+            cwd=tmp_path,
             capture_output=True,
             text=True
         )
 
         # 检查文件创建
-        assert Path("novel/novel.md").exists()
+        assert (tmp_path / "novel.md").exists()
 
     def test_cli_help(self):
         """帮助信息"""
         result = subprocess.run(
             ["python", "write.py", "--help"],
-            cwd="novel",
+            cwd=Path("novel"),
             capture_output=True,
             text=True
         )
@@ -1273,7 +1285,7 @@ pytest tests/test_write.py::TestCLI -v
 ```
 Expected: FAIL
 
-- [ ] **Step 3: 实现 CLI 入口**
+- [ ] **Step 3a: 实现 cmd_* 命令函数**
 
 ```python
 # 添加到 novel/write.py 末尾
@@ -1292,12 +1304,8 @@ def cmd_new(args):
         "created": datetime.now().strftime("%Y-%m-%d")
     }
     write_novel(data)
-
-    # 初始化上下文
     write_context({"current_chapter": 0, "recent_summaries": []})
-
     print(f"✓ 创建小说: {args.title}")
-    print(f"  类型: {data['genre']}, 主题: {data['theme']}")
 
 
 def cmd_world(args):
@@ -1317,8 +1325,8 @@ def cmd_character(args):
 def cmd_outline(args):
     """生成大纲"""
     print("正在生成大纲...")
-    outline = gen_outline()
-    print(f"✓ 大纲生成完成")
+    gen_outline()
+    print("✓ 大纲生成完成")
 
 
 def cmd_chapter(args):
@@ -1351,29 +1359,26 @@ def cmd_status(args):
     print(f"📖 {novel.get('title', '未命名')}")
     print(f"   类型: {novel.get('genre', '-')} | 主题: {novel.get('theme', '-')}")
     print(f"   进度: {context.get('current_chapter', 0)} / {novel.get('target_chapters', '?')} 章")
-    print(f"   大纲卷数: {len(outline)}")
 
 
 def cmd_run(args):
     """一键全流程"""
     print("=== 开始完整创作流程 ===")
-
     print("\n[1/5] 生成世界观...")
     gen_world()
-
     print("\n[2/5] 生成角色...")
     gen_character()
-
     print("\n[3/5] 生成大纲...")
     gen_outline()
-
     print("\n[4/5] 生成第一章...")
     gen_chapter(1)
-
     print("\n[5/5] 完成！")
-    print("运行 'python write.py next' 继续生成后续章节")
+```
 
+- [ ] **Step 3b: 实现 main() 和 argparse 配置**
 
+```python
+# 继续添加到 novel/write.py
 def main():
     parser = argparse.ArgumentParser(description="极简本地小说创作系统")
     subparsers = parser.add_subparsers(dest="command", help="命令")
@@ -1386,41 +1391,33 @@ def main():
     p_new.add_argument("--chapters", "-c", type=int, help="目标章节数")
     p_new.set_defaults(func=cmd_new)
 
-    # world
+    # world / character / outline / chapter / next / status / run
     p_world = subparsers.add_parser("world", help="生成世界观")
     p_world.set_defaults(func=cmd_world)
 
-    # character
     p_char = subparsers.add_parser("character", help="生成角色")
     p_char.set_defaults(func=cmd_character)
 
-    # outline
     p_outline = subparsers.add_parser("outline", help="生成大纲")
     p_outline.set_defaults(func=cmd_outline)
 
-    # chapter
     p_chapter = subparsers.add_parser("chapter", help="生成指定章节")
     p_chapter.add_argument("num", type=int, help="章节号")
     p_chapter.set_defaults(func=cmd_chapter)
 
-    # next
     p_next = subparsers.add_parser("next", help="生成下一章")
     p_next.set_defaults(func=cmd_next)
 
-    # status
     p_status = subparsers.add_parser("status", help="查看状态")
     p_status.set_defaults(func=cmd_status)
 
-    # run
     p_run = subparsers.add_parser("run", help="一键全流程")
     p_run.set_defaults(func=cmd_run)
 
     args = parser.parse_args()
-
     if args.command is None:
         parser.print_help()
         return
-
     args.func(args)
 
 
