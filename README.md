@@ -1,266 +1,59 @@
-# AI 小说自动化创作系统
+# 极简本地小说创作系统
 
-基于 Ollama 本地大模型的 24 小时自动化小说创作和发布系统。
-
-## 功能特性
-
-- **本地大模型**: 使用 Ollama 部署 DeepSeek/Qwen 等模型，无需 API 费用
-- **多智能体创作**: 世界观 → 角色 → 大纲 → 章节，全流程自动化
-- **多类型支持**: 玄幻、都市、言情、科幻等多种小说类型
-- **自动发布**: 通过浏览器自动化发布到番茄小说平台
-- **定时调度**: 24 小时无人值守运行，定时生成和发布章节
-
-## 系统架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AI 小说自动化系统                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Ollama    │  │  创作管理器  │  │    番茄小说发布器    │  │
-│  │  本地推理    │→│ 多智能体协作 │→│   浏览器自动化      │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-│         ↑                                    ↓               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                    定时任务调度器                      │   │
-│  │              (APScheduler + 24h 守护进程)              │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 上下文记忆系统
-
-AI 小说创作系统采用三层存储架构来优化上下文记忆：
-
-- **索引层**: 轻量级元数据，常驻内存 (~1KB/小说)
-- **上下文层**: 压缩的 AI 生成上下文 (~2KB，压缩比 >75%)
-- **完整层**: 按章节分割的 JSON 文件存储
-
-详见 [记忆系统文档](docs/memory-system.md)。
+基于 Ollama 本地大模型的 AI 小说创作工具，单脚本 398 行。
 
 ## 快速开始
 
-### 1. 环境准备
-
-**安装 Ollama** (Mac):
 ```bash
-# 方法 1: Homebrew
-brew install ollama
+cd novel-lite
+pip install -r requirements-novel.txt
 
-# 方法 2: 官网下载
-# 访问 https://ollama.com 下载 macOS 安装包
+# 设置模型（查看可用: ollama list）
+export OLLAMA_MODEL=qwen3:8b
+
+# 创建新小说
+python write.py new "逆天剑尊" --genre xuanhuan --theme "逆天改命"
+
+# 一键全流程
+python write.py run
+
+# 生成下一章
+python write.py next
 ```
 
-**启动 Ollama 服务**:
-```bash
-ollama serve
-```
+## 命令
 
-**下载推荐模型**:
-```bash
-# DeepSeek 7B (推荐，中文能力强)
-ollama pull deepseek-r1:7b
+| 命令 | 说明 |
+|------|------|
+| `new` | 创建新小说 |
+| `world` | 生成世界观 |
+| `character` | 生成角色 |
+| `outline` | 生成大纲 |
+| `chapter N` | 生成第 N 章 |
+| `next` | 生成下一章 |
+| `status` | 查看状态 |
+| `run` | 一键全流程 |
 
-# 备选: Qwen 7B
-ollama pull qwen2.5:7b
-```
-
-### 2. 安装项目依赖
-
-```bash
-# 创建 conda 环境
-conda env create -f environment.yml
-conda activate auto_novel
-
-# 或使用 pip
-pip install -r requirements.txt
-
-# 安装 Playwright 浏览器
-playwright install chromium
-```
-
-### 3. 配置
-
-```bash
-# 复制配置文件
-cp .env.example .env
-
-# 编辑配置
-vim .env
-```
-
-### 4. 使用
-
-**创建新小说**:
-```bash
-python main.py create --title "我的修仙小说" --genre xuanhuan --theme 修仙 --chapters 100
-```
-
-**撰写章节**:
-```bash
-python main.py write --novel-id <小说ID>
-```
-
-**查看小说列表**:
-```bash
-python main.py list
-```
-
-**查看小说详情**:
-```bash
-python main.py show <小说ID> --show-outline
-```
-
-**登录番茄小说**:
-```bash
-python main.py login
-```
-
-**启动守护进程** (24h 自动化):
-```bash
-# 首先创建配置文件 data/novels.json
-python main.py daemon
-```
-
-## 配置说明
-
-### .env 文件
-
-```env
-# Ollama 配置
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=deepseek-r1:7b
-
-# 创作配置
-NOVEL_TYPE=xuanhuan
-CHAPTERS_PER_DAY=2
-WORDS_PER_CHAPTER=3000
-```
-
-### data/novels.json (守护进程配置)
-
-```json
-[
-  {
-    "novel_id": "abc12345",
-    "book_id": "番茄小说书籍ID",
-    "auto_publish": true,
-    "schedule": {
-      "hour": 10,
-      "minute": 0
-    }
-  }
-]
-```
-
-## 项目结构
+## 文件结构
 
 ```
-auto_novel/
-├── __init__.py
-├── config.py              # 配置管理
-├── cli.py                 # 命令行界面
-├── models/
-│   └── ollama_client.py   # Ollama 客户端
-├── agents/
-│   ├── prompts.py         # 提示词模板
-│   ├── novel_state.py     # 小说状态
-│   └── novel_manager.py   # 创作管理器
-├── memory/
-│   ├── base.py            # 数据类定义
-│   ├── index.py           # 索引层存储
-│   ├── compressor.py      # 上下文压缩器
-│   └── store.py           # 三层存储管理器
-├── publisher/
-│   ├── browser_manager.py # 浏览器管理
-│   └── fanqie_publisher.py# 番茄小说发布器
-└── scheduler/
-    ├── task_scheduler.py  # 任务调度器
-    └── novel_job.py       # 小说任务
-main.py                    # 主入口
-requirements.txt           # 依赖
-environment.yml            # Conda 环境
+novel-lite/
+├── write.py              # 核心脚本
+├── novel.md              # 小说设定
+├── outline.md            # 大纲
+├── context.md            # 上下文
+├── chapters/             # 章节目录
+└── requirements-novel.txt
 ```
 
-## 支持的小说类型
+## 环境变量
 
-| 类型 | 代码 | 核心元素 |
-|------|------|----------|
-| 玄幻 | xuanhuan | 修炼、灵气、境界、法宝、宗门 |
-| 都市 | dushi | 都市生活、职场、爱情、商战 |
-| 言情 | yanqing | 爱情、情感、缘分、成长 |
-| 科幻 | kehuan | 未来世界、科技、太空、人工智能 |
+| 变量 | 默认值 |
+|------|--------|
+| `OLLAMA_MODEL` | `deepseek-r1:7b` |
+| `OLLAMA_TIMEOUT` | `300` |
 
-## 注意事项
+## 设计文档
 
-1. **Ollama 内存需求**: 7B 模型约需 8GB 内存，M4 Mac 16GB 可流畅运行
-2. **番茄小说登录**: 首次使用需要手动扫码登录，Cookies 会自动保存
-3. **生成速度**: 每章 3000 字约需 5-10 分钟（取决于模型和硬件）
-4. **内容审核**: 生成的内容建议人工审核后再发布
-
-## 看板前端
-
-独立的 Next.js 看板应用，用于可视化管理小说创作进度。
-
-### 启动
-
-```bash
-# 1. 启动后端 API 服务器
-python run_api.py
-
-# 2. 启动前端开发服务器 (另一个终端)
-cd kanban
-npm install
-npm run dev
-```
-
-访问 http://localhost:3005 即可使用看板界面。
-
-### API 端点
-
-后端 API 运行在 http://localhost:8000，提供以下端点：
-
-| 端点 | 方法 | 描述 |
-|------|------|------|
-| `/api/novels` | GET | 获取小说列表 |
-| `/api/novels` | POST | 创建小说 |
-| `/api/novels/{id}` | GET | 获取小说详情 |
-| `/api/novels/{id}` | PATCH | 更新小说 |
-| `/api/novels/{id}` | DELETE | 删除小说 |
-| `/api/novels/{id}/chapters` | GET/POST | 章节 CRUD |
-| `/api/novels/{id}/characters` | GET/POST | 角色 CRUD |
-
-### 工作流状态
-
-看板支持 7 步工作流：
-1. **大纲** (outline): 生成故事大纲
-2. **大纲审核** (outline_review): 审核大纲
-3. **角色设计** (character_design): 设计主要角色
-4. **写作** (writing): AI 自动写作
-5. **AI 审核** (ai_review): 机器审核内容
-6. **审核定稿** (human_finalization): 人工审核并定稿
-7. **已发布** (published): 发布到平台
-
-## 开发
-
-**运行测试**:
-```bash
-pytest tests/ -v
-```
-
-**检查代码**:
-```bash
-ruff check auto_novel/
-```
-
-**前端开发**:
-```bash
-cd kanban
-npx tsc --noEmit  # 类型检查
-npm run lint      # 代码检查
-npm run build     # 生产构建
-```
-
-## License
-
-MIT
+- [设计文档](docs/superpowers/specs/2026-03-12-minimal-novel-writer-design.md)
+- [实现计划](docs/superpowers/plans/2026-03-12-minimal-novel-writer.md)
