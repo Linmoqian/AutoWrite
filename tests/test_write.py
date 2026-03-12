@@ -365,3 +365,31 @@ class TestCLI:
             text=True
         )
         assert "未找到" in result.stdout or "请先运行" in result.stdout
+
+
+@pytest.mark.integration
+class TestIntegration:
+    """集成测试（需要运行 Ollama）"""
+
+    @pytest.mark.skip(reason="需要真实 Ollama 环境")
+    def test_full_flow(self, tmp_path):
+        """完整流程测试"""
+        os.chdir(tmp_path)
+        # 创建小说
+        write_novel({"title": "集成测试", "genre": "xuanhuan", "theme": "测试"})
+        # 生成世界观
+        world = gen_world()
+        assert len(world) > 100
+        # 生成角色
+        characters = gen_character()
+        assert len(characters) > 50
+        # 生成大纲
+        gen_outline()
+        outline = read_outline()
+        assert len(outline) > 0
+        # 生成第一章
+        content = gen_chapter(1)
+        assert len(content) > 500
+        # 验证上下文
+        context = read_context_dict()
+        assert context["current_chapter"] == 1
