@@ -10,7 +10,8 @@ from write import (
     write_file, read_file, write_novel, read_novel,
     write_outline, read_outline, get_chapter_outline,
     write_context, read_context, read_context_dict,
-    generate, WORLD_PROMPT, CHARACTER_PROMPT, OUTLINE_PROMPT, CHAPTER_PROMPT
+    generate, WORLD_PROMPT, CHARACTER_PROMPT, OUTLINE_PROMPT, CHAPTER_PROMPT,
+    gen_world, gen_character, gen_outline, parse_outline_text
 )
 
 
@@ -215,6 +216,47 @@ class TestOllamaGenerate:
         mock_chat.side_effect = Exception("持续失败")
         with pytest.raises(RuntimeError, match="Ollama 调用失败"):
             generate("测试", retries=2)
+
+
+class TestGenerationFlow:
+    """测试生成流程"""
+
+    @patch("write.generate")
+    def test_gen_world(self, mock_gen, tmp_path):
+        """生成世界观"""
+        os.chdir(tmp_path)
+        write_novel({"title": "测试", "genre": "玄幻", "theme": "修仙"})
+        mock_gen.return_value = "生成的世界观内容"
+        gen_world()
+        novel = read_novel()
+        assert novel["world"] == "生成的世界观内容"
+
+    @patch("write.generate")
+    def test_gen_character(self, mock_gen, tmp_path):
+        """生成角色"""
+        os.chdir(tmp_path)
+        write_novel({"title": "测试", "world": "测试世界观"})
+        mock_gen.return_value = "## 主角：林凡\n- 身份：穿越者"
+        gen_character()
+        novel = read_novel()
+        assert "林凡" in novel["characters"]
+
+    @patch("write.generate")
+    def test_gen_outline(self, mock_gen, tmp_path):
+        """生成大纲"""
+        os.chdir(tmp_path)
+        write_novel({
+            "title": "测试", "world": "世界观", "characters": "角色", "target_chapters": 10
+        })
+        mock_gen.return_value = """# 大纲
+
+## 第一卷
+- 001. 穿越
+- 002. 拜师"""
+        gen_outline()
+        outline = read_outline()
+        assert len(outline) > 0
+        assert outline[0]["volume"] == "第一卷"
 
 
 class TestPromptTemplates:

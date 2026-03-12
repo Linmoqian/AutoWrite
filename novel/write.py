@@ -4,6 +4,7 @@ import os
 import time
 import shutil
 import yaml
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Optional
 
@@ -143,10 +144,10 @@ def read_novel() -> dict:
     # 解析正文
     result = dict(meta)
     if "# 世界观" in body:
-        world_section = body.split("# 世界观")[1].split("#")[0].strip()
+        world_section = body.split("# 世界观")[1].split("\n# ")[0].strip()
         result["world"] = world_section
     if "# 角色" in body:
-        char_section = body.split("# 角色")[1].split("#")[0].strip()
+        char_section = body.split("# 角色")[1].split("\n# ")[0].strip()
         result["characters"] = char_section
 
     return result
@@ -329,3 +330,64 @@ def read_context_dict() -> dict:
             result["pending_plots"].append(line[2:])
 
     return result
+
+
+# ========== 生成流程函数 ==========
+
+def gen_world() -> str:
+    """生成世界观"""
+    novel = read_novel()
+    prompt = WORLD_PROMPT.format(
+        genre=novel.get("genre", "玄幻"),
+        theme=novel.get("theme", "修仙")
+    )
+    world = generate(prompt)
+    novel["world"] = world
+    write_novel(novel)
+    return world
+
+
+def gen_character() -> str:
+    """生成角色"""
+    novel = read_novel()
+    prompt = CHARACTER_PROMPT.format(world=novel.get("world", ""))
+    characters = generate(prompt)
+    novel["characters"] = characters
+    write_novel(novel)
+    return characters
+
+
+def gen_outline() -> str:
+    """生成大纲"""
+    novel = read_novel()
+    prompt = OUTLINE_PROMPT.format(
+        world=novel.get("world", ""),
+        characters=novel.get("characters", ""),
+        total_chapters=novel.get("target_chapters", 100)
+    )
+    outline_text = generate(prompt)
+    write_outline(parse_outline_text(outline_text))
+    return outline_text
+
+
+def parse_outline_text(text: str) -> list:
+    """解析大纲文本为结构化数据"""
+    outline = []
+    current_volume = None
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            if current_volume:
+                outline.append(current_volume)
+            current_volume = {"volume": line[3:].strip(), "chapters": []}
+        elif line.startswith("- ") and current_volume:
+            parts = line[2:].split(". ", 1)
+            if len(parts) == 2:
+                try:
+                    num = int(parts[0].strip())
+                    title = parts[1].strip()
+                    current_volume["chapters"].append({"num": num, "title": title})
+                except ValueError:
+                    pass
+    if current_volume:
+        outline.append(current_volume)
+    return outline
