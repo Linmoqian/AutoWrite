@@ -15,6 +15,7 @@ import BookInfo from './components/BookInfo';
 import ProgressBar from './components/ProgressBar';
 import ActionButtons from './components/ActionButtons';
 import LogPanel from './components/LogPanel';
+import StreamPreview from './components/StreamPreview';
 import CreateNovelModal from './components/CreateNovelModal';
 import ChapterList from './components/ChapterList';
 import ReaderView from './components/ReaderView';
@@ -32,6 +33,7 @@ function App() {
     auto_running: false,
   });
   const [writing, setWriting] = useState(false);
+  const [streamState, setStreamState] = useState({ active: false, text: '' });
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({
     connected: false,
     models: [],
@@ -93,7 +95,14 @@ function App() {
     es.onmessage = (e) => {
       try {
         const entry: LogEntry = JSON.parse(e.data);
-        setLogs((prev) => [...prev.slice(-200), entry]);
+        if (entry.type === 'stream') {
+          setStreamState(prev => ({ active: true, text: prev.text + entry.message }));
+        } else if (entry.type === 'complete') {
+          setStreamState({ active: false, text: '' });
+          loadNovels();
+        } else {
+          setLogs((prev) => [...prev.slice(-200), entry]);
+        }
       } catch {
         // ignore parse errors
       }
@@ -118,7 +127,6 @@ function App() {
     if (selected < 0) return;
     setWriting(true);
     await writeNext(selected, selectedModel || undefined);
-    await loadNovels();
     setWriting(false);
   };
 
@@ -227,6 +235,7 @@ function App() {
                 writtenCount={novel.current_chapter}
                 onSelect={handleReadChapter}
               />
+              <StreamPreview active={streamState.active} text={streamState.text} />
               <LogPanel logs={logs} />
             </>
           ) : (

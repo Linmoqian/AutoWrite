@@ -3,7 +3,6 @@
 import asyncio
 import json
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -19,7 +18,7 @@ from pydantic import BaseModel
 NOVEL_LITE_DIR = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(NOVEL_LITE_DIR))
 
-from tui import ChapterWriter, NovelReader, discover_novels  # noqa: E402
+from tui import NovelReader, discover_novels  # noqa: E402
 
 app = FastAPI(title="Novel-Lite Dashboard")
 
@@ -114,14 +113,22 @@ def _read_chapter_content(project_dir: Path, chapter_num: int) -> dict | None:
     return None
 
 
-def _log_broadcast(idx: int, level: str, message: str):
+def _log_broadcast(idx: int, level: str, message: str, entry_type: str = "log"):
     entry = {
         "timestamp": time.strftime("%H:%M:%S"),
         "level": level,
         "message": message,
+        "type": entry_type,
     }
     state = auto_states.get(idx)
-    if state:
+    if not state:
+        return
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = None
+
+    def _put():
         dead = []
         for q in state.queues:
             try:
@@ -130,6 +137,90 @@ def _log_broadcast(idx: int, level: str, message: str):
                 dead.append(q)
         for q in dead:
             state.queues.remove(q)
+
+    if loop and loop.is_running():
+        loop.call_soon_threadsafe(_put)
+    else:
+        _put()
+
+
+def _stream_write_chapter(idx: int, project_dir: Path, model: str | None = None) -> tuple[bool, str]:
+    """在 executor 中直接调用 Ollama SDK 流式生成章节"""
+    import os
+    os.chdir(str(project_dir))
+
+    if model:
+        os.environ["OLLAMA_MODEL"] = model
+
+    from config import CONFIG
+    from ai import generate_stream, generate
+    from files import (
+        read_novel, read_context, read_context_dict,
+        write_context, get_chapter_outline, build_yaml_front_matter,
+        write_file, CHAPTERS_DIR,
+    )
+
+    # 1. 获取章节信息
+    ctx = read_context_dict()
+    chapter_num = ctx.get("current_chapter", 0) + 1
+    chapter_title = get_chapter_outline(chapter_num)
+    if not chapter_title:
+        return False, f"未找到第 {chapter_num} 章的大纲"
+
+    # 2. 状态广播
+    _log_broadcast(idx, "info", f"调用 {CONFIG['model']} 模型", "status")
+    _log_broadcast(idx, "info", "模型启动中...", "status")
+
+    # 3. 构造 prompt（与 core.py 一致）
+    novel = read_novel()
+    prompt = CONFIG["prompts"]["chapter"].format(
+        context=read_context(),
+        num=chapter_num,
+        title=chapter_title,
+        outline_detail=f"第{chapter_num}章：{chapter_title}",
+        words=novel.get("words_per_chapter", 3000),
+        style=f"{novel.get('genre', '玄幻')}类型，{novel.get('theme', '')}主题",
+    )
+
+    # 4. 流式生成
+    _log_broadcast(idx, "info", "模型创作中...", "status")
+    content_parts = []
+    try:
+        for chunk in generate_stream(prompt):
+            content_parts.append(chunk)
+            _log_broadcast(idx, "info", chunk, "stream")
+    except Exception as e:
+        _log_broadcast(idx, "error", f"模型连接失败: {e}", "status")
+        return False, f"模型连接失败: {e}"
+
+    content = "".join(content_parts)
+    _log_broadcast(idx, "info", "模型创作完毕", "status")
+
+    # 5. 写入章节文件（复用 files.py）
+    CHAPTERS_DIR.mkdir(exist_ok=True)
+    from datetime import datetime
+    meta = {
+        "chapter": chapter_num,
+        "title": chapter_title,
+        "words": len(content),
+        "created": datetime.now().strftime("%Y-%m-%d"),
+    }
+    write_file(
+        CHAPTERS_DIR / f"{chapter_num:03d}-{chapter_title[:10]}.md",
+        build_yaml_front_matter(meta) + f"\n# 第{chapter_num}章 {chapter_title}\n\n{content}",
+    )
+
+    # 6. 生成摘要 + 更新 context
+    _log_broadcast(idx, "info", "生成剧情摘要...", "status")
+    try:
+        summary = generate(f"请用200字概括以下章节的剧情：\n{content[:2000]}")
+    except Exception:
+        summary = content[:200]
+    ctx["recent_summaries"] = (ctx.get("recent_summaries", []) + [f"第{chapter_num}章：{summary}"])[-5:]
+    ctx["current_chapter"] = chapter_num
+    write_context(ctx)
+
+    return True, f"第 {chapter_num} 章创作完成"
 
 
 # ── API 端点 ─────────────────────────────────────────────
@@ -211,8 +302,10 @@ async def write_next(idx: int, req: WriteRequest | None = None):
     _log_broadcast(idx, "info", f"开始创作第 {info.current_chapter + 1} 章...")
     state.timer_start = time.monotonic()
 
-    writer = ChapterWriter(info.path, model=model)
-    success, output = await writer.write_next()
+    loop = asyncio.get_event_loop()
+    success, output = await loop.run_in_executor(
+        None, _stream_write_chapter, idx, info.path, model
+    )
 
     if state.timer_start:
         state.elapsed += time.monotonic() - state.timer_start
@@ -220,7 +313,7 @@ async def write_next(idx: int, req: WriteRequest | None = None):
 
     if success:
         state.session_chapters += 1
-        _log_broadcast(idx, "success", f"第 {info.current_chapter + 1} 章创作完成")
+        _log_broadcast(idx, "success", output, "complete")
     else:
         _log_broadcast(idx, "error", f"创作失败: {output}")
 
@@ -281,13 +374,15 @@ async def _auto_write_loop(idx: int):
             break
 
         _log_broadcast(idx, "info", f"[自动] 开始创作第 {info.current_chapter + 1} 章...")
-        writer = ChapterWriter(info.path, model=state.model)
-        success, output = await writer.write_next()
+        loop = asyncio.get_event_loop()
+        success, output = await loop.run_in_executor(
+            None, _stream_write_chapter, idx, info.path, state.model
+        )
 
         if success:
             fail_count = 0
             state.session_chapters += 1
-            _log_broadcast(idx, "success", f"[自动] 第 {info.current_chapter + 1} 章完成")
+            _log_broadcast(idx, "success", f"[自动] {output}", "complete")
         else:
             fail_count += 1
             _log_broadcast(idx, "error", f"[自动] 失败 ({fail_count}/3): {output}")

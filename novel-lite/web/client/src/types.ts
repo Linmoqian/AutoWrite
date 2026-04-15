@@ -14,6 +14,7 @@ export interface LogEntry {
   timestamp: string;
   level: string;
   message: string;
+  type?: 'log' | 'status' | 'stream' | 'complete';
 }
 
 export interface StatusInfo {

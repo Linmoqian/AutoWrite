@@ -18,7 +18,7 @@ function LogPanel({ logs }: LogPanelProps) {
         <div style={{ color: 'var(--text-dim)' }}>等待日志...</div>
       )}
       {logs.map((entry, i) => (
-        <div key={i} className={`log-entry level-${entry.level}`}>
+        <div key={i} className={`log-entry level-${entry.level}${entry.type === 'status' ? ' type-status' : ''}`}>
           <span className="log-time">{entry.timestamp}</span>
           <span className="log-msg">{entry.message}</span>
         </div>
