@@ -19,6 +19,13 @@ python write.py new "书名" --genre xuanhuan --theme 修仙 --chapters 100  # �
 python write.py outline   # 生成大纲（含世界观、角色）
 python write.py write     # 撰写下一章
 
+# TUI 仪表盘
+python tui.py             # 启动终端仪表盘
+
+# Web Dashboard
+cd novel-lite/web && python server.py           # 启动后端 (localhost:8000)
+cd novel-lite/web/client && npm run dev          # 启动前端 (localhost:5173)
+
 # 辅助工具
 python batch_write.py     # 后台持续创作，循环直到目标章数
 python polish.py single 1                       # 润色单章

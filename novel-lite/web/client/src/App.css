@@ -1,0 +1,286 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin: 0;
+}
+
+.app-model {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* ── Body layout ── */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Main area ── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* ── Book info ── */
+.book-info {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.book-info h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 8px;
+}
+
+.book-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.book-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Progress bar ── */
+.progress-section {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.progress-header span {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.progress-header strong {
+  color: var(--text-bright);
+  font-size: 15px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── Stats row ── */
+.stats-row {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-item {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  color: var(--text);
+  font-size: 14px;
+  flex: 1;
+}
+
+/* ── Action buttons ── */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons button {
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-buttons button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.action-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-buttons button.btn-danger:hover:not(:disabled) {
+  background: var(--error);
+  border-color: var(--error);
+}
+
+.action-buttons button.btn-success:hover:not(:disabled) {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+/* ── Log panel ── */
+.log-panel {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  min-height: 120px;
+}
+
+.log-entry {
+  padding: 2px 0;
+  display: flex;
+  gap: 8px;
+}
+
+.log-entry .log-time {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.log-entry .log-msg {
+  color: var(--text);
+}
+
+.log-entry.level-success .log-msg {
+  color: var(--success);
+}
+
+.log-entry.level-error .log-msg {
+  color: var(--error);
+}
+
+.log-entry.level-warning .log-msg {
+  color: var(--warning);
+}
+
+.log-entry.level-info .log-msg {
+  color: var(--accent);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 16px;
+  font-weight: 600;
+  color: var(--text-bright);
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.sidebar-item:hover {
+  background: rgba(122, 162, 247, 0.08);
+}
+
+.sidebar-item.active {
+  background: rgba(122, 162, 247, 0.15);
+  border-left: 3px solid var(--accent);
+}
+
+.sidebar-item .item-title {
+  color: var(--text-bright);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.sidebar-item .item-progress {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-dim);
+}
+
+.empty-state .hint {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* ── Footer ── */
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+}
