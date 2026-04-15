@@ -192,8 +192,9 @@ def _scan_recursive(
 class ChapterWriter:
     """通过 subprocess 调用 write.py，不 import core.py"""
 
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Path, model: str | None = None):
         self.project_dir = project_dir
+        self.model = model
 
     async def write_next(self, timeout: int = 600) -> tuple[bool, str]:
         write_py = str(NOVEL_LITE_DIR / "write.py")
@@ -202,6 +203,8 @@ class ChapterWriter:
             **os.environ,
             "PYTHONPATH": str(NOVEL_LITE_DIR),
         }
+        if self.model:
+            env["OLLAMA_MODEL"] = self.model
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

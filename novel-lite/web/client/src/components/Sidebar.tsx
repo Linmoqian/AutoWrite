@@ -4,12 +4,18 @@ interface SidebarProps {
   novels: NovelItem[];
   selected: number;
   onSelect: (index: number) => void;
+  onCreateNew: () => void;
 }
 
-function Sidebar({ novels, selected, onSelect }: SidebarProps) {
+function Sidebar({ novels, selected, onSelect, onCreateNew }: SidebarProps) {
   return (
     <nav className="sidebar">
-      <div className="sidebar-header">项目列表</div>
+      <div className="sidebar-header">
+        <span>项目列表</span>
+        <button className="btn-create" onClick={onCreateNew} title="创建新小说">
+          +
+        </button>
+      </div>
       <ul className="sidebar-list">
         {novels.map((novel) => (
           <li
