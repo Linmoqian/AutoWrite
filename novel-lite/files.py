@@ -54,6 +54,16 @@ def write_novel(data: dict) -> None:
     write_file(NOVEL_FILE, build_yaml_front_matter(meta) + "\n" + "\n\n".join(body_parts))
 
 
+def _extract_section(body: str, heading: str) -> str:
+    """安全提取 Markdown 章节内容"""
+    marker = f"# {heading}"
+    if marker not in body:
+        return ""
+    part = body.split(marker, 1)[1]
+    next_h = part.find("\n# ")
+    return part[:next_h].strip() if next_h != -1 else part.strip()
+
+
 def read_novel() -> dict:
     """读取 novel.md"""
     content = read_file(NOVEL_FILE)
@@ -61,10 +71,12 @@ def read_novel() -> dict:
         return {}
     meta, body = parse_yaml_front_matter(content, return_body=True)
     result = dict(meta)
-    if "# 世界观" in body:
-        result["world"] = body.split("# 世界观")[1].split("\n# ")[0].strip()
-    if "# 角色" in body:
-        result["characters"] = body.split("# 角色")[1].split("\n# ")[0].strip()
+    world = _extract_section(body, "世界观")
+    if world:
+        result["world"] = world
+    characters = _extract_section(body, "角色")
+    if characters:
+        result["characters"] = characters
     return result
 
 

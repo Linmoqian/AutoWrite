@@ -1,11 +1,11 @@
 ---
 created: '2026-03-12'
 genre: xuanhuan
-model: deepseek-r1:7b
+model: qwen3:8b
 target_chapters: 100
 theme: 逆天改命，一剑破万法
 title: 逆天剑尊
-words_per_chapter: 3000
+words_per_chapter: 4000
 ---
 
 # 世界观
