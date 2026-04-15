@@ -50,11 +50,37 @@ cli.py → core.py → ai.py + files.py + config.py
 ```
 
 - `config.py` — 加载 `config.yaml`，支持 `OLLAMA_MODEL`/`OLLAMA_TIMEOUT` 环境变量覆盖，模块加载时执行 `CONFIG = load_config()`
-- `ai.py` — `generate(prompt)` 调用 Ollama chat API，指数退避重试（最多 3 次），`num_ctx: 4096`
+- `ai.py` — `generate(prompt)` 调用 Ollama chat API，指数退避重试（最多 3 次），`num_ctx: 4096`；`generate_stream(prompt)` 流式调用，yield 文本片段
 - `files.py` — 所有文件 I/O：YAML front matter 解析/构建、`novel.md`/`outline.md`/`context.md` 的读写、原子写入（先写 `.tmp` 再 rename，带 `.bak` 备份）
 - `core.py` — `Novel` 类，核心业务：`create()` → `generate_outline()` → `write_chapter()`
 - `cli.py` — argparse 命令行，支持 `new`/`outline`/`write` 三个子命令
 - `write.py` — 入口点，仅调用 `cli.main()`
+
+### Web Dashboard 架构
+
+```
+server.py (FastAPI)
+  ├─ /api/novels         → discover_novels() 扫描项目
+  ├─ /api/novels/{idx}/write → run_in_executor(_stream_write_chapter)
+  ├─ /api/novels/{idx}/logs  → SSE 实时推送
+  └─ _stream_write_chapter() → 直接调用 ai.generate_stream()，不走 subprocess
+
+client/ (React + TypeScript)
+  ├─ App.tsx          → SSE onmessage 按 type 分流（log/stream/status/complete）
+  ├─ StreamPreview    → 实时显示流式文本 + 闪烁光标
+  ├─ LogPanel         → 日志面板，status 类型黄色加粗
+  ├─ ReaderView       → Markdown 渲染阅读器
+  └─ ModelSelector    → Ollama 模型动态选择
+```
+
+### SSE 事件类型
+
+| type | 说明 | 前端处理 |
+|------|------|----------|
+| `log` | 普通日志 | LogPanel 显示 |
+| `status` | 状态信息（模型名、启动中、创作中） | LogPanel 黄色加粗显示 |
+| `stream` | 流式文本片段 | StreamPreview 追加显示 |
+| `complete` | 创作完成 | 清空预览 + 刷新章节列表 |
 
 ### Prompt 模板
 
@@ -102,3 +128,4 @@ write   → chapters/*.md + context.md（更新进度+摘要）
 - `cli.py`、`core.py`、`batch_write.py`、`polish.py` 使用相对导入（如 `from ai import generate`），必须在 `novel-lite/` 目录下运行
 - `files.py` 中路径常量（`NOVEL_FILE`、`CHAPTERS_DIR` 等）使用相对 `Path`，工作目录必须是 `novel-lite/`
 - 生成内容（`chapters/`、`polished/`、`novel.md`、`outline.md`、`context.md` 等）已被 `.gitignore` 排除，不会进入版本控制
+- Web Dashboard 的 `_stream_write_chapter()` 通过 `os.chdir()` 切换到项目目录后调用 `files.py`，不在 subprocess 中运行
