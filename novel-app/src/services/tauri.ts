@@ -1,0 +1,52 @@
+import { invoke } from "@tauri-apps/api/core";
+import type {
+  AppConfig,
+  ChapterContent,
+  ChapterMeta,
+  NovelStatus,
+} from "../types";
+
+export async function selectNovelDir(): Promise<string> {
+  return invoke<string>("select_novel_dir");
+}
+
+export async function getNovelDir(): Promise<string | null> {
+  return invoke<string | null>("get_novel_dir");
+}
+
+export async function createNovel(
+  title: string,
+  genre: string,
+  theme: string,
+  chapters: number,
+): Promise<void> {
+  return invoke("create_novel", { title, genre, theme, chapters });
+}
+
+export async function generateOutline(): Promise<string> {
+  return invoke<string>("generate_outline");
+}
+
+export async function generateChapter(): Promise<number> {
+  return invoke<number>("generate_chapter");
+}
+
+export async function getStatus(): Promise<NovelStatus> {
+  return invoke<NovelStatus>("get_status");
+}
+
+export async function listChapters(): Promise<ChapterMeta[]> {
+  return invoke<ChapterMeta[]>("list_chapters");
+}
+
+export async function readChapter(filename: string): Promise<ChapterContent> {
+  return invoke<ChapterContent>("read_chapter", { filename });
+}
+
+export async function loadConfig(): Promise<AppConfig> {
+  return invoke<AppConfig>("load_config");
+}
+
+export async function saveConfig(config: AppConfig): Promise<void> {
+  return invoke("save_config", { config });
+}
