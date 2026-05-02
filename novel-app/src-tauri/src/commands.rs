@@ -37,6 +37,11 @@ pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>)
         .to_path_buf();
     let dir_str = dir.to_string_lossy().to_string();
     *state.novel_dir.lock().unwrap() = Some(dir);
+    // 持久化到配置文件
+    let config_path = state.config_path.lock().unwrap().clone();
+    let mut config = crate::config::load_config(&config_path).unwrap_or_default();
+    config.novel_dir = Some(dir_str.clone());
+    let _ = crate::config::save_config(&config_path, &config);
     Ok(dir_str)
 }
 

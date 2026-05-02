@@ -55,6 +55,7 @@ export interface Prompts {
 }
 
 export interface AppConfig {
+  novel_dir?: string;
   model: string;
   timeout: number;
   ollama_url: string;

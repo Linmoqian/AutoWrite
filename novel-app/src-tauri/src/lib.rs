@@ -18,11 +18,15 @@ use tauri::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let config_path = dirs_config_path();
+    let saved_dir = config::load_config(&config_path)
+        .ok()
+        .and_then(|c| c.novel_dir)
+        .map(PathBuf::from);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
-            novel_dir: Mutex::new(None),
+            novel_dir: Mutex::new(saved_dir),
             config_path: Mutex::new(config_path),
         })
         .invoke_handler(tauri::generate_handler![

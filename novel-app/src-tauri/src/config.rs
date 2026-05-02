@@ -13,6 +13,8 @@ pub struct Prompts {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub novel_dir: Option<String>,
     pub model: String,
     pub timeout: u64,
     pub ollama_url: String,
@@ -22,6 +24,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
+            novel_dir: None,
             model: "deepseek-r1:7b".to_string(),
             timeout: 300,
             ollama_url: "http://localhost:11434".to_string(),
