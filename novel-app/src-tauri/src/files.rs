@@ -184,8 +184,8 @@ pub fn read_novel(dir: &Path) -> Result<NovelData> {
     if content.is_empty() {
         return Err(AppError::NovelNotFound(novel_file(dir).display().to_string()));
     }
-    let (_meta, body) = parse_yaml_front_matter(&content);
-    let mut data: NovelData = serde_yaml::from_str(&content)?;
+    let (meta, body) = parse_yaml_front_matter(&content);
+    let mut data: NovelData = serde_yaml::from_value(meta)?;
     if body.contains("# 世界观") {
         let world_section = body.split("# 世界观").nth(1).unwrap_or("");
         let world = world_section
