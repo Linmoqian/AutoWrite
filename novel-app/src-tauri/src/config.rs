@@ -39,19 +39,35 @@ pub enum Provider {
     Ollama,
 }
 
+fn default_timeout() -> u64 {
+    300
+}
+
+fn default_ollama_url() -> String {
+    "http://localhost:11434".to_string()
+}
+
+fn default_model() -> String {
+    "deepseek-chat".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub novel_dir: Option<String>,
     #[serde(default)]
     pub provider: Provider,
+    #[serde(default = "default_model")]
     pub model: String,
+    #[serde(default = "default_timeout")]
     pub timeout: u64,
+    #[serde(default = "default_ollama_url")]
     pub ollama_url: String,
     #[serde(default)]
     pub api_base_url: String,
     #[serde(default)]
     pub api_key: String,
+    #[serde(default)]
     pub prompts: Prompts,
 }
 

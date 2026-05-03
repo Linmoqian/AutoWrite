@@ -16,9 +16,11 @@ export default function Settings() {
   const [form] = Form.useForm<AppConfig>();
   const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<Provider>("openai");
+  const [savedConfig, setSavedConfig] = useState<AppConfig | null>(null);
 
   useEffect(() => {
     loadConfig().then((config) => {
+      setSavedConfig(config);
       form.setFieldsValue(config);
       setProvider(config.provider || "openai");
     });
@@ -41,7 +43,9 @@ export default function Settings() {
   const onSave = async (values: AppConfig) => {
     setLoading(true);
     try {
-      await saveConfig(values);
+      const merged = { ...savedConfig, ...values };
+      await saveConfig(merged);
+      setSavedConfig(merged);
       message.success("配置已保存");
     } catch (e) {
       message.error(`保存失败: ${e}`);
