@@ -119,12 +119,13 @@ export default function Chapters() {
 
   const displayText = filterThinkTags(streamingText);
 
-  // 右侧内容：生成中显示流式文本，否则显示选中的章节
   const rightContent = generating ? (
     displayText ? (
-      <div ref={streamRef} className="streaming-area md-body">
-        <Markdown>{displayText}</Markdown>
-        <span className="cursor-blink">|</span>
+      <div ref={streamRef} className="chapter-scroll">
+        <div className="md-body">
+          <Markdown>{displayText}</Markdown>
+          <span className="cursor-blink">|</span>
+        </div>
       </div>
     ) : (
       <div style={{ textAlign: "center", padding: 24 }}>
@@ -136,7 +137,7 @@ export default function Chapters() {
       <Text style={{ color: "var(--text-muted)" }}>加载中...</Text>
     </div>
   ) : selected ? (
-    <div>
+    <div className="chapter-scroll">
       <div
         style={{
           fontFamily: '"KaiTi", "楷体", serif',
@@ -165,13 +166,14 @@ export default function Chapters() {
   );
 
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ height: "calc(100vh - 144px)", display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 20,
+          marginBottom: 16,
+          flexShrink: 0,
         }}
       >
         <h1 className="page-title" style={{ marginBottom: 0, paddingBottom: 0 }}>
@@ -187,12 +189,12 @@ export default function Chapters() {
         </LoadingButton>
       </div>
 
-      <div style={{ display: "flex" }}>
-        <div style={{ width: "33%", flexShrink: 0 }}>
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <div style={{ width: 220, flexShrink: 0, overflowY: "auto" }}>
           <List
             dataSource={chapters}
             renderItem={(ch) => (
-              <List.Item style={{ padding: 4, border: "none" }}>
+              <List.Item style={{ padding: "2px 0", border: "none" }}>
                 <ChapterCard
                   chapter={ch}
                   selected={selected?.meta.chapter === ch.chapter}
@@ -203,7 +205,7 @@ export default function Chapters() {
           />
         </div>
         <div style={{ width: 1, background: "var(--border)", margin: "0 16px", flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           {rightContent}
         </div>
       </div>

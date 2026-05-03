@@ -25,25 +25,23 @@ export default function ChapterCard({
         borderColor: selected ? "var(--gold-dim)" : "var(--border)",
         background: selected ? "var(--gold-glow)" : "var(--bg-surface)",
         transition: "all 0.2s ease",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
-      <div>
-        <Text
-          strong
-          style={{ color: selected ? "var(--gold)" : "var(--text-primary)" }}
-        >
-          第{chapter.chapter}章
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <Text strong style={{ color: selected ? "var(--gold)" : "var(--text-primary)", whiteSpace: "nowrap" }}>
+          {String(chapter.chapter).padStart(3, "0")}
         </Text>
-        <Text style={{ color: "var(--text-secondary)", marginLeft: 6 }}>
+        <Text style={{ color: "var(--text-secondary)", marginLeft: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {chapter.title}
         </Text>
       </div>
-      <Text
-        type="secondary"
-        style={{ fontSize: 12, color: "var(--text-muted)" }}
-      >
-        {chapter.words} 字 | {chapter.created}
-      </Text>
+      <div style={{ marginTop: 4 }}>
+        <Text style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          {chapter.words} 字
+        </Text>
+      </div>
     </div>
   );
 }
