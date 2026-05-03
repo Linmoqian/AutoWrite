@@ -35,13 +35,64 @@ pub struct ChapterEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmotionalTag {
+    pub tag: String,
+    pub intensity: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensionItem {
+    pub item: String,
+    #[serde(default = "default_open")]
+    pub status: String,
+}
+
+fn default_open() -> String {
+    "open".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NarrativeIntent {
+    pub character_wants: String,
+    pub obstacle: String,
+    pub reader_should_care: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextData {
     pub current_chapter: u32,
+    #[serde(default)]
     pub recent_summaries: Vec<String>,
     #[serde(default)]
-    pub character_states: Vec<String>,
+    pub character_states: Vec<serde_yaml::Value>,
     #[serde(default)]
     pub pending_plots: Vec<String>,
+    #[serde(default)]
+    pub plot_events: Vec<String>,
+    #[serde(default)]
+    pub unresolved_threads: Vec<String>,
+    #[serde(default)]
+    pub emotional_arc: Vec<EmotionalTag>,
+    #[serde(default)]
+    pub tension_checklist: Vec<TensionItem>,
+    #[serde(default)]
+    pub current_intent: Option<NarrativeIntent>,
+}
+
+impl Default for ContextData {
+    fn default() -> Self {
+        Self {
+            current_chapter: 0,
+            recent_summaries: Vec::new(),
+            character_states: Vec::new(),
+            pending_plots: Vec::new(),
+            plot_events: Vec::new(),
+            unresolved_threads: Vec::new(),
+            emotional_arc: Vec::new(),
+            tension_checklist: Vec::new(),
+            current_intent: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -236,42 +287,58 @@ pub fn write_context(dir: &Path, ctx: &ContextData) -> Result<()> {
     let mut lines = vec![
         format!("# 上下文摘要\n\n## 当前进度\n- 已完成：{}章\n", ctx.current_chapter),
     ];
-    if !ctx.recent_summaries.is_empty() {
-        lines.push("## 剧情摘要（最近5章）\n".to_string());
-        for s in &ctx.recent_summaries {
-            lines.push(s.clone());
-        }
+    // 叙事意图
+    if let Some(ref intent) = ctx.current_intent {
+        lines.push("## 叙事意图".to_string());
+        lines.push(format!("- 角色想要：{}", intent.character_wants));
+        lines.push(format!("- 阻碍：{}", intent.obstacle));
+        lines.push(format!("- 读者关注：{}", intent.reader_should_care));
         lines.push(String::new());
     }
+    // 角色状态
     if !ctx.character_states.is_empty() {
-        lines.push("## 角色状态\n".to_string());
+        lines.push("## 角色状态".to_string());
         for s in &ctx.character_states {
-            lines.push(format!("- {}", s));
+            if let Some(name) = s.get("name").and_then(|v| v.as_str()) {
+                let location = s.get("location").and_then(|v| v.as_str()).unwrap_or("?");
+                let power = s.get("power_level").and_then(|v| v.as_str()).unwrap_or("?");
+                let action = s.get("recent_action").and_then(|v| v.as_str()).unwrap_or("?");
+                lines.push(format!("- {}：{}，{}，{}", name, location, power, action));
+            }
         }
         lines.push(String::new());
     }
-    if !ctx.pending_plots.is_empty() {
-        lines.push("## 待埋伏笔\n".to_string());
-        for p in &ctx.pending_plots {
-            lines.push(format!("- {}", p));
+    // 关键事件
+    if !ctx.plot_events.is_empty() {
+        lines.push("## 关键事件".to_string());
+        for e in ctx.plot_events.iter().rev().take(10) {
+            lines.push(format!("- {}", e));
+        }
+        lines.push(String::new());
+    }
+    // 张力清单
+    if !ctx.tension_checklist.is_empty() {
+        lines.push("## 张力清单".to_string());
+        for t in ctx.tension_checklist.iter().rev().take(10) {
+            let mark = if t.status == "resolved" { "x" } else { " " };
+            lines.push(format!("- [{}] {}", mark, t.item));
+        }
+        lines.push(String::new());
+    }
+    // 情感弧线
+    if !ctx.emotional_arc.is_empty() {
+        lines.push("## 情感弧线".to_string());
+        for e in ctx.emotional_arc.iter().rev().take(8) {
+            lines.push(format!("- {}({})", e.tag, e.intensity));
         }
         lines.push(String::new());
     }
     write_file_atomic(&context_file(dir), &lines.join("\n"))
 }
 
-pub fn read_context_text(dir: &Path) -> Result<String> {
-    read_file(&context_file(dir))
-}
-
 pub fn read_context(dir: &Path) -> Result<ContextData> {
     let content = read_file(&context_file(dir))?;
-    let mut result = ContextData {
-        current_chapter: 0,
-        recent_summaries: Vec::new(),
-        character_states: Vec::new(),
-        pending_plots: Vec::new(),
-    };
+    let mut result = ContextData::default();
     if content.is_empty() {
         return Ok(result);
     }
@@ -282,6 +349,11 @@ pub fn read_context(dir: &Path) -> Result<ContextData> {
             s if s.starts_with("## 剧情摘要") => section = Some("summaries"),
             s if s.starts_with("## 角色状态") => section = Some("characters"),
             s if s.starts_with("## 待埋伏笔") => section = Some("plots"),
+            s if s.starts_with("## 叙事意图") => section = Some("intent"),
+            s if s.starts_with("## 关键事件") => section = Some("events"),
+            s if s.starts_with("## 未解决悬念") => section = Some("threads"),
+            s if s.starts_with("## 张力清单") => section = Some("tension"),
+            s if s.starts_with("## 情感弧线") => section = Some("emotion"),
             s if !s.is_empty() => match section {
                 Some("progress") if s.contains("已完成：") => {
                     if let Some(idx) = s.find("已完成：") {
@@ -295,10 +367,53 @@ pub fn read_context(dir: &Path) -> Result<ContextData> {
                     result.recent_summaries.push(s.to_string());
                 }
                 Some("characters") if s.starts_with("- ") => {
-                    result.character_states.push(s[2..].to_string());
+                    result.character_states.push(serde_yaml::Value::String(s[2..].to_string()));
                 }
                 Some("plots") if s.starts_with("- ") => {
                     result.pending_plots.push(s[2..].to_string());
+                }
+                Some("intent") if s.starts_with("- ") => {
+                    let text = &s[2..];
+                    if result.current_intent.is_none() {
+                        result.current_intent = Some(NarrativeIntent {
+                            character_wants: String::new(),
+                            obstacle: String::new(),
+                            reader_should_care: String::new(),
+                        });
+                    }
+                    if let Some(ref mut intent) = result.current_intent {
+                        if text.starts_with("角色想要：") {
+                            intent.character_wants = text["角色想要：".len()..].to_string();
+                        } else if text.starts_with("阻碍：") {
+                            intent.obstacle = text["阻碍：".len()..].to_string();
+                        } else if text.starts_with("读者关注：") {
+                            intent.reader_should_care = text["读者关注：".len()..].to_string();
+                        }
+                    }
+                }
+                Some("events") if s.starts_with("- ") => {
+                    result.plot_events.push(s[2..].to_string());
+                }
+                Some("threads") if s.starts_with("- [ ] ") => {
+                    result.unresolved_threads.push(s[6..].to_string());
+                }
+                Some("tension") if s.starts_with("- [") => {
+                    let mark = s.chars().nth(3).unwrap_or(' ');
+                    let item = s.get(6..).unwrap_or("").to_string();
+                    result.tension_checklist.push(TensionItem {
+                        item,
+                        status: if mark == 'x' { "resolved".to_string() } else { "open".to_string() },
+                    });
+                }
+                Some("emotion") if s.starts_with("- ") => {
+                    let text = &s[2..];
+                    if let Some(pos) = text.rfind('(') {
+                        let tag = text[..pos].to_string();
+                        let intensity_str = text[pos + 1..].trim_end_matches(')');
+                        if let Ok(intensity) = intensity_str.parse::<u32>() {
+                            result.emotional_arc.push(EmotionalTag { tag, intensity });
+                        }
+                    }
                 }
                 _ => {}
             },
