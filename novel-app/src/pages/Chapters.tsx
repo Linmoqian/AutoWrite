@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Row, Col, List, Typography, Empty, message } from "antd";
+import { List, Typography, Empty, message } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import {
   listChapters,
@@ -187,8 +187,8 @@ export default function Chapters() {
         </LoadingButton>
       </div>
 
-      <Row gutter={16}>
-        <Col span={8}>
+      <div style={{ display: "flex" }}>
+        <div style={{ width: "33%", flexShrink: 0 }}>
           <List
             dataSource={chapters}
             renderItem={(ch) => (
@@ -201,11 +201,12 @@ export default function Chapters() {
               </List.Item>
             )}
           />
-        </Col>
-        <Col span={16}>
+        </div>
+        <div style={{ width: 1, background: "var(--border)", margin: "0 16px", flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
           {rightContent}
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 }
