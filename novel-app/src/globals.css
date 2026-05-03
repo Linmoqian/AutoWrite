@@ -6,3 +6,13 @@
 *::-webkit-scrollbar {
   display: none;
 }
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+  font-weight: normal;
+  color: #999;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}

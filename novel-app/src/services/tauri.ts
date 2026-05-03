@@ -1,9 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppConfig,
   ChapterContent,
   ChapterMeta,
+  ChapterProgressEvent,
   NovelStatus,
+  OutlineProgressEvent,
 } from "../types";
 
 export async function selectNovelDir(): Promise<string> {
@@ -49,4 +52,20 @@ export async function loadConfig(): Promise<AppConfig> {
 
 export async function saveConfig(config: AppConfig): Promise<void> {
   return invoke("save_config", { config });
+}
+
+export function onOutlineProgress(
+  handler: (e: OutlineProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<OutlineProgressEvent>("outline-progress", (e) =>
+    handler(e.payload),
+  );
+}
+
+export function onChapterProgress(
+  handler: (e: ChapterProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<ChapterProgressEvent>("chapter-progress", (e) =>
+    handler(e.payload),
+  );
 }

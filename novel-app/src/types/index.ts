@@ -61,3 +61,14 @@ export interface AppConfig {
   ollama_url: string;
   prompts: Prompts;
 }
+
+export interface OutlineProgressEvent {
+  step: "world" | "characters" | "outline";
+  chunk: string;
+  done: boolean;
+}
+
+export interface ChapterProgressEvent {
+  chunk: string;
+  done: boolean;
+}
