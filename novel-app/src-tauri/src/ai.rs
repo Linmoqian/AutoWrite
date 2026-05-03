@@ -409,7 +409,11 @@ where
             let line = buffer[..pos].trim().to_string();
             *buffer = buffer[pos + 1..].to_string();
 
-            if line.is_empty() || line == "data: [DONE]" {
+            if line.is_empty() {
+                continue;
+            }
+
+            if line == "data: [DONE]" {
                 return Ok(());
             }
 

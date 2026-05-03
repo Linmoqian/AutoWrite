@@ -261,7 +261,7 @@ pub fn parse_outline_text(text: &str) -> Result<Vec<Volume>> {
                 volume: line[3..].to_string(),
                 chapters: Vec::new(),
             });
-        } else if line.starts_with("- ") {
+        } else if line.starts_with("- ") || line.starts_with("* ") {
             if let Some(ref mut vol) = current_volume {
                 let rest = &line[2..];
                 if let Some(dot_pos) = rest.find(". ") {
@@ -270,6 +270,27 @@ pub fn parse_outline_text(text: &str) -> Result<Vec<Volume>> {
                             num,
                             title: rest[dot_pos + 2..].trim().to_string(),
                         });
+                    }
+                }
+            }
+        } else {
+            // 格式：数字. 标题 (如 "1. 混沌海遗珠——...")
+            if let Some(ref mut vol) = current_volume {
+                if let Some(rest) = line.strip_prefix(|c: char| c.is_ascii_digit()) {
+                    // 跳过多位数字
+                    let rest = rest.trim_start_matches(|c: char| c.is_ascii_digit());
+                    if let Some(rest) = rest.strip_prefix('.') {
+                        let rest = rest.trim_start();
+                        if !rest.is_empty() {
+                            // 尝试从行首解析序号
+                            let num_start = line.find(|c: char| !c.is_ascii_digit()).unwrap_or(0);
+                            if let Ok(num) = line[..num_start].parse::<u32>() {
+                                vol.chapters.push(ChapterEntry {
+                                    num,
+                                    title: rest.to_string(),
+                                });
+                            }
+                        }
                     }
                 }
             }

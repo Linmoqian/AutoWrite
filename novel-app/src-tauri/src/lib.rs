@@ -1,9 +1,9 @@
-mod ai;
-mod commands;
-mod config;
-mod error;
-mod files;
-mod novel;
+pub mod ai;
+pub mod commands;
+pub mod config;
+pub mod error;
+pub mod files;
+pub mod novel;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
