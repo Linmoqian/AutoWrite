@@ -45,14 +45,66 @@ prompts:
     - 主线清晰，有起承转合
     直接输出大纲，按卷分组。
   chapter: |
-    {context}
-    ## 本章任务
+    你是一位资深小说作家，正在创作一部{genre}类型小说，主题为{theme}。
+
+    ## 叙事核心
+    {intent_block}
+
+    ## 事实基础
+    ### 角色当前位置与状态
+    {character_states}
+
+    ### 已发生的关键事件
+    {plot_events}
+
+    ### 尚未解决的悬念
+    {tension_checklist}
+
+    ### 情感走向
+    最近几章的情感轨迹：{emotional_arc}
+
+    ## 本章写作任务
     第{num}章：{title}
-    ## 大纲描述
-    {outline_detail}
-    ## 要求
-    - 字数：{words}字
-    - 风格：{style}
-    - 场景描写细腻，对话生动
-    - 章末留悬念或转折
+
+    写作要求：围绕核心叙事张力展开，用场景和对话推进剧情，
+    自然处理至少一个未解决的悬念。字数约{words}字。
     直接输出章节正文内容。
+  extract_facts: |
+    请从以下章节内容中提取结构化信息，严格按JSON格式输出：
+
+    {{
+      "character_states": [
+        {{"name": "角色名", "location": "当前位置", "power_level": "当前实力", "recent_action": "最近行动", "status": "状态"}}
+      ],
+      "plot_events": ["关键事件1", "关键事件2", "关键事件3"],
+      "unresolved_threads": ["未解决的悬念1", "未解决的悬念2"]
+    }}
+
+    要求：
+    - character_states 包含本章出现的所有重要角色
+    - plot_events 只记录推动剧情的关键事件，最多5个
+    - unresolved_threads 记录本章新增或延续的未解决线索
+
+    章节内容：
+    {content}
+  extract_intent: |
+    请阅读以下章节内容，用简洁的语言回答三个问题：
+
+    1. 角色想要什么？（一句话）
+    2. 什么阻碍了他？（一句话）
+    3. 读者该在意什么？（一句话）
+
+    请严格按以下JSON格式输出：
+    {{"character_wants": "...", "obstacle": "...", "reader_should_care": "..."}}
+
+    章节内容：
+    {content}
+  extract_emotion: |
+    请为以下章节的情感走向打标签。输出JSON：
+    {{"tags": [{{"tag": "情感标签", "intensity": 1}}]}}
+
+    可选标签：紧张、愤怒、悲伤、温馨、热血、恐惧、希望、绝望、迷茫、震撼
+    intensity范围1-5，每章最多3个标签。
+
+    章节内容：
+    {content}

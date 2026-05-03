@@ -1,5 +1,6 @@
 """文件操作模块"""
 
+import re
 import shutil
 from pathlib import Path
 
@@ -124,14 +125,52 @@ def get_chapter_outline(chapter_num: int) -> str | None:
 
 
 def write_context(context: dict) -> None:
-    """写入 context.md"""
+    """写入 context.md，支持三层记忆结构"""
     lines = [f"# 上下文摘要\n\n## 当前进度\n- 已完成：{context.get('current_chapter', 0)}章\n"]
+    # 叙事意图
+    if context.get("current_intent"):
+        intent = context["current_intent"]
+        lines.append("## 叙事意图")
+        lines.append(f"- 角色想要：{intent.get('character_wants', '')}")
+        lines.append(f"- 阻碍：{intent.get('obstacle', '')}")
+        lines.append(f"- 读者关注：{intent.get('reader_should_care', '')}\n")
+    # 角色状态（结构化）
+    char_states = context.get("character_states", [])
+    if char_states and isinstance(char_states, list) and char_states and isinstance(char_states[0], dict):
+        lines.append("## 角色状态")
+        for s in char_states:
+            lines.append(f"- {s.get('name', '?')}：{s.get('location', '?')}，{s.get('power_level', '?')}，{s.get('recent_action', '?')}")
+        lines.append("")
+    elif context.get("character_states"):
+        lines.append("## 角色状态\n" + "\n".join(f"- {s}" for s in context["character_states"]) + "\n")
+    # 关键事件
+    if context.get("plot_events"):
+        lines.append("## 关键事件")
+        for e in context["plot_events"][-10:]:
+            lines.append(f"- {e}")
+        lines.append("")
+    # 未解决悬念
+    if context.get("unresolved_threads"):
+        lines.append("## 未解决悬念")
+        for t in context["unresolved_threads"][-10:]:
+            lines.append(f"- [ ] {t}")
+        lines.append("")
+    # 张力清单
+    if context.get("tension_checklist"):
+        lines.append("## 张力清单")
+        for t in context["tension_checklist"][-10:]:
+            mark = "x" if t.get("status") == "resolved" else " "
+            lines.append(f"- [{mark}] {t.get('item', '')}")
+        lines.append("")
+    # 情感弧线
+    if context.get("emotional_arc"):
+        lines.append("## 情感弧线")
+        for e in context["emotional_arc"][-8:]:
+            lines.append(f"- {e.get('tag', '?')}({e.get('intensity', '?')})")
+        lines.append("")
+    # 向后兼容：旧格式摘要
     if context.get("recent_summaries"):
         lines.append("## 剧情摘要（最近5章）\n" + "\n".join(context["recent_summaries"][-5:]) + "\n")
-    if context.get("character_states"):
-        lines.append("## 角色状态\n" + "\n".join(f"- {s}" for s in context["character_states"]) + "\n")
-    if context.get("pending_plots"):
-        lines.append("## 待埋伏笔\n" + "\n".join(f"- {p}" for p in context["pending_plots"]) + "\n")
     write_file(CONTEXT_FILE, "\n".join(lines))
 
 
@@ -141,9 +180,19 @@ def read_context() -> str:
 
 
 def read_context_dict() -> dict:
-    """读取 context.md 解析为字典"""
+    """读取 context.md 解析为字典，支持三层记忆结构"""
     content = read_file(CONTEXT_FILE)
-    result = {"current_chapter": 0, "recent_summaries": [], "character_states": [], "pending_plots": []}
+    result: dict = {
+        "current_chapter": 0,
+        "recent_summaries": [],
+        "character_states": [],
+        "pending_plots": [],
+        "plot_events": [],
+        "unresolved_threads": [],
+        "emotional_arc": [],
+        "tension_checklist": [],
+        "current_intent": None,
+    }
     if not content:
         return result
     current_section = None
@@ -156,6 +205,16 @@ def read_context_dict() -> dict:
             current_section = "characters"
         elif line.startswith("## 待埋伏笔"):
             current_section = "plots"
+        elif line.startswith("## 叙事意图"):
+            current_section = "intent"
+        elif line.startswith("## 关键事件"):
+            current_section = "events"
+        elif line.startswith("## 未解决悬念"):
+            current_section = "threads"
+        elif line.startswith("## 张力清单"):
+            current_section = "tension"
+        elif line.startswith("## 情感弧线"):
+            current_section = "emotion"
         elif current_section == "progress" and "已完成：" in line:
             try:
                 result["current_chapter"] = int(line.split("：")[1].replace("章", ""))
@@ -167,6 +226,32 @@ def read_context_dict() -> dict:
             result["character_states"].append(line[2:])
         elif current_section == "plots" and line.startswith("- "):
             result["pending_plots"].append(line[2:])
+        elif current_section == "intent" and line.startswith("- "):
+            if result["current_intent"] is None:
+                result["current_intent"] = {}
+            text = line[2:]
+            if text.startswith("角色想要："):
+                result["current_intent"]["character_wants"] = text[5:]
+            elif text.startswith("阻碍："):
+                result["current_intent"]["obstacle"] = text[3:]
+            elif text.startswith("读者关注："):
+                result["current_intent"]["reader_should_care"] = text[5:]
+        elif current_section == "events" and line.startswith("- "):
+            result["plot_events"].append(line[2:])
+        elif current_section == "threads" and line.startswith("- [ ] "):
+            result["unresolved_threads"].append(line[6:])
+        elif current_section == "tension" and line.startswith("- ["):
+            mark = line[3]
+            item = line[6:]
+            result["tension_checklist"].append({
+                "item": item,
+                "status": "resolved" if mark == "x" else "open",
+            })
+        elif current_section == "emotion" and line.startswith("- "):
+            text = line[2:]
+            m = re.match(r"(.+)\((\d+)\)", text)
+            if m:
+                result["emotional_arc"].append({"tag": m.group(1), "intensity": int(m.group(2))})
     return result
 
 
