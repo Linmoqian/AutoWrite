@@ -40,6 +40,7 @@ export default function Outline() {
   // 流式缓冲：chunk 先写入 ref，每 80ms 批量刷到 state
   const bufferRef = useRef<Record<string, string>>({});
   const timerRef = useRef(0);
+  const userScrolledRef = useRef(false);
 
   const flushBuffer = useCallback(() => {
     const updates = bufferRef.current;
@@ -70,7 +71,18 @@ export default function Outline() {
   }, []);
 
   useEffect(() => {
-    if (streamRef.current) {
+    const el = streamRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      userScrolledRef.current = !atBottom;
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (streamRef.current && !userScrolledRef.current) {
       streamRef.current.scrollTop = streamRef.current.scrollHeight;
     }
   }, [streamingText]);
@@ -80,6 +92,7 @@ export default function Outline() {
     setStreamingText({});
     setCurrentStep("world");
     bufferRef.current = {};
+    userScrolledRef.current = false;
     timerRef.current = window.setTimeout(flushBuffer, 80);
 
     const unlisten = await onOutlineProgress((e: OutlineProgressEvent) => {

@@ -30,6 +30,7 @@ export default function Chapters() {
 
   const bufferRef = useRef("");
   const timerRef = useRef(0);
+  const userScrolledRef = useRef(false);
 
   const flushBuffer = useCallback(() => {
     if (bufferRef.current) {
@@ -54,7 +55,18 @@ export default function Chapters() {
   }, []);
 
   useEffect(() => {
-    if (streamRef.current && !viewingDuringGen) {
+    const el = streamRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      userScrolledRef.current = !atBottom;
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (streamRef.current && !viewingDuringGen && !userScrolledRef.current) {
       streamRef.current.scrollTop = streamRef.current.scrollHeight;
     }
   }, [streamingText, viewingDuringGen]);
@@ -86,6 +98,7 @@ export default function Chapters() {
     setViewingDuringGen(false);
     setStreamingText("");
     bufferRef.current = "";
+    userScrolledRef.current = false;
     timerRef.current = window.setTimeout(flushBuffer, 80);
 
     const unlisten = await onChapterProgress((e) => {
