@@ -7,7 +7,7 @@ use tauri::Emitter;
 use crate::ai;
 use crate::config::{fill_template, AppConfig};
 use crate::error::{AppError, Result};
-use crate::files::{self, ContextData, ChapterMeta, NovelData, Volume};
+use crate::files::{self, ChapterMeta, ContextData, NovelData, Volume};
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,9 +44,7 @@ pub fn create_novel(
 ) -> Result<()> {
     let novel_path = files::novel_file(dir);
     if novel_path.exists() && !overwrite {
-        return Err(AppError::NovelAlreadyExists(
-            files::read_novel(dir)?.title,
-        ));
+        return Err(AppError::NovelAlreadyExists(files::read_novel(dir)?.title));
     }
 
     // 覆盖时清理旧数据
@@ -83,6 +81,18 @@ pub async fn generate_outline_streaming(
     config: &AppConfig,
     app: &tauri::AppHandle,
 ) -> Result<String> {
+    generate_outline_streaming_with_progress(dir, config, app, |_step, _chunk, _done| {}).await
+}
+
+pub async fn generate_outline_streaming_with_progress<F>(
+    dir: &Path,
+    config: &AppConfig,
+    app: &tauri::AppHandle,
+    on_progress: F,
+) -> Result<String>
+where
+    F: Fn(&str, &str, bool) + Clone + Send + Sync + 'static,
+{
     let steps = ["world", "characters", "outline"];
 
     // Step 1: 生成世界观
@@ -92,7 +102,7 @@ pub async fn generate_outline_streaming(
         &[("genre", &novel.genre), ("theme", &novel.theme)],
     );
     let app_w = app.clone();
-    let world = streaming_step(config, &prompt, app_w, steps[0]).await?;
+    let world = streaming_step(config, &prompt, app_w, steps[0], on_progress.clone()).await?;
     let mut novel = files::read_novel(dir)?;
     novel.world = Some(world.clone());
     files::write_novel(dir, &novel)?;
@@ -100,7 +110,7 @@ pub async fn generate_outline_streaming(
     // Step 2: 生成角色
     let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
     let app_c = app.clone();
-    let characters = streaming_step(config, &prompt, app_c, steps[1]).await?;
+    let characters = streaming_step(config, &prompt, app_c, steps[1], on_progress.clone()).await?;
     let mut novel = files::read_novel(dir)?;
     novel.characters = Some(characters.clone());
     files::write_novel(dir, &novel)?;
@@ -116,22 +126,30 @@ pub async fn generate_outline_streaming(
         ],
     );
     let app_o = app.clone();
-    let outline_text = streaming_step(config, &prompt, app_o, steps[2]).await?;
+    let outline_text =
+        streaming_step(config, &prompt, app_o, steps[2], on_progress.clone()).await?;
     let outline = files::parse_outline_text(&outline_text)?;
     files::write_outline(dir, &outline)?;
 
     Ok(outline_text)
 }
 
-async fn streaming_step(
+async fn streaming_step<F>(
     config: &AppConfig,
     prompt: &str,
     app: tauri::AppHandle,
     step: &str,
-) -> Result<String> {
+    on_progress: F,
+) -> Result<String>
+where
+    F: Fn(&str, &str, bool) + Clone + Send + Sync + 'static,
+{
     let step_owned = step.to_string();
+    let callback_step = step.to_string();
+    let on_chunk = on_progress.clone();
     let app_for_done = app.clone();
     let result = ai::generate_streaming(config, prompt, move |chunk| {
+        on_chunk(&callback_step, chunk, false);
         let _ = app.emit(
             "outline-progress",
             OutlineProgressEvent {
@@ -145,6 +163,7 @@ async fn streaming_step(
     .await;
 
     // 发送完成事件
+    on_progress(step, "", true);
     let _ = app_for_done.emit(
         "outline-progress",
         OutlineProgressEvent {
@@ -166,8 +185,8 @@ pub async fn generate_chapter_streaming(
     let chapter_num = ctx.current_chapter + 1;
 
     let novel = files::read_novel(dir)?;
-    let chapter_title =
-        files::get_chapter_outline(dir, chapter_num)?.ok_or(AppError::OutlineMissing(chapter_num))?;
+    let chapter_title = files::get_chapter_outline(dir, chapter_num)?
+        .ok_or(AppError::OutlineMissing(chapter_num))?;
 
     let prompt = build_chapter_prompt(&ctx, chapter_num, &chapter_title, &novel, config);
 
@@ -368,24 +387,21 @@ async fn extract_facts(config: &AppConfig, content: &str) -> Result<Value> {
     parse_json_response(&raw)
 }
 
-async fn extract_intent(
-    config: &AppConfig,
-    content: &str,
-) -> Result<files::NarrativeIntent> {
+async fn extract_intent(config: &AppConfig, content: &str) -> Result<files::NarrativeIntent> {
     let prompt = fill_template(&config.prompts.extract_intent, &[("content", content)]);
     let raw = ai::generate(config, &prompt).await?;
     let json = parse_json_response(&raw)?;
     Ok(files::NarrativeIntent {
         character_wants: json["character_wants"].as_str().unwrap_or("").to_string(),
         obstacle: json["obstacle"].as_str().unwrap_or("").to_string(),
-        reader_should_care: json["reader_should_care"].as_str().unwrap_or("").to_string(),
+        reader_should_care: json["reader_should_care"]
+            .as_str()
+            .unwrap_or("")
+            .to_string(),
     })
 }
 
-async fn extract_emotion(
-    config: &AppConfig,
-    content: &str,
-) -> Result<Vec<files::EmotionalTag>> {
+async fn extract_emotion(config: &AppConfig, content: &str) -> Result<Vec<files::EmotionalTag>> {
     let prompt = fill_template(&config.prompts.extract_emotion, &[("content", content)]);
     let raw = ai::generate(config, &prompt).await?;
     let json = parse_json_response(&raw)?;
@@ -469,10 +485,7 @@ fn merge_facts(ctx: &mut ContextData, facts: &Value) {
 
 fn update_tension(ctx: &mut ContextData) {
     for t in &ctx.unresolved_threads {
-        let exists = ctx
-            .tension_checklist
-            .iter()
-            .any(|tc| tc.item == *t);
+        let exists = ctx.tension_checklist.iter().any(|tc| tc.item == *t);
         if !exists {
             ctx.tension_checklist.push(files::TensionItem {
                 item: t.clone(),

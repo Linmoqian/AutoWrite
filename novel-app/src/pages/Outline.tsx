@@ -1,19 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Collapse,
-  List,
-  Typography,
-  Empty,
-  Steps,
-  message,
-} from "antd";
+import { Collapse, List, Typography, Empty, Steps, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
   getStatus,
-  generateOutline,
+  getOutlineGenerationStatus,
   onOutlineProgress,
+  startOutlineGeneration,
 } from "../services/tauri";
-import type { Volume, OutlineProgressEvent } from "../types";
+import type { OutlineProgressEvent, Volume } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 
@@ -26,6 +20,9 @@ const STEP_LABELS: Record<string, string> = {
   outline: "章节列表",
 };
 
+type OutlineStep = (typeof STEP_KEYS)[number];
+type StreamingText = Partial<Record<OutlineStep, string>>;
+
 function filterThinkTags(text: string): string {
   return text.replace(/<think[\s\S]*?<\/think>/g, "");
 }
@@ -33,29 +30,11 @@ function filterThinkTags(text: string): string {
 export default function Outline() {
   const [volumes, setVolumes] = useState<Volume[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<string | null>(null);
-  const [streamingText, setStreamingText] = useState<Record<string, string>>({});
+  const [currentStep, setCurrentStep] = useState<OutlineStep | null>(null);
+  const [streamingText, setStreamingText] = useState<StreamingText>({});
   const streamRef = useRef<HTMLDivElement>(null);
-
-  // 流式缓冲：chunk 先写入 ref，每 80ms 批量刷到 state
-  const bufferRef = useRef<Record<string, string>>({});
-  const timerRef = useRef(0);
+  const wasRunningRef = useRef(false);
   const userScrolledRef = useRef(false);
-
-  const flushBuffer = useCallback(() => {
-    const updates = bufferRef.current;
-    if (Object.keys(updates).length > 0) {
-      bufferRef.current = {};
-      setStreamingText((prev) => {
-        const next = { ...prev };
-        for (const [key, val] of Object.entries(updates)) {
-          next[key] = (next[key] || "") + val;
-        }
-        return next;
-      });
-    }
-    timerRef.current = window.setTimeout(flushBuffer, 80);
-  }, []);
 
   const refresh = async () => {
     try {
@@ -66,20 +45,65 @@ export default function Outline() {
     }
   };
 
-  useEffect(() => {
-    refresh();
+  const syncGenerationStatus = useCallback(async () => {
+    try {
+      const status = await getOutlineGenerationStatus();
+      setLoading(status.running);
+      setCurrentStep(status.currentStep ?? null);
+      setStreamingText(status.streamingText ?? {});
+
+      if (wasRunningRef.current && !status.running) {
+        if (status.completed) {
+          message.success("大纲生成完成");
+          refresh();
+        } else if (status.error) {
+          message.error(`生成失败: ${status.error}`);
+        }
+      }
+      wasRunningRef.current = status.running;
+    } catch (e) {
+      message.error(String(e));
+    }
   }, []);
 
   useEffect(() => {
+    refresh();
+    syncGenerationStatus();
+  }, [syncGenerationStatus]);
+
+  useEffect(() => {
+    const unlistenPromise = onOutlineProgress((e: OutlineProgressEvent) => {
+      setLoading(true);
+      setCurrentStep(e.step);
+      if (e.chunk) {
+        setStreamingText((prev) => ({
+          ...prev,
+          [e.step]: (prev[e.step] || "") + e.chunk,
+        }));
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!loading) return undefined;
+    const timer = window.setInterval(syncGenerationStatus, 1000);
+    return () => window.clearInterval(timer);
+  }, [loading, syncGenerationStatus]);
+
+  useEffect(() => {
     const el = streamRef.current;
-    if (!el) return;
+    if (!el) return undefined;
     const onScroll = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
       userScrolledRef.current = !atBottom;
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
     if (streamRef.current && !userScrolledRef.current) {
@@ -88,41 +112,22 @@ export default function Outline() {
   }, [streamingText]);
 
   const handleGenerate = async () => {
-    setLoading(true);
     setStreamingText({});
     setCurrentStep("world");
-    bufferRef.current = {};
+    setLoading(true);
     userScrolledRef.current = false;
-    timerRef.current = window.setTimeout(flushBuffer, 80);
-
-    const unlisten = await onOutlineProgress((e: OutlineProgressEvent) => {
-      setCurrentStep(e.step);
-      if (e.chunk) {
-        bufferRef.current[e.step] = (bufferRef.current[e.step] || "") + e.chunk;
-      }
-    });
 
     try {
-      await generateOutline();
-      clearTimeout(timerRef.current);
-      flushBuffer();
-      message.success("大纲生成完成");
-      refresh();
+      await startOutlineGeneration();
+      await syncGenerationStatus();
     } catch (e) {
-      message.error(`生成失败: ${e}`);
-    } finally {
-      unlisten();
-      clearTimeout(timerRef.current);
       setLoading(false);
-      setStreamingText({});
-      setCurrentStep(null);
+      message.error(`生成失败: ${e}`);
     }
   };
 
   if (loading) {
-    const stepIndex = currentStep
-      ? STEP_KEYS.indexOf(currentStep as (typeof STEP_KEYS)[number])
-      : 0;
+    const stepIndex = currentStep ? STEP_KEYS.indexOf(currentStep) : 0;
     const displayText = currentStep
       ? filterThinkTags(streamingText[currentStep] || "")
       : "";
@@ -137,11 +142,13 @@ export default function Outline() {
           }))}
           style={{ marginBottom: 24 }}
         />
-        {displayText && (
+        {displayText ? (
           <div ref={streamRef} className="streaming-area md-body">
             <Markdown>{displayText}</Markdown>
             <span className="cursor-blink">|</span>
           </div>
+        ) : (
+          <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
         )}
       </div>
     );

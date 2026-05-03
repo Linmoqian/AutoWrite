@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use tauri::State;
+use tauri::{Emitter, Manager, State};
 
 use crate::config::AppConfig;
 use crate::error::Result;
@@ -11,6 +12,17 @@ use crate::novel::{self, NovelStatus};
 pub struct AppState {
     pub novel_dir: Mutex<Option<PathBuf>>,
     pub config_path: Mutex<PathBuf>,
+    pub outline_generation: Mutex<OutlineGenerationStatus>,
+}
+
+#[derive(Clone, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutlineGenerationStatus {
+    pub running: bool,
+    pub completed: bool,
+    pub current_step: Option<String>,
+    pub streaming_text: HashMap<String, String>,
+    pub error: Option<String>,
 }
 
 fn dir_from_state(state: &State<AppState>) -> Result<PathBuf> {
@@ -30,9 +42,13 @@ fn config_from_state(state: &State<AppState>) -> Result<AppConfig> {
 #[tauri::command]
 pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
     use tauri_plugin_dialog::DialogExt;
-    let file_path = app.dialog().file().blocking_pick_folder()
+    let file_path = app
+        .dialog()
+        .file()
+        .blocking_pick_folder()
         .ok_or(crate::error::AppError::NoNovelDir)?;
-    let dir: PathBuf = file_path.as_path()
+    let dir: PathBuf = file_path
+        .as_path()
         .ok_or(crate::error::AppError::NoNovelDir)?
         .to_path_buf();
     let dir_str = dir.to_string_lossy().to_string();
@@ -66,24 +82,91 @@ pub async fn create_novel(
 ) -> Result<()> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    novel::create_novel(&dir, &title, &genre, &theme, chapters, &config, overwrite.unwrap_or(false))
+    novel::create_novel(
+        &dir,
+        &title,
+        &genre,
+        &theme,
+        chapters,
+        &config,
+        overwrite.unwrap_or(false),
+    )
 }
 
 #[tauri::command]
-pub async fn generate_outline(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<String> {
+pub async fn generate_outline(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
     novel::generate_outline_streaming(&dir, &config, &app).await
 }
 
 #[tauri::command]
-pub async fn generate_chapter(
+pub async fn start_outline_generation(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
-) -> Result<u32> {
+) -> Result<()> {
+    let dir = dir_from_state(&state)?;
+    let config = config_from_state(&state)?;
+
+    {
+        let mut status = state.outline_generation.lock().unwrap();
+        if status.running {
+            return Ok(());
+        }
+        *status = OutlineGenerationStatus {
+            running: true,
+            completed: false,
+            current_step: Some("world".to_string()),
+            streaming_text: HashMap::new(),
+            error: None,
+        };
+    }
+
+    let app_for_task = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let app_for_progress = app_for_task.clone();
+        let result = novel::generate_outline_streaming_with_progress(
+            &dir,
+            &config,
+            &app_for_task,
+            move |step, chunk, _done| {
+                let state = app_for_progress.state::<AppState>();
+                let mut status = state.outline_generation.lock().unwrap();
+                status.current_step = Some(step.to_string());
+                if !chunk.is_empty() {
+                    status
+                        .streaming_text
+                        .entry(step.to_string())
+                        .or_default()
+                        .push_str(chunk);
+                }
+            },
+        )
+        .await;
+
+        let state = app_for_task.state::<AppState>();
+        let status_snapshot = {
+            let mut status = state.outline_generation.lock().unwrap();
+            status.running = false;
+            status.completed = result.is_ok();
+            status.error = result.err().map(|e| e.to_string());
+            status.clone()
+        };
+        let _ = app_for_task.emit("outline-generation-status", status_snapshot);
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_outline_generation_status(
+    state: State<'_, AppState>,
+) -> Result<OutlineGenerationStatus> {
+    Ok(state.outline_generation.lock().unwrap().clone())
+}
+
+#[tauri::command]
+pub async fn generate_chapter(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<u32> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
     novel::generate_chapter_streaming(&dir, &config, &app).await

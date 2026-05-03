@@ -11,14 +11,9 @@ import {
   Space,
   Typography,
 } from "antd";
-import {
-  BookOutlined,
-  ThunderboltOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
-import { getStatus, generateOutline, generateChapter } from "../services/tauri";
+import { BookOutlined, FileTextOutlined } from "@ant-design/icons";
+import { getStatus } from "../services/tauri";
 import type { NovelStatus } from "../types";
-import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 
 const { Paragraph } = Typography;
@@ -27,7 +22,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<NovelStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
@@ -140,38 +134,6 @@ export default function Dashboard() {
       )}
 
       <Space style={{ marginTop: 20 }}>
-        <LoadingButton
-          type="primary"
-          icon={<ThunderboltOutlined />}
-          loading={loading === "outline"}
-          onClick={async () => {
-            setLoading("outline");
-            try {
-              await generateOutline();
-            } finally {
-              setLoading(null);
-              refresh();
-            }
-          }}
-        >
-          生成大纲
-        </LoadingButton>
-        <LoadingButton
-          type="primary"
-          icon={<FileTextOutlined />}
-          loading={loading === "chapter"}
-          onClick={async () => {
-            setLoading("chapter");
-            try {
-              await generateChapter();
-            } finally {
-              setLoading(null);
-              refresh();
-            }
-          }}
-        >
-          写下一章
-        </LoadingButton>
         <Button onClick={() => navigate("/outline")}>查看大纲</Button>
         <Button onClick={() => navigate("/chapters")}>查看章节</Button>
       </Space>

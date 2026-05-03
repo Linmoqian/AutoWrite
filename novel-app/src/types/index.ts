@@ -73,6 +73,14 @@ export interface OutlineProgressEvent {
   done: boolean;
 }
 
+export interface OutlineGenerationStatus {
+  running: boolean;
+  completed: boolean;
+  currentStep?: "world" | "characters" | "outline";
+  streamingText: Partial<Record<"world" | "characters" | "outline", string>>;
+  error?: string;
+}
+
 export interface ChapterProgressEvent {
   chunk: string;
   done: boolean;

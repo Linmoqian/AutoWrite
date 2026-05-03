@@ -6,6 +6,7 @@ import type {
   ChapterMeta,
   ChapterProgressEvent,
   NovelStatus,
+  OutlineGenerationStatus,
   OutlineProgressEvent,
 } from "../types";
 
@@ -29,6 +30,14 @@ export async function createNovel(
 
 export async function generateOutline(): Promise<string> {
   return invoke<string>("generate_outline");
+}
+
+export async function startOutlineGeneration(): Promise<void> {
+  return invoke("start_outline_generation");
+}
+
+export async function getOutlineGenerationStatus(): Promise<OutlineGenerationStatus> {
+  return invoke<OutlineGenerationStatus>("get_outline_generation_status");
 }
 
 export async function generateChapter(): Promise<number> {

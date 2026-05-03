@@ -10,9 +10,9 @@ use std::sync::Mutex;
 
 use commands::AppState;
 use tauri::{
-    Manager,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,12 +28,15 @@ pub fn run() {
         .manage(AppState {
             novel_dir: Mutex::new(saved_dir),
             config_path: Mutex::new(config_path),
+            outline_generation: Mutex::new(Default::default()),
         })
         .invoke_handler(tauri::generate_handler![
             commands::select_novel_dir,
             commands::get_novel_dir,
             commands::create_novel,
             commands::generate_outline,
+            commands::start_outline_generation,
+            commands::get_outline_generation_status,
             commands::generate_chapter,
             commands::get_status,
             commands::list_chapters,
