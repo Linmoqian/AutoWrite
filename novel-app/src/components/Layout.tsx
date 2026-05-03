@@ -21,6 +21,8 @@ const menuItems = [
   { key: "/settings", icon: <SettingOutlined />, label: "设置" },
 ];
 
+const FULL_WIDTH_ROUTES = ["/chapters"];
+
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,6 +36,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     const selected = await selectNovelDir();
     setDir(selected);
   };
+
+  const fullWidth = FULL_WIDTH_ROUTES.includes(location.pathname);
 
   return (
     <AntLayout style={{ minHeight: "100vh" }}>
@@ -113,8 +117,10 @@ export default function Layout({ children }: { children: ReactNode }) {
         </Header>
         <Content
           style={{
-            margin: 24,
-            padding: 28,
+            margin: fullWidth ? 24 : "24px auto",
+            padding: fullWidth ? "20px 28px" : "28px 36px",
+            maxWidth: fullWidth ? "none" : 1100,
+            width: "100%",
             background: "var(--bg-surface)",
             borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border)",
