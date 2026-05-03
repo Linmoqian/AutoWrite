@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Form, Input, InputNumber, Card, Collapse, Select, message } from "antd";
+import { CheckCircleOutlined } from "@ant-design/icons";
 import { loadConfig, saveConfig } from "../services/tauri";
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
@@ -15,6 +16,7 @@ const PROVIDER_PRESETS: Record<string, { label: string; model: string; url: stri
 export default function Settings() {
   const [form] = Form.useForm<AppConfig>();
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [provider, setProvider] = useState<Provider>("openai");
   const [savedConfig, setSavedConfig] = useState<AppConfig | null>(null);
 
@@ -42,11 +44,21 @@ export default function Settings() {
 
   const onSave = async (values: AppConfig) => {
     setLoading(true);
+    setSaved(false);
     try {
       const merged = { ...savedConfig, ...values };
       await saveConfig(merged);
       setSavedConfig(merged);
-      message.success("配置已保存", 3);
+      setSaved(true);
+      message.open({
+        type: "success",
+        content: "配置已保存",
+        duration: 3,
+        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+        style: {
+          marginTop: "48px",
+        },
+      });
     } catch (e) {
       message.error(`保存失败: ${e}`);
     } finally {
@@ -55,7 +67,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="fade-in" style={{ maxWidth: 700 }}>
+    <div className="fade-in" style={{ maxWidth: 700, margin: "0 auto" }}>
       <h1 className="page-title">设置</h1>
       <Form form={form} layout="vertical" onFinish={onSave} requiredMark={false}>
         <Card title="AI 模型" style={{ marginBottom: 16 }}>
@@ -148,9 +160,17 @@ export default function Settings() {
           style={{ marginBottom: 16 }}
         />
 
-        <LoadingButton type="primary" htmlType="submit" loading={loading}>
-          保存配置
-        </LoadingButton>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <LoadingButton type="primary" htmlType="submit" loading={loading}>
+            保存配置
+          </LoadingButton>
+          {saved && (
+            <span style={{ color: "#52c41a", fontSize: 14 }}>
+              <CheckCircleOutlined style={{ marginRight: 4 }} />
+              已保存
+            </span>
+          )}
+        </div>
       </Form>
     </div>
   );

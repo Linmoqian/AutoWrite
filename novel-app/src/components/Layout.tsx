@@ -40,8 +40,17 @@ export default function Layout({ children }: { children: ReactNode }) {
   const fullWidth = FULL_WIDTH_ROUTES.includes(location.pathname);
 
   return (
-    <AntLayout style={{ minHeight: "100vh" }}>
-      <Sider width={200}>
+    <AntLayout style={{ height: "100vh", overflow: "hidden" }}>
+      <Sider
+        width={200}
+        style={{
+          overflow: "auto",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
+          left: 0,
+        }}
+      >
         <div
           style={{
             padding: "20px 16px 8px",
@@ -84,7 +93,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           onClick={({ key }) => navigate(key)}
         />
       </Sider>
-      <AntLayout>
+      <AntLayout style={{ overflow: "hidden" }}>
         <Header
           style={{
             background: "var(--bg-primary)",
@@ -95,6 +104,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             borderBottom: "1px solid var(--border)",
             height: 48,
             lineHeight: "48px",
+            flexShrink: 0,
           }}
         >
           <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
@@ -124,7 +134,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             background: "var(--bg-surface)",
             borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border)",
-            minHeight: "calc(100vh - 96px)",
+            overflowY: "auto",
+            flex: 1,
           }}
         >
           {children}

@@ -22,6 +22,8 @@ export default function Chapters() {
   const [chapters, setChapters] = useState<ChapterMeta[]>([]);
   const [selected, setSelected] = useState<ChapterContent | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingChapter, setGeneratingChapter] = useState<number | null>(null);
+  const [viewingDuringGen, setViewingDuringGen] = useState(false);
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const streamRef = useRef<HTMLDivElement>(null);
@@ -52,18 +54,24 @@ export default function Chapters() {
   }, []);
 
   useEffect(() => {
-    if (streamRef.current) {
+    if (streamRef.current && !viewingDuringGen) {
       streamRef.current.scrollTop = streamRef.current.scrollHeight;
     }
-  }, [streamingText]);
+  }, [streamingText, viewingDuringGen]);
 
   const handleSelect = async (ch: ChapterMeta) => {
-    if (generating) return;
+    // 生成中切换到其他章节查看
+    if (generating && ch.chapter === generatingChapter) {
+      setViewingDuringGen(false);
+      setSelected(null);
+      return;
+    }
     setLoadingChapter(true);
     try {
       const filename = `${String(ch.chapter).padStart(3, "0")}-${ch.title.slice(0, 10)}.md`;
       const content = await readChapter(filename);
       setSelected(content);
+      setViewingDuringGen(generating);
     } catch (e) {
       message.error(String(e));
     } finally {
@@ -73,7 +81,9 @@ export default function Chapters() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setGeneratingChapter(chapters.length > 0 ? chapters[chapters.length - 1].chapter + 1 : 1);
     setSelected(null);
+    setViewingDuringGen(false);
     setStreamingText("");
     bufferRef.current = "";
     timerRef.current = window.setTimeout(flushBuffer, 80);
@@ -96,6 +106,8 @@ export default function Chapters() {
       unlisten();
       clearTimeout(timerRef.current);
       setGenerating(false);
+      setGeneratingChapter(null);
+      setViewingDuringGen(false);
       setStreamingText("");
     }
   };
@@ -119,7 +131,16 @@ export default function Chapters() {
 
   const displayText = filterThinkTags(streamingText);
 
-  const rightContent = generating ? (
+  // 生成中的虚拟章节卡片
+  const generatingCard = generating ? {
+    chapter: generatingChapter ?? (chapters.length + 1),
+    title: "创作中...",
+    words: 0,
+    created: "",
+  } : null;
+
+  // 右侧内容
+  const rightContent = generating && !viewingDuringGen ? (
     displayText ? (
       <div ref={streamRef} className="chapter-scroll">
         <div className="md-body">
@@ -165,6 +186,12 @@ export default function Chapters() {
     <Empty description="选择左侧章节查看内容" />
   );
 
+  // 判断当前选中：生成中未切换时选中生成卡片，否则按 selected 判断
+  const isSelected = (ch: ChapterMeta) => {
+    if (generating && !viewingDuringGen) return false;
+    return selected?.meta.chapter === ch.chapter;
+  };
+
   return (
     <div className="fade-in" style={{ height: "calc(100vh - 144px)", display: "flex", flexDirection: "column" }}>
       <div
@@ -197,12 +224,25 @@ export default function Chapters() {
               <List.Item style={{ padding: "2px 0", border: "none" }}>
                 <ChapterCard
                   chapter={ch}
-                  selected={selected?.meta.chapter === ch.chapter}
+                  selected={isSelected(ch)}
                   onClick={() => handleSelect(ch)}
                 />
               </List.Item>
             )}
           />
+          {generatingCard && (
+            <List.Item style={{ padding: "2px 0", border: "none" }}>
+              <ChapterCard
+                chapter={generatingCard}
+                selected={!viewingDuringGen}
+                generating
+                onClick={() => {
+                  setViewingDuringGen(false);
+                  setSelected(null);
+                }}
+              />
+            </List.Item>
+          )}
         </div>
         <div style={{ width: 1, background: "var(--border)", margin: "0 16px", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
