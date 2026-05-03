@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Collapse,
   List,
@@ -33,10 +33,27 @@ export default function Outline() {
   const [volumes, setVolumes] = useState<Volume[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<string | null>(null);
-  const [streamingText, setStreamingText] = useState<Record<string, string>>(
-    {},
-  );
+  const [streamingText, setStreamingText] = useState<Record<string, string>>({});
   const streamRef = useRef<HTMLDivElement>(null);
+
+  // 流式缓冲：chunk 先写入 ref，每 80ms 批量刷到 state
+  const bufferRef = useRef<Record<string, string>>({});
+  const timerRef = useRef(0);
+
+  const flushBuffer = useCallback(() => {
+    const updates = bufferRef.current;
+    if (Object.keys(updates).length > 0) {
+      bufferRef.current = {};
+      setStreamingText((prev) => {
+        const next = { ...prev };
+        for (const [key, val] of Object.entries(updates)) {
+          next[key] = (next[key] || "") + val;
+        }
+        return next;
+      });
+    }
+    timerRef.current = window.setTimeout(flushBuffer, 80);
+  }, []);
 
   const refresh = async () => {
     try {
@@ -55,31 +72,33 @@ export default function Outline() {
     if (streamRef.current) {
       streamRef.current.scrollTop = streamRef.current.scrollHeight;
     }
-  }, [streamingText, currentStep]);
+  }, [streamingText]);
 
   const handleGenerate = async () => {
     setLoading(true);
     setStreamingText({});
     setCurrentStep("world");
+    bufferRef.current = {};
+    timerRef.current = window.setTimeout(flushBuffer, 80);
 
     const unlisten = await onOutlineProgress((e: OutlineProgressEvent) => {
       setCurrentStep(e.step);
       if (e.chunk) {
-        setStreamingText((prev) => ({
-          ...prev,
-          [e.step]: (prev[e.step] || "") + e.chunk,
-        }));
+        bufferRef.current[e.step] = (bufferRef.current[e.step] || "") + e.chunk;
       }
     });
 
     try {
       await generateOutline();
+      clearTimeout(timerRef.current);
+      flushBuffer();
       message.success("大纲生成完成");
       refresh();
     } catch (e) {
       message.error(`生成失败: ${e}`);
     } finally {
       unlisten();
+      clearTimeout(timerRef.current);
       setLoading(false);
       setStreamingText({});
       setCurrentStep(null);

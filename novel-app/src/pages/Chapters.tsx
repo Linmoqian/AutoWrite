@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Row, Col, List, Typography, Empty, message } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import {
@@ -24,6 +24,19 @@ export default function Chapters() {
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const streamRef = useRef<HTMLDivElement>(null);
+
+  // 流式缓冲：chunk 先写入 ref，每 80ms 批量刷到 state
+  const bufferRef = useRef("");
+  const timerRef = useRef(0);
+
+  const flushBuffer = useCallback(() => {
+    if (bufferRef.current) {
+      const chunk = bufferRef.current;
+      bufferRef.current = "";
+      setStreamingText((prev) => prev + chunk);
+    }
+    timerRef.current = window.setTimeout(flushBuffer, 80);
+  }, []);
 
   const refresh = async () => {
     try {
@@ -60,21 +73,26 @@ export default function Chapters() {
   const handleGenerate = async () => {
     setGenerating(true);
     setStreamingText("");
+    bufferRef.current = "";
+    timerRef.current = window.setTimeout(flushBuffer, 80);
 
     const unlisten = await onChapterProgress((e) => {
       if (e.chunk) {
-        setStreamingText((prev) => prev + e.chunk);
+        bufferRef.current += e.chunk;
       }
     });
 
     try {
       const num = await generateChapter();
+      clearTimeout(timerRef.current);
+      flushBuffer();
       message.success(`第 ${num} 章已生成`);
       refresh();
     } catch (e) {
       message.error(`生成失败: ${e}`);
     } finally {
       unlisten();
+      clearTimeout(timerRef.current);
       setGenerating(false);
       setStreamingText("");
     }
