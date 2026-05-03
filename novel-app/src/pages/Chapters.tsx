@@ -26,7 +26,6 @@ export default function Chapters() {
   const [streamingText, setStreamingText] = useState("");
   const streamRef = useRef<HTMLDivElement>(null);
 
-  // 流式缓冲：chunk 先写入 ref，每 80ms 批量刷到 state
   const bufferRef = useRef("");
   const timerRef = useRef(0);
 
@@ -59,6 +58,7 @@ export default function Chapters() {
   }, [streamingText]);
 
   const handleSelect = async (ch: ChapterMeta) => {
+    if (generating) return;
     setLoadingChapter(true);
     try {
       const filename = `${String(ch.chapter).padStart(3, "0")}-${ch.title.slice(0, 10)}.md`;
@@ -73,6 +73,7 @@ export default function Chapters() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setSelected(null);
     setStreamingText("");
     bufferRef.current = "";
     timerRef.current = window.setTimeout(flushBuffer, 80);
@@ -118,6 +119,51 @@ export default function Chapters() {
 
   const displayText = filterThinkTags(streamingText);
 
+  // 右侧内容：生成中显示流式文本，否则显示选中的章节
+  const rightContent = generating ? (
+    displayText ? (
+      <div ref={streamRef} className="streaming-area md-body">
+        <Markdown>{displayText}</Markdown>
+        <span className="cursor-blink">|</span>
+      </div>
+    ) : (
+      <div style={{ textAlign: "center", padding: 24 }}>
+        <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
+      </div>
+    )
+  ) : loadingChapter ? (
+    <div style={{ textAlign: "center", padding: 24 }}>
+      <Text style={{ color: "var(--text-muted)" }}>加载中...</Text>
+    </div>
+  ) : selected ? (
+    <div>
+      <div
+        style={{
+          fontFamily: '"KaiTi", "楷体", serif',
+          fontSize: 20,
+          color: "var(--text-primary)",
+          marginBottom: 4,
+        }}
+      >
+        第{selected.meta.chapter}章 {selected.meta.title}
+      </div>
+      <Text style={{ color: "var(--text-muted)", fontSize: 13 }}>
+        {selected.meta.words} 字 | {selected.meta.created}
+      </Text>
+      <div
+        style={{
+          marginTop: 20,
+          borderTop: "1px solid var(--border)",
+          paddingTop: 20,
+        }}
+      >
+        <div className="chapter-body"><Markdown>{selected.body}</Markdown></div>
+      </div>
+    </div>
+  ) : (
+    <Empty description="选择左侧章节查看内容" />
+  );
+
   return (
     <div className="fade-in">
       <div
@@ -141,19 +187,6 @@ export default function Chapters() {
         </LoadingButton>
       </div>
 
-      {generating && displayText && (
-        <div ref={streamRef} className="streaming-area md-body" style={{ marginBottom: 16 }}>
-          <Markdown>{displayText}</Markdown>
-          <span className="cursor-blink">|</span>
-        </div>
-      )}
-
-      {generating && !displayText && (
-        <div style={{ textAlign: "center", padding: 24 }}>
-          <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
-        </div>
-      )}
-
       <Row gutter={16}>
         <Col span={8}>
           <List
@@ -170,38 +203,7 @@ export default function Chapters() {
           />
         </Col>
         <Col span={16}>
-          {loadingChapter ? (
-            <div style={{ textAlign: "center", padding: 24 }}>
-              <Text style={{ color: "var(--text-muted)" }}>加载中...</Text>
-            </div>
-          ) : selected ? (
-            <div>
-              <div
-                style={{
-                  fontFamily: '"KaiTi", "楷体", serif',
-                  fontSize: 20,
-                  color: "var(--text-primary)",
-                  marginBottom: 4,
-                }}
-              >
-                第{selected.meta.chapter}章 {selected.meta.title}
-              </div>
-              <Text style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                {selected.meta.words} 字 | {selected.meta.created}
-              </Text>
-              <div
-                style={{
-                  marginTop: 20,
-                  borderTop: "1px solid var(--border)",
-                  paddingTop: 20,
-                }}
-              >
-                <div className="chapter-body"><Markdown>{selected.body}</Markdown></div>
-              </div>
-            </div>
-          ) : (
-            <Empty description="选择左侧章节查看内容" />
-          )}
+          {rightContent}
         </Col>
       </Row>
     </div>
