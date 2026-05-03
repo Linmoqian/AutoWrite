@@ -54,11 +54,16 @@ export interface Prompts {
   chapter: string;
 }
 
+export type Provider = "openai" | "ollama";
+
 export interface AppConfig {
   novel_dir?: string;
+  provider: Provider;
   model: string;
   timeout: number;
   ollama_url: string;
+  api_base_url: string;
+  api_key: string;
   prompts: Prompts;
 }
 

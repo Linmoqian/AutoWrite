@@ -14,8 +14,8 @@ pub enum AppError {
     NovelNotFound(String),
     #[error("第 {0} 章大纲缺失")]
     OutlineMissing(u32),
-    #[error("Ollama 调用失败: {0}")]
-    OllamaFailed(String),
+    #[error("AI 调用失败: {0}")]
+    AiFailed(String),
     #[error("未选择小说目录")]
     NoNovelDir,
 }

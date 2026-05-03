@@ -31,13 +31,27 @@ impl Default for Prompts {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Provider {
+    #[default]
+    OpenAI,
+    Ollama,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub novel_dir: Option<String>,
+    #[serde(default)]
+    pub provider: Provider,
     pub model: String,
     pub timeout: u64,
     pub ollama_url: String,
+    #[serde(default)]
+    pub api_base_url: String,
+    #[serde(default)]
+    pub api_key: String,
     pub prompts: Prompts,
 }
 
@@ -45,9 +59,12 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             novel_dir: None,
-            model: "deepseek-r1:7b".to_string(),
+            provider: Provider::OpenAI,
+            model: "deepseek-chat".to_string(),
             timeout: 300,
             ollama_url: "http://localhost:11434".to_string(),
+            api_base_url: "https://api.deepseek.com".to_string(),
+            api_key: String::new(),
             prompts: Prompts::default(),
         }
     }
