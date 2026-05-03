@@ -19,6 +19,7 @@ import {
 import { getStatus, generateOutline, generateChapter } from "../services/tauri";
 import type { NovelStatus } from "../types";
 import LoadingButton from "../components/LoadingButton";
+import Markdown from "react-markdown";
 
 const { Paragraph } = Typography;
 
@@ -125,7 +126,7 @@ export default function Dashboard() {
           title="世界观"
           style={{ marginTop: 16 }}
         >
-          <div className="world-body">{novel.world}</div>
+          <div className="md-body"><Markdown>{novel.world}</Markdown></div>
         </Card>
       )}
 
@@ -134,7 +135,7 @@ export default function Dashboard() {
           title="角色"
           style={{ marginTop: 16 }}
         >
-          <div className="world-body">{novel.characters}</div>
+          <div className="md-body"><Markdown>{novel.characters}</Markdown></div>
         </Card>
       )}
 

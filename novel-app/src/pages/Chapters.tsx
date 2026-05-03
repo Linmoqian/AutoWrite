@@ -10,6 +10,7 @@ import {
 import type { ChapterMeta, ChapterContent } from "../types";
 import ChapterCard from "../components/ChapterCard";
 import LoadingButton from "../components/LoadingButton";
+import Markdown from "react-markdown";
 
 const { Text } = Typography;
 
@@ -141,8 +142,8 @@ export default function Chapters() {
       </div>
 
       {generating && displayText && (
-        <div ref={streamRef} className="streaming-area" style={{ marginBottom: 16 }}>
-          {displayText}
+        <div ref={streamRef} className="streaming-area md-body" style={{ marginBottom: 16 }}>
+          <Markdown>{displayText}</Markdown>
           <span className="cursor-blink">|</span>
         </div>
       )}
@@ -195,7 +196,7 @@ export default function Chapters() {
                   paddingTop: 20,
                 }}
               >
-                <div className="chapter-body">{selected.body}</div>
+                <div className="chapter-body"><Markdown>{selected.body}</Markdown></div>
               </div>
             </div>
           ) : (

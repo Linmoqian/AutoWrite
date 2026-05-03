@@ -15,6 +15,7 @@ import {
 } from "../services/tauri";
 import type { Volume, OutlineProgressEvent } from "../types";
 import LoadingButton from "../components/LoadingButton";
+import Markdown from "react-markdown";
 
 const { Text } = Typography;
 
@@ -124,8 +125,8 @@ export default function Outline() {
           style={{ marginBottom: 24 }}
         />
         {displayText && (
-          <div ref={streamRef} className="streaming-area">
-            {displayText}
+          <div ref={streamRef} className="streaming-area md-body">
+            <Markdown>{displayText}</Markdown>
             <span className="cursor-blink">|</span>
           </div>
         )}
