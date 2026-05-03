@@ -69,17 +69,23 @@ pub async fn create_novel(
 }
 
 #[tauri::command]
-pub async fn generate_outline(state: State<'_, AppState>) -> Result<String> {
+pub async fn generate_outline(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    novel::generate_outline(&dir, &config).await
+    novel::generate_outline_streaming(&dir, &config, &app).await
 }
 
 #[tauri::command]
-pub async fn generate_chapter(state: State<'_, AppState>) -> Result<u32> {
+pub async fn generate_chapter(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<u32> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    novel::generate_chapter(&dir, &config).await
+    novel::generate_chapter_streaming(&dir, &config, &app).await
 }
 
 #[tauri::command]

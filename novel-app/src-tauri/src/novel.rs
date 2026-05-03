@@ -2,11 +2,27 @@ use chrono::Local;
 use regex::Regex;
 use serde_json::Value;
 use std::path::Path;
+use tauri::Emitter;
 
 use crate::ai;
 use crate::config::{fill_template, AppConfig};
 use crate::error::{AppError, Result};
 use crate::files::{self, ContextData, ChapterMeta, NovelData, Volume};
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OutlineProgressEvent {
+    step: String,
+    chunk: String,
+    done: bool,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChapterProgressEvent {
+    chunk: String,
+    done: bool,
+}
 
 #[derive(Debug, serde::Serialize)]
 pub struct NovelStatus {
@@ -41,37 +57,34 @@ pub fn create_novel(
     Ok(())
 }
 
-pub async fn generate_world(dir: &Path, config: &AppConfig) -> Result<String> {
+pub async fn generate_outline_streaming(
+    dir: &Path,
+    config: &AppConfig,
+    app: &tauri::AppHandle,
+) -> Result<String> {
+    let steps = ["world", "characters", "outline"];
+
+    // Step 1: 生成世界观
     let novel = files::read_novel(dir)?;
     let prompt = fill_template(
         &config.prompts.world,
-        &[
-            ("genre", &novel.genre),
-            ("theme", &novel.theme),
-        ],
+        &[("genre", &novel.genre), ("theme", &novel.theme)],
     );
-    let world = ai::generate(config, &prompt).await?;
+    let app_w = app.clone();
+    let world = streaming_step(config, &prompt, app_w, steps[0]).await?;
     let mut novel = files::read_novel(dir)?;
     novel.world = Some(world.clone());
     files::write_novel(dir, &novel)?;
-    Ok(world)
-}
 
-pub async fn generate_characters(dir: &Path, config: &AppConfig) -> Result<String> {
-    let novel = files::read_novel(dir)?;
-    let world = novel.world.as_deref().unwrap_or("");
-    let prompt = fill_template(&config.prompts.character, &[("world", world)]);
-    let characters = ai::generate(config, &prompt).await?;
+    // Step 2: 生成角色
+    let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
+    let app_c = app.clone();
+    let characters = streaming_step(config, &prompt, app_c, steps[1]).await?;
     let mut novel = files::read_novel(dir)?;
     novel.characters = Some(characters.clone());
     files::write_novel(dir, &novel)?;
-    Ok(characters)
-}
 
-pub async fn generate_outline(dir: &Path, config: &AppConfig) -> Result<String> {
-    let world = generate_world(dir, config).await?;
-    let characters = generate_characters(dir, config).await?;
-
+    // Step 3: 生成大纲
     let novel = files::read_novel(dir)?;
     let prompt = fill_template(
         &config.prompts.outline,
@@ -81,22 +94,75 @@ pub async fn generate_outline(dir: &Path, config: &AppConfig) -> Result<String> 
             ("total_chapters", &novel.target_chapters.to_string()),
         ],
     );
-    let outline_text = ai::generate(config, &prompt).await?;
+    let app_o = app.clone();
+    let outline_text = streaming_step(config, &prompt, app_o, steps[2]).await?;
     let outline = files::parse_outline_text(&outline_text)?;
     files::write_outline(dir, &outline)?;
+
     Ok(outline_text)
 }
 
-pub async fn generate_chapter(dir: &Path, config: &AppConfig) -> Result<u32> {
+async fn streaming_step(
+    config: &AppConfig,
+    prompt: &str,
+    app: tauri::AppHandle,
+    step: &str,
+) -> Result<String> {
+    let step_owned = step.to_string();
+    let app_for_done = app.clone();
+    let result = ai::generate_streaming(config, prompt, move |chunk| {
+        let _ = app.emit(
+            "outline-progress",
+            OutlineProgressEvent {
+                step: step_owned.clone(),
+                chunk: chunk.to_string(),
+                done: false,
+            },
+        );
+        Ok(())
+    })
+    .await;
+
+    // 发送完成事件
+    let _ = app_for_done.emit(
+        "outline-progress",
+        OutlineProgressEvent {
+            step: step.to_string(),
+            chunk: String::new(),
+            done: true,
+        },
+    );
+
+    result
+}
+
+pub async fn generate_chapter_streaming(
+    dir: &Path,
+    config: &AppConfig,
+    app: &tauri::AppHandle,
+) -> Result<u32> {
     let ctx = files::read_context(dir)?;
     let chapter_num = ctx.current_chapter + 1;
 
     let novel = files::read_novel(dir)?;
-    let chapter_title = files::get_chapter_outline(dir, chapter_num)?
-        .ok_or(AppError::OutlineMissing(chapter_num))?;
+    let chapter_title =
+        files::get_chapter_outline(dir, chapter_num)?.ok_or(AppError::OutlineMissing(chapter_num))?;
 
     let prompt = build_chapter_prompt(&ctx, chapter_num, &chapter_title, &novel, config);
-    let content = ai::generate(config, &prompt).await?;
+
+    // 流式生成章节内容
+    let app_clone = app.clone();
+    let content = ai::generate_streaming(config, &prompt, move |chunk| {
+        let _ = app_clone.emit(
+            "chapter-progress",
+            ChapterProgressEvent {
+                chunk: chunk.to_string(),
+                done: false,
+            },
+        );
+        Ok(())
+    })
+    .await?;
 
     // 写入章节文件
     let ch_dir = files::chapters_dir(dir);
@@ -117,8 +183,26 @@ pub async fn generate_chapter(dir: &Path, config: &AppConfig) -> Result<u32> {
     );
     files::write_file_atomic(&ch_dir.join(&filename), &file_content)?;
 
+    // 通知前端进入后处理阶段
+    let _ = app.emit(
+        "chapter-progress",
+        ChapterProgressEvent {
+            chunk: "\n\n[正在提取叙事记忆...]".to_string(),
+            done: false,
+        },
+    );
+
     // 三次提取 + 更新三层记忆
     update_memory(dir, config, chapter_num, &content).await?;
+
+    // 生成完成
+    let _ = app.emit(
+        "chapter-progress",
+        ChapterProgressEvent {
+            chunk: String::new(),
+            done: true,
+        },
+    );
 
     Ok(chapter_num)
 }
