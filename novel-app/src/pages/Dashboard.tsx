@@ -120,6 +120,24 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {novel.world && (
+        <Card
+          title="世界观"
+          style={{ marginTop: 16 }}
+        >
+          <div className="world-body">{novel.world}</div>
+        </Card>
+      )}
+
+      {novel.characters && (
+        <Card
+          title="角色"
+          style={{ marginTop: 16 }}
+        >
+          <div className="world-body">{novel.characters}</div>
+        </Card>
+      )}
+
       <Space style={{ marginTop: 20 }}>
         <LoadingButton
           type="primary"

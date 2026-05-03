@@ -399,6 +399,14 @@ body {
   white-space: pre-wrap;
 }
 
+/* 世界观/角色文本展示 */
+.world-body {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
 /* ── 淡入动画 ── */
 
 .fade-in {
