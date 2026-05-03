@@ -49,6 +49,19 @@ pub fn create_novel(
         ));
     }
 
+    // 覆盖时清理旧数据
+    if overwrite {
+        let outline_path = files::outline_file(dir);
+        if outline_path.exists() {
+            let _ = std::fs::remove_file(&outline_path);
+            let _ = std::fs::remove_file(format!("{}.bak", outline_path.display()));
+        }
+        let chapters_dir = files::chapters_dir(dir);
+        if chapters_dir.exists() {
+            let _ = std::fs::remove_dir_all(&chapters_dir);
+        }
+    }
+
     let data = NovelData {
         title: title.to_string(),
         genre: genre.to_string(),
