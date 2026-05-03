@@ -46,7 +46,7 @@ export default function Settings() {
       const merged = { ...savedConfig, ...values };
       await saveConfig(merged);
       setSavedConfig(merged);
-      message.success("配置已保存");
+      message.success("配置已保存", 3);
     } catch (e) {
       message.error(`保存失败: ${e}`);
     } finally {

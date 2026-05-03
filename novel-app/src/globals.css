@@ -296,6 +296,15 @@ body {
   color: var(--text-primary) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-md) !important;
+  padding: 10px 20px !important;
+}
+
+.ant-message-success .anticon {
+  color: #52c41a !important;
+}
+
+.ant-message-error .anticon {
+  color: var(--red) !important;
 }
 
 /* Select 下拉 */
