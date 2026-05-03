@@ -11,7 +11,7 @@ import type { ChapterMeta, ChapterContent } from "../types";
 import ChapterCard from "../components/ChapterCard";
 import LoadingButton from "../components/LoadingButton";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 function filterThinkTags(text: string): string {
   return text.replace(/<think[\s\S]*?<\/think>/g, "");
@@ -82,8 +82,8 @@ export default function Chapters() {
 
   if (chapters.length === 0 && !generating) {
     return (
-      <div>
-        <Title level={3}>章节管理</Title>
+      <div className="fade-in">
+        <h1 className="page-title">章节管理</h1>
         <Empty description="暂无章节">
           <LoadingButton
             type="primary"
@@ -100,18 +100,18 @@ export default function Chapters() {
   const displayText = filterThinkTags(streamingText);
 
   return (
-    <div>
+    <div className="fade-in">
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 16,
+          marginBottom: 20,
         }}
       >
-        <Title level={3} style={{ margin: 0 }}>
+        <h1 className="page-title" style={{ marginBottom: 0, paddingBottom: 0 }}>
           章节管理
-        </Title>
+        </h1>
         <LoadingButton
           type="primary"
           icon={<FileTextOutlined />}
@@ -123,19 +123,7 @@ export default function Chapters() {
       </div>
 
       {generating && displayText && (
-        <div
-          ref={streamRef}
-          style={{
-            background: "#fafafa",
-            padding: 16,
-            borderRadius: 8,
-            maxHeight: 500,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.8,
-            marginBottom: 16,
-          }}
-        >
+        <div ref={streamRef} className="streaming-area" style={{ marginBottom: 16 }}>
           {displayText}
           <span className="cursor-blink">|</span>
         </div>
@@ -143,7 +131,7 @@ export default function Chapters() {
 
       {generating && !displayText && (
         <div style={{ textAlign: "center", padding: 24 }}>
-          <Text type="secondary">正在连接模型...</Text>
+          <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
         </div>
       )}
 
@@ -152,7 +140,7 @@ export default function Chapters() {
           <List
             dataSource={chapters}
             renderItem={(ch) => (
-              <List.Item style={{ padding: 4 }}>
+              <List.Item style={{ padding: 4, border: "none" }}>
                 <ChapterCard
                   chapter={ch}
                   selected={selected?.meta.chapter === ch.chapter}
@@ -165,24 +153,31 @@ export default function Chapters() {
         <Col span={16}>
           {loadingChapter ? (
             <div style={{ textAlign: "center", padding: 24 }}>
-              <Text type="secondary">加载中...</Text>
+              <Text style={{ color: "var(--text-muted)" }}>加载中...</Text>
             </div>
           ) : selected ? (
             <div>
-              <Title level={4}>
+              <div
+                style={{
+                  fontFamily: '"KaiTi", "楷体", serif',
+                  fontSize: 20,
+                  color: "var(--text-primary)",
+                  marginBottom: 4,
+                }}
+              >
                 第{selected.meta.chapter}章 {selected.meta.title}
-              </Title>
-              <Text type="secondary">
+              </div>
+              <Text style={{ color: "var(--text-muted)", fontSize: 13 }}>
                 {selected.meta.words} 字 | {selected.meta.created}
               </Text>
               <div
                 style={{
-                  marginTop: 16,
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.8,
+                  marginTop: 20,
+                  borderTop: "1px solid var(--border)",
+                  paddingTop: 20,
                 }}
               >
-                {selected.body}
+                <div className="chapter-body">{selected.body}</div>
               </div>
             </div>
           ) : (

@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Layout as AntLayout, Menu, Typography, Button, Space } from "antd";
+import { Layout as AntLayout, Menu, Button } from "antd";
 import {
   BookOutlined,
   PlusOutlined,
@@ -12,7 +12,6 @@ import {
 import { getNovelDir, selectNovelDir } from "../services/tauri";
 
 const { Sider, Content, Header } = AntLayout;
-const { Text } = Typography;
 
 const menuItems = [
   { key: "/", icon: <BookOutlined />, label: "仪表盘" },
@@ -38,10 +37,42 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <AntLayout style={{ minHeight: "100vh" }}>
-      <Sider width={200} theme="light">
-        <div style={{ padding: "16px", textAlign: "center" }}>
-          <Text strong style={{ fontSize: 16 }}>AI 小说创作</Text>
+      <Sider width={200}>
+        <div
+          style={{
+            padding: "20px 16px 8px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: '"KaiTi", "楷体", serif',
+              fontSize: 20,
+              color: "var(--gold)",
+              letterSpacing: 4,
+              fontWeight: "normal",
+            }}
+          >
+            墨夜书房
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--text-muted)",
+              marginTop: 4,
+              letterSpacing: 1,
+            }}
+          >
+            AI 小说创作
+          </div>
         </div>
+        <div
+          style={{
+            height: 1,
+            background: "var(--border)",
+            margin: "8px 20px 12px",
+          }}
+        />
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
@@ -52,28 +83,44 @@ export default function Layout({ children }: { children: ReactNode }) {
       <AntLayout>
         <Header
           style={{
-            background: "#fff",
-            padding: "0 24px",
+            background: "var(--bg-primary)",
+            padding: "0 28px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: "1px solid var(--border)",
+            height: 48,
+            lineHeight: "48px",
           }}
         >
-          <Text type="secondary">
-            {dir || "未选择目录"}
-          </Text>
-          <Space>
-            <Button
-              icon={<FolderOpenOutlined />}
-              onClick={handleSelectDir}
-              size="small"
-            >
-              选择目录
-            </Button>
-          </Space>
+          <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            {dir ? (
+              <>
+                <FolderOpenOutlined style={{ marginRight: 6 }} />
+                {dir}
+              </>
+            ) : (
+              "未选择目录"
+            )}
+          </span>
+          <Button
+            size="small"
+            onClick={handleSelectDir}
+            icon={<FolderOpenOutlined />}
+          >
+            选择目录
+          </Button>
         </Header>
-        <Content style={{ margin: 24, padding: 24, background: "#fff", borderRadius: 8 }}>
+        <Content
+          style={{
+            margin: 24,
+            padding: 28,
+            background: "var(--bg-surface)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--border)",
+            minHeight: "calc(100vh - 96px)",
+          }}
+        >
           {children}
         </Content>
       </AntLayout>

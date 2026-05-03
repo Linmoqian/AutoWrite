@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { Form, Input, InputNumber, Card, Typography, message, Collapse } from "antd";
+import { Form, Input, InputNumber, Card, Collapse, message } from "antd";
 import { loadConfig, saveConfig } from "../services/tauri";
 import type { AppConfig } from "../types";
 import LoadingButton from "../components/LoadingButton";
-
-const { Title } = Typography;
 
 export default function Settings() {
   const [form] = Form.useForm<AppConfig>();
@@ -27,17 +25,29 @@ export default function Settings() {
   };
 
   return (
-    <div style={{ maxWidth: 700 }}>
-      <Title level={3}>设置</Title>
-      <Form form={form} layout="vertical" onFinish={onSave}>
+    <div className="fade-in" style={{ maxWidth: 700 }}>
+      <h1 className="page-title">设置</h1>
+      <Form form={form} layout="vertical" onFinish={onSave} requiredMark={false}>
         <Card title="模型配置" style={{ marginBottom: 16 }}>
-          <Form.Item name="model" label="Ollama 模型" rules={[{ required: true }]}>
+          <Form.Item
+            name="model"
+            label="Ollama 模型"
+            rules={[{ required: true }]}
+          >
             <Input placeholder="如：qwen3:8b, deepseek-r1:7b" />
           </Form.Item>
-          <Form.Item name="ollama_url" label="Ollama 地址" rules={[{ required: true }]}>
+          <Form.Item
+            name="ollama_url"
+            label="Ollama 地址"
+            rules={[{ required: true }]}
+          >
             <Input placeholder="http://localhost:11434" />
           </Form.Item>
-          <Form.Item name="timeout" label="超时时间（秒）" rules={[{ required: true }]}>
+          <Form.Item
+            name="timeout"
+            label="超时时间（秒）"
+            rules={[{ required: true }]}
+          >
             <InputNumber min={60} max={1200} style={{ width: "100%" }} />
           </Form.Item>
         </Card>
@@ -49,16 +59,28 @@ export default function Settings() {
               label: "提示词模板（高级）",
               children: (
                 <>
-                  <Form.Item name={["prompts", "world"]} label="世界观提示词">
+                  <Form.Item
+                    name={["prompts", "world"]}
+                    label="世界观提示词"
+                  >
                     <Input.TextArea rows={6} />
                   </Form.Item>
-                  <Form.Item name={["prompts", "character"]} label="角色提示词">
+                  <Form.Item
+                    name={["prompts", "character"]}
+                    label="角色提示词"
+                  >
                     <Input.TextArea rows={6} />
                   </Form.Item>
-                  <Form.Item name={["prompts", "outline"]} label="大纲提示词">
+                  <Form.Item
+                    name={["prompts", "outline"]}
+                    label="大纲提示词"
+                  >
                     <Input.TextArea rows={6} />
                   </Form.Item>
-                  <Form.Item name={["prompts", "chapter"]} label="章节提示词">
+                  <Form.Item
+                    name={["prompts", "chapter"]}
+                    label="章节提示词"
+                  >
                     <Input.TextArea rows={6} />
                   </Form.Item>
                 </>

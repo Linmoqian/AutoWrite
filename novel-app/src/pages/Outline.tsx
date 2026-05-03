@@ -16,7 +16,7 @@ import {
 import type { Volume, OutlineProgressEvent } from "../types";
 import LoadingButton from "../components/LoadingButton";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const STEP_KEYS = ["world", "characters", "outline"] as const;
 const STEP_LABELS: Record<string, string> = {
@@ -88,14 +88,14 @@ export default function Outline() {
 
   if (loading) {
     const stepIndex = currentStep
-      ? STEP_KEYS.indexOf(currentStep as typeof STEP_KEYS[number])
+      ? STEP_KEYS.indexOf(currentStep as (typeof STEP_KEYS)[number])
       : 0;
     const displayText = currentStep
       ? filterThinkTags(streamingText[currentStep] || "")
       : "";
 
     return (
-      <div style={{ padding: 24 }}>
+      <div className="fade-in">
         <Steps
           current={stepIndex}
           items={STEP_KEYS.map((key) => ({
@@ -105,20 +105,7 @@ export default function Outline() {
           style={{ marginBottom: 24 }}
         />
         {displayText && (
-          <div
-            ref={streamRef}
-            style={{
-              background: "#fafafa",
-              padding: 16,
-              borderRadius: 8,
-              maxHeight: 400,
-              overflow: "auto",
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.8,
-              fontFamily: "monospace",
-              fontSize: 14,
-            }}
-          >
+          <div ref={streamRef} className="streaming-area">
             {displayText}
             <span className="cursor-blink">|</span>
           </div>
@@ -129,8 +116,8 @@ export default function Outline() {
 
   if (volumes.length === 0) {
     return (
-      <div>
-        <Title level={3}>大纲管理</Title>
+      <div className="fade-in">
+        <h1 className="page-title">大纲管理</h1>
         <Empty description="暂无大纲，请先生成">
           <LoadingButton
             type="primary"
@@ -163,18 +150,18 @@ export default function Outline() {
   }));
 
   return (
-    <div>
+    <div className="fade-in">
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 16,
+          marginBottom: 20,
         }}
       >
-        <Title level={3} style={{ margin: 0 }}>
+        <h1 className="page-title" style={{ marginBottom: 0, paddingBottom: 0 }}>
           大纲管理
-        </Title>
+        </h1>
         <LoadingButton
           type="primary"
           icon={<ThunderboltOutlined />}
