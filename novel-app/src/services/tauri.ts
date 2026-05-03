@@ -22,8 +22,9 @@ export async function createNovel(
   genre: string,
   theme: string,
   chapters: number,
+  overwrite = false,
 ): Promise<void> {
-  return invoke("create_novel", { title, genre, theme, chapters });
+  return invoke("create_novel", { title, genre, theme, chapters, overwrite });
 }
 
 export async function generateOutline(): Promise<string> {

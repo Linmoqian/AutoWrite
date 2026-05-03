@@ -18,6 +18,8 @@ pub enum AppError {
     AiFailed(String),
     #[error("未选择小说目录")]
     NoNovelDir,
+    #[error("目录下已有小说「{0}」，请先选择新目录")]
+    NovelAlreadyExists(String),
 }
 
 impl serde::Serialize for AppError {

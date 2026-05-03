@@ -7,6 +7,7 @@ import {
   Select,
   Button,
   Card,
+  Modal,
   message,
 } from "antd";
 import { createNovel } from "../services/tauri";
@@ -25,6 +26,33 @@ const genreOptions = [
 export default function CreateNovel() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [pendingValues, setPendingValues] = useState<{
+    title: string;
+    genre: string;
+    theme: string;
+    chapters: number;
+  } | null>(null);
+
+  const doCreate = async (
+    values: { title: string; genre: string; theme: string; chapters: number },
+    overwrite: boolean,
+  ) => {
+    setLoading(true);
+    try {
+      await createNovel(values.title, values.genre, values.theme, values.chapters, overwrite);
+      message.success("小说创建成功");
+      navigate("/");
+    } catch (e: unknown) {
+      const msg = String(e);
+      if (msg.includes("已有小说")) {
+        setPendingValues(values);
+      } else {
+        message.error(`创建失败: ${e}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onFinish = async (values: {
     title: string;
@@ -32,20 +60,17 @@ export default function CreateNovel() {
     theme: string;
     chapters: number;
   }) => {
-    setLoading(true);
-    try {
-      await createNovel(values.title, values.genre, values.theme, values.chapters);
-      message.success("小说创建成功");
-      navigate("/");
-    } catch (e) {
-      message.error(`创建失败: ${e}`);
-    } finally {
-      setLoading(false);
-    }
+    doCreate(values, false);
+  };
+
+  const handleOverwrite = async () => {
+    if (!pendingValues) return;
+    setPendingValues(null);
+    doCreate(pendingValues, true);
   };
 
   return (
-    <div className="fade-in" style={{ maxWidth: 560 }}>
+    <div className="fade-in" style={{ maxWidth: 560, margin: "0 auto" }}>
       <h1 className="page-title">创建新小说</h1>
       <Card>
         <Form
@@ -81,6 +106,19 @@ export default function CreateNovel() {
           </Form.Item>
         </Form>
       </Card>
+
+      <Modal
+        open={!!pendingValues}
+        title="目录下已有小说"
+        okText="覆盖并创建"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+        onOk={handleOverwrite}
+        onCancel={() => setPendingValues(null)}
+      >
+        <p>当前目录下已经存在小说，覆盖后将丢失所有已有内容（大纲、章节、记忆等）。</p>
+        <p>建议先在设置中选择一个新目录，再创建新小说。</p>
+      </Modal>
     </div>
   );
 }

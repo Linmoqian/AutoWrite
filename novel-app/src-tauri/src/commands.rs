@@ -62,10 +62,11 @@ pub async fn create_novel(
     genre: String,
     theme: String,
     chapters: u32,
+    overwrite: Option<bool>,
 ) -> Result<()> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    novel::create_novel(&dir, &title, &genre, &theme, chapters, &config)
+    novel::create_novel(&dir, &title, &genre, &theme, chapters, &config, overwrite.unwrap_or(false))
 }
 
 #[tauri::command]

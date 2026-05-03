@@ -40,7 +40,15 @@ pub fn create_novel(
     theme: &str,
     chapters: u32,
     config: &AppConfig,
+    overwrite: bool,
 ) -> Result<()> {
+    let novel_path = files::novel_file(dir);
+    if novel_path.exists() && !overwrite {
+        return Err(AppError::NovelAlreadyExists(
+            files::read_novel(dir)?.title,
+        ));
+    }
+
     let data = NovelData {
         title: title.to_string(),
         genre: genre.to_string(),
