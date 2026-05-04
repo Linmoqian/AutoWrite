@@ -499,3 +499,80 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ── 提供商卡片 ── */
+
+.provider-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.provider-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.provider-card:hover {
+  border-color: var(--border-light);
+}
+
+.provider-card--selected {
+  border-color: var(--gold-dim);
+  box-shadow: var(--shadow-glow);
+}
+
+.provider-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.provider-card__header:hover {
+  background: var(--bg-elevated);
+}
+
+.provider-card--selected .provider-card__header {
+  background: var(--gold-glow);
+}
+
+.provider-card__icon {
+  font-size: 22px;
+  color: var(--gold-dim);
+}
+
+.provider-card--selected .provider-card__icon {
+  color: var(--gold);
+}
+
+.provider-card__title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.provider-card__desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.provider-card__check {
+  margin-left: auto;
+  font-size: 18px;
+  color: var(--gold);
+}
+
+.provider-card__body {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
