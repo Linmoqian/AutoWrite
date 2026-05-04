@@ -131,9 +131,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         </Header>
         <Content
           style={{
-            margin: fullWidth ? 24 : "24px auto",
-            padding: fullWidth ? "20px 28px" : "28px 36px",
-            maxWidth: fullWidth ? "none" : 1100,
+            margin: fullWidth ? 16 : 16,
+            padding: fullWidth ? "20px 24px" : "24px 32px",
             width: "100%",
             background: "var(--bg-surface)",
             borderRadius: "var(--radius-lg)",

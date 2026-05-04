@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { List, Typography, Empty, Steps, Collapse, message } from "antd";
+import { List, Typography, Empty, Steps, Collapse, Card, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
   getStatus,
@@ -141,26 +141,29 @@ export default function Outline() {
 
     return (
       <div className="fade-in">
-        <Steps
-          current={stepIndex}
-          items={STEP_KEYS.map((key) => ({
-            title: STEP_LABELS[key],
-            description:
-              currentStep === key
-                ? "生成中..."
-                : STEP_KEYS.indexOf(key) < stepIndex
-                  ? "已完成"
-                  : "",
-          }))}
-          style={{ marginBottom: 24 }}
-        />
+        <Card style={{ marginBottom: 16 }}>
+          <Steps
+            current={stepIndex}
+            items={STEP_KEYS.map((key) => ({
+              title: STEP_LABELS[key],
+              description:
+                currentStep === key
+                  ? "生成中..."
+                  : STEP_KEYS.indexOf(key) < stepIndex
+                    ? "已完成"
+                    : "",
+            }))}
+          />
+        </Card>
         {displayText ? (
           <div ref={streamRef} className="streaming-area md-body">
             <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
             <span className="cursor-blink">|</span>
           </div>
         ) : (
-          <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
+          <Card>
+            <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
+          </Card>
         )}
       </div>
     );
@@ -173,15 +176,17 @@ export default function Outline() {
     return (
       <div className="fade-in">
         <h1 className="page-title">大纲管理</h1>
-        <Empty description="暂无大纲，请先生成">
-          <LoadingButton
-            type="primary"
-            icon={<ThunderboltOutlined />}
-            onClick={handleGenerate}
-          >
-            生成大纲
-          </LoadingButton>
-        </Empty>
+        <Card>
+          <Empty description="暂无大纲，请先生成">
+            <LoadingButton
+              type="primary"
+              icon={<ThunderboltOutlined />}
+              onClick={handleGenerate}
+            >
+              生成大纲
+            </LoadingButton>
+          </Empty>
+        </Card>
       </div>
     );
   }
@@ -259,31 +264,35 @@ export default function Outline() {
             : `重新生成${STEP_LABELS[activeTab] || ""}`}
         </LoadingButton>
       </div>
-      <Steps
-        current={STEP_KEYS.indexOf(activeTab)}
-        items={STEP_KEYS.map((key) => {
-          const available = availableSteps.includes(key);
-          const completed =
-            key === "world"
-              ? !!world
-              : key === "characters"
-                ? !!characters
-                : volumes.length > 0;
-          return {
-            title: STEP_LABELS[key],
-            status: activeTab === key ? "process" : completed ? "finish" : "wait",
-            disabled: !available,
-          };
-        })}
-        onChange={(idx) => {
-          const step = STEP_KEYS[idx];
-          if (availableSteps.includes(step)) setViewTab(step);
-        }}
-        style={{ marginBottom: 24, cursor: "pointer" }}
-      />
-      <div className="outline-content-area md-body" style={{ minHeight: 200 }}>
-        {renderContent()}
-      </div>
+      <Card style={{ marginBottom: 16 }}>
+        <Steps
+          current={STEP_KEYS.indexOf(activeTab)}
+          items={STEP_KEYS.map((key) => {
+            const available = availableSteps.includes(key);
+            const completed =
+              key === "world"
+                ? !!world
+                : key === "characters"
+                  ? !!characters
+                  : volumes.length > 0;
+            return {
+              title: STEP_LABELS[key],
+              status: activeTab === key ? "process" : completed ? "finish" : "wait",
+              disabled: !available,
+            };
+          })}
+          onChange={(idx) => {
+            const step = STEP_KEYS[idx];
+            if (availableSteps.includes(step)) setViewTab(step);
+          }}
+          style={{ cursor: "pointer" }}
+        />
+      </Card>
+      <Card>
+        <div className="outline-content-area md-body" style={{ minHeight: 200 }}>
+          {renderContent()}
+        </div>
+      </Card>
     </div>
   );
 }

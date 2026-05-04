@@ -71,7 +71,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="fade-in" style={{ maxWidth: 700, margin: "0 auto" }}>
+    <div className="fade-in" style={{ maxWidth: 720, margin: "0 auto" }}>
       <h1 className="page-title">模型配置</h1>
       <Form form={form} layout="vertical" onFinish={onSave} requiredMark={false}>
         <Form.Item name="provider" hidden>

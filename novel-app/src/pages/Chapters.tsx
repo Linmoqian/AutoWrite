@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { List, Typography, Empty, message } from "antd";
+import { List, Typography, Empty, Card, message } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import {
   listChapters,
@@ -205,15 +205,17 @@ export default function Chapters() {
     return (
       <div className="fade-in">
         <h1 className="page-title">章节管理</h1>
-        <Empty description="暂无章节，请先在「大纲管理」页面生成大纲">
-          <LoadingButton
-            type="primary"
-            icon={<FileTextOutlined />}
-            onClick={handleGenerate}
-          >
-            写第一章
-          </LoadingButton>
-        </Empty>
+        <Card>
+          <Empty description="暂无章节，请先在「大纲管理」页面生成大纲">
+            <LoadingButton
+              type="primary"
+              icon={<FileTextOutlined />}
+              onClick={handleGenerate}
+            >
+              写第一章
+            </LoadingButton>
+          </Empty>
+        </Card>
       </div>
     );
   }
@@ -302,8 +304,11 @@ export default function Chapters() {
         </LoadingButton>
       </div>
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <div style={{ width: 220, flexShrink: 0, overflowY: "auto" }}>
+      <div style={{ display: "flex", flex: 1, minHeight: 0, gap: 16 }}>
+        <Card
+          style={{ width: 220, flexShrink: 0, overflowY: "auto", padding: 0 }}
+          styles={{ body: { padding: "8px 0" } }}
+        >
           <List
             dataSource={chapters}
             renderItem={(ch) => (
@@ -329,11 +334,13 @@ export default function Chapters() {
               />
             </List.Item>
           )}
-        </div>
-        <div style={{ width: 1, background: "var(--border)", margin: "0 16px", flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+        </Card>
+        <Card
+          style={{ flex: 1, minWidth: 0, overflow: "hidden" }}
+          styles={{ body: { padding: 0, height: "100%", overflow: "hidden" } }}
+        >
           {rightContent}
-        </div>
+        </Card>
       </div>
     </div>
   );

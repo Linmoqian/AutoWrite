@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
-  Col,
-  Row,
   Statistic,
   Progress,
   Button,
@@ -61,31 +59,25 @@ export default function Dashboard() {
     <div className="fade-in">
       <h1 className="page-title">{novel.title}</h1>
 
-      <Row gutter={[16, 16]}>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="类型"
-              value={novel.genre}
-              prefix={<BookOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic title="主题" value={novel.theme} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="目标章节"
-              value={novel.target_chapters}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+        <Card>
+          <Statistic
+            title="类型"
+            value={novel.genre}
+            prefix={<BookOutlined />}
+          />
+        </Card>
+        <Card>
+          <Statistic title="主题" value={novel.theme} />
+        </Card>
+        <Card>
+          <Statistic
+            title="目标章节"
+            value={novel.target_chapters}
+            prefix={<FileTextOutlined />}
+          />
+        </Card>
+      </div>
 
       <Card style={{ marginTop: 16 }}>
         <div

@@ -92,7 +92,7 @@ export default function CreateNovel() {
   };
 
   return (
-    <div className="fade-in" style={{ maxWidth: 560, margin: "0 auto" }}>
+    <div className="fade-in" style={{ maxWidth: 720, margin: "0 auto" }}>
       <h1 className="page-title">创建新小说</h1>
       {existingNovel && (
         <Card
