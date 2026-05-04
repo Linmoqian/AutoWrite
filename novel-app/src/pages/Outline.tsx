@@ -119,13 +119,13 @@ export default function Outline() {
 
   const handleGenerate = async () => {
     setStreamingText({});
-    const initialStep: OutlineStep = world && characters ? "outline" : world ? "characters" : "world";
+    const initialStep: OutlineStep = activeTab;
     setCurrentStep(initialStep);
     setLoading(true);
     userScrolledRef.current = false;
 
     try {
-      await startOutlineGeneration();
+      await startOutlineGeneration(initialStep);
       await syncGenerationStatus();
     } catch (e) {
       setLoading(false);
@@ -254,7 +254,9 @@ export default function Outline() {
           icon={<ThunderboltOutlined />}
           onClick={handleGenerate}
         >
-          {volumes.length > 0 ? "重新生成" : "生成章节大纲"}
+          {hasNothing
+            ? "生成大纲"
+            : `重新生成${STEP_LABELS[activeTab] || ""}`}
         </LoadingButton>
       </div>
       <Steps

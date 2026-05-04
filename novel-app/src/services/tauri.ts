@@ -44,8 +44,8 @@ export async function generateOutline(): Promise<string> {
   return invoke<string>("generate_outline");
 }
 
-export async function startOutlineGeneration(): Promise<void> {
-  return invoke("start_outline_generation");
+export async function startOutlineGeneration(step?: string): Promise<void> {
+  return invoke("start_outline_generation", { step });
 }
 
 export async function getOutlineGenerationStatus(): Promise<OutlineGenerationStatus> {

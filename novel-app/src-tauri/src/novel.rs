@@ -81,22 +81,21 @@ pub async fn generate_outline_streaming(
     config: &AppConfig,
     app: &tauri::AppHandle,
 ) -> Result<String> {
-    generate_outline_streaming_with_progress(dir, config, app, |_step, _chunk, _done| {}).await
+    generate_outline_streaming_with_progress(dir, config, app, "", |_step, _chunk, _done| {}).await
 }
 
 pub async fn generate_outline_streaming_with_progress<F>(
     dir: &Path,
     config: &AppConfig,
     app: &tauri::AppHandle,
+    target_step: &str,
     on_progress: F,
 ) -> Result<String>
 where
     F: Fn(&str, &str, bool) + Clone + Send + Sync + 'static,
 {
-    let steps = ["world", "characters", "outline"];
     let novel = files::read_novel(dir)?;
 
-    // 辅助：为跳过的步骤发送完成事件
     let emit_skip = |step: &str| {
         on_progress(step, "", true);
         let _ = app.emit(
@@ -109,57 +108,62 @@ where
         );
     };
 
-    // Step 1: 生成世界观（如已有则跳过）
-    let world = match novel.world.as_deref() {
-        Some(w) if !w.trim().is_empty() => {
-            emit_skip("world");
-            w.to_string()
-        }
-        _ => {
-            let prompt = fill_template(
-                &config.prompts.world,
-                &[("genre", &novel.genre), ("theme", &novel.theme)],
-            );
-            let result = streaming_step(config, &prompt, app.clone(), steps[0], on_progress.clone())
-                .await?;
-            let mut n = files::read_novel(dir)?;
-            n.world = Some(result.clone());
-            files::write_novel(dir, &n)?;
-            result
-        }
+    let need_world = target_step.is_empty() || target_step == "world";
+    let need_characters = target_step.is_empty() || target_step == "characters";
+    let need_outline = target_step.is_empty() || target_step == "outline";
+
+    // Step 1: 生成世界观
+    let world = if need_world {
+        let prompt = fill_template(
+            &config.prompts.world,
+            &[("genre", &novel.genre), ("theme", &novel.theme)],
+        );
+        let result =
+            streaming_step(config, &prompt, app.clone(), "world", on_progress.clone()).await?;
+        let mut n = files::read_novel(dir)?;
+        n.world = Some(result.clone());
+        files::write_novel(dir, &n)?;
+        result
+    } else {
+        emit_skip("world");
+        novel.world.clone().unwrap_or_default()
     };
 
-    // Step 2: 生成角色（如已有则跳过）
-    let characters = match novel.characters.as_deref() {
-        Some(c) if !c.trim().is_empty() => {
-            emit_skip("characters");
-            c.to_string()
-        }
-        _ => {
-            let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
-            let result = streaming_step(config, &prompt, app.clone(), steps[1], on_progress.clone())
+    // Step 2: 生成角色
+    let characters = if need_characters {
+        let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
+        let result =
+            streaming_step(config, &prompt, app.clone(), "characters", on_progress.clone())
                 .await?;
-            let mut n = files::read_novel(dir)?;
-            n.characters = Some(result.clone());
-            files::write_novel(dir, &n)?;
-            result
-        }
+        let mut n = files::read_novel(dir)?;
+        n.characters = Some(result.clone());
+        files::write_novel(dir, &n)?;
+        result
+    } else {
+        emit_skip("characters");
+        novel.characters.clone().unwrap_or_default()
     };
 
     // Step 3: 生成章节大纲
-    let novel = files::read_novel(dir)?;
-    let prompt = fill_template(
-        &config.prompts.outline,
-        &[
-            ("world", &world),
-            ("characters", &characters),
-            ("total_chapters", &novel.target_chapters.to_string()),
-        ],
-    );
-    let outline_text =
-        streaming_step(config, &prompt, app.clone(), steps[2], on_progress.clone()).await?;
-    let outline = files::parse_outline_text(&outline_text)?;
-    files::write_outline(dir, &outline)?;
+    let outline_text = if need_outline {
+        let novel = files::read_novel(dir)?;
+        let prompt = fill_template(
+            &config.prompts.outline,
+            &[
+                ("world", &world),
+                ("characters", &characters),
+                ("total_chapters", &novel.target_chapters.to_string()),
+            ],
+        );
+        let result =
+            streaming_step(config, &prompt, app.clone(), "outline", on_progress.clone()).await?;
+        let outline = files::parse_outline_text(&result)?;
+        files::write_outline(dir, &outline)?;
+        result
+    } else {
+        emit_skip("outline");
+        String::new()
+    };
 
     Ok(outline_text)
 }

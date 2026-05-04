@@ -108,9 +108,11 @@ pub async fn generate_outline(app: tauri::AppHandle, state: State<'_, AppState>)
 pub async fn start_outline_generation(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
+    step: Option<String>,
 ) -> Result<()> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
+    let target_step = step.unwrap_or_default();
 
     {
         let mut status = state.outline_generation.lock().unwrap();
@@ -120,7 +122,7 @@ pub async fn start_outline_generation(
         *status = OutlineGenerationStatus {
             running: true,
             completed: false,
-            current_step: Some("world".to_string()),
+            current_step: Some(target_step.clone()),
             streaming_text: HashMap::new(),
             error: None,
         };
@@ -133,6 +135,7 @@ pub async fn start_outline_generation(
             &dir,
             &config,
             &app_for_task,
+            &target_step,
             move |step, chunk, _done| {
                 let state = app_for_progress.state::<AppState>();
                 let mut status = state.outline_generation.lock().unwrap();
