@@ -50,6 +50,20 @@ data/fanqie_cookies.json
 .DS_Store
 Thumbs.db
 
+# 备份文件
+*.bak
+
+# 实验数据
+experiment_results/
+
+# 废弃项目
+auto_novel/
+kanban/
+
+# 构建产物
+.next/
+dist/
+
 # 测试覆盖率
 .coverage
 htmlcov/
