@@ -10,13 +10,14 @@ import {
   Empty,
   Space,
   Typography,
+  Collapse,
 } from "antd";
 import { BookOutlined, FileTextOutlined } from "@ant-design/icons";
 import { getStatus } from "../services/tauri";
 import type { NovelStatus } from "../types";
 import Markdown from "react-markdown";
 
-const { Paragraph } = Typography;
+const { Paragraph, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -116,20 +117,30 @@ export default function Dashboard() {
       )}
 
       {novel.world && (
-        <Card
-          title="世界观"
-          style={{ marginTop: 16 }}
-        >
-          <div className="md-body"><Markdown>{novel.world}</Markdown></div>
+        <Card style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+          <Collapse
+            ghost
+            items={[{
+              key: "world",
+              label: <Text strong style={{ fontSize: 15 }}>世界观</Text>,
+              children: <div className="md-body"><Markdown>{novel.world}</Markdown></div>,
+            }]}
+            style={{ border: "none" }}
+          />
         </Card>
       )}
 
       {novel.characters && (
-        <Card
-          title="角色"
-          style={{ marginTop: 16 }}
-        >
-          <div className="md-body"><Markdown>{novel.characters}</Markdown></div>
+        <Card style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+          <Collapse
+            ghost
+            items={[{
+              key: "characters",
+              label: <Text strong style={{ fontSize: 15 }}>角色</Text>,
+              children: <div className="md-body"><Markdown>{novel.characters}</Markdown></div>,
+            }]}
+            style={{ border: "none" }}
+          />
         </Card>
       )}
 
