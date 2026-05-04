@@ -164,6 +164,23 @@ fn build_yaml_front_matter(data: &serde_yaml::Value) -> String {
     )
 }
 
+/// 在文本中查找下一个顶级 Markdown 标题（`# ` 但非 `##`）的字节偏移量。
+fn next_h1_offset(text: &str) -> usize {
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'\n'
+            && i + 2 < bytes.len()
+            && bytes[i + 1] == b'#'
+            && bytes[i + 2] == b' '
+        {
+            return i;
+        }
+        i += 1;
+    }
+    text.len()
+}
+
 // novel.md 操作
 
 pub fn write_novel(dir: &Path, data: &NovelData) -> Result<()> {
@@ -187,25 +204,17 @@ pub fn read_novel(dir: &Path) -> Result<NovelData> {
     let (meta, body) = parse_yaml_front_matter(&content);
     let mut data: NovelData = serde_yaml::from_value(meta)?;
     if body.contains("# 世界观") {
-        let world_section = body.split("# 世界观").nth(1).unwrap_or("");
-        let world = world_section
-            .split("\n# ")
-            .next()
-            .unwrap_or("")
-            .trim()
-            .to_string();
+        let after = body.split("# 世界观").nth(1).unwrap_or("");
+        let end = next_h1_offset(after);
+        let world = after[..end].trim().to_string();
         if !world.is_empty() {
             data.world = Some(world);
         }
     }
     if body.contains("# 角色") {
-        let char_section = body.split("# 角色").nth(1).unwrap_or("");
-        let characters = char_section
-            .split("\n# ")
-            .next()
-            .unwrap_or("")
-            .trim()
-            .to_string();
+        let after = body.split("# 角色").nth(1).unwrap_or("");
+        let end = next_h1_offset(after);
+        let characters = after[..end].trim().to_string();
         if !characters.is_empty() {
             data.characters = Some(characters);
         }
