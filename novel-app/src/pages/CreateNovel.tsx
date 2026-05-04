@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Form,
@@ -9,8 +9,12 @@ import {
   Card,
   Modal,
   message,
+  Tag,
+  Progress,
+  Collapse,
 } from "antd";
-import { createNovel } from "../services/tauri";
+import { createNovel, getStatus, loadConfig } from "../services/tauri";
+import type { NovelStatus, Prompts } from "../types";
 
 const genreOptions = [
   { value: "xuanhuan", label: "玄幻" },
@@ -33,13 +37,31 @@ export default function CreateNovel() {
     chapters: number;
   } | null>(null);
 
+  const [existingNovel, setExistingNovel] = useState<NovelStatus | null>(null);
+  const [prompts, setPrompts] = useState<Prompts | null>(null);
+  const [promptsExpanded, setPromptsExpanded] = useState(false);
+
+  useEffect(() => {
+    getStatus()
+      .then((s) => setExistingNovel(s))
+      .catch(() => setExistingNovel(null));
+    loadConfig().then((c) => setPrompts(c.prompts));
+  }, []);
+
   const doCreate = async (
     values: { title: string; genre: string; theme: string; chapters: number },
     overwrite: boolean,
   ) => {
     setLoading(true);
     try {
-      await createNovel(values.title, values.genre, values.theme, values.chapters, overwrite);
+      await createNovel(
+        values.title,
+        values.genre,
+        values.theme,
+        values.chapters,
+        overwrite,
+        promptsExpanded ? prompts ?? undefined : undefined,
+      );
       message.success("小说创建成功");
       navigate("/");
     } catch (e: unknown) {
@@ -72,6 +94,43 @@ export default function CreateNovel() {
   return (
     <div className="fade-in" style={{ maxWidth: 560, margin: "0 auto" }}>
       <h1 className="page-title">创建新小说</h1>
+      {existingNovel && (
+        <Card
+          hoverable
+          style={{ marginBottom: 16, cursor: "pointer" }}
+          onClick={() => navigate("/")}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: 16 }}>
+                {existingNovel.novel.title}
+              </span>
+              <Tag color="gold" style={{ marginLeft: 8 }}>
+                {existingNovel.novel.genre}
+              </Tag>
+            </div>
+            <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+              {existingNovel.novel.theme}
+            </span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Progress
+              percent={Math.round(
+                existingNovel.total_chapters > 0
+                  ? (existingNovel.written_chapters / existingNovel.total_chapters) * 100
+                  : 0,
+              )}
+              size="small"
+              format={() =>
+                `${existingNovel.written_chapters} / ${existingNovel.total_chapters} 章`
+              }
+            />
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-muted)" }}>
+            点击查看详情
+          </div>
+        </Card>
+      )}
       <Card>
         <Form
           layout="vertical"
@@ -106,6 +165,53 @@ export default function CreateNovel() {
           </Form.Item>
         </Form>
       </Card>
+
+      {prompts && (
+        <Card style={{ marginTop: 16 }}>
+          <Collapse
+            activeKey={promptsExpanded ? ["prompts"] : []}
+            onChange={(keys) => setPromptsExpanded(keys.includes("prompts"))}
+            items={[
+              {
+                key: "prompts",
+                label: "提示词模板（高级，可选自定义）",
+                children: (
+                  <>
+                    <Form.Item label="世界观提示词">
+                      <Input.TextArea
+                        rows={4}
+                        value={prompts.world}
+                        onChange={(e) => setPrompts({ ...prompts, world: e.target.value })}
+                      />
+                    </Form.Item>
+                    <Form.Item label="角色提示词">
+                      <Input.TextArea
+                        rows={4}
+                        value={prompts.character}
+                        onChange={(e) => setPrompts({ ...prompts, character: e.target.value })}
+                      />
+                    </Form.Item>
+                    <Form.Item label="大纲提示词">
+                      <Input.TextArea
+                        rows={4}
+                        value={prompts.outline}
+                        onChange={(e) => setPrompts({ ...prompts, outline: e.target.value })}
+                      />
+                    </Form.Item>
+                    <Form.Item label="章节提示词">
+                      <Input.TextArea
+                        rows={4}
+                        value={prompts.chapter}
+                        onChange={(e) => setPrompts({ ...prompts, chapter: e.target.value })}
+                      />
+                    </Form.Item>
+                  </>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       <Modal
         open={!!pendingValues}

@@ -1,9 +1,15 @@
 import { useState, useEffect } from "react";
-import { Form, Input, InputNumber, Card, Collapse, Select, message } from "antd";
-import { CheckCircleOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Select, message } from "antd";
+import {
+  CheckCircleOutlined,
+  CloudOutlined,
+  LaptopOutlined,
+} from "@ant-design/icons";
 import { loadConfig, saveConfig } from "../services/tauri";
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
+import ProviderCard from "../components/ProviderCard";
+import OllamaModelSelect from "../components/OllamaModelSelect";
 
 const PROVIDER_PRESETS: Record<string, { label: string; model: string; url: string }> = {
   deepseek: { label: "DeepSeek", model: "deepseek-chat", url: "https://api.deepseek.com" },
@@ -27,13 +33,6 @@ export default function Settings() {
       setProvider(config.provider || "openai");
     });
   }, [form]);
-
-  const onProviderChange = (value: Provider) => {
-    setProvider(value);
-    if (value === "ollama") {
-      form.setFieldsValue({ model: "deepseek-r1:7b" });
-    }
-  };
 
   const onPresetChange = (preset: string) => {
     const p = PROVIDER_PRESETS[preset];
@@ -66,99 +65,104 @@ export default function Settings() {
     }
   };
 
+  const handleProviderSwitch = (p: Provider) => {
+    setProvider(p);
+    form.setFieldsValue({ provider: p });
+    if (p === "ollama") {
+      form.setFieldsValue({ model: "" });
+    }
+  };
+
   return (
     <div className="fade-in" style={{ maxWidth: 700, margin: "0 auto" }}>
       <h1 className="page-title">设置</h1>
       <Form form={form} layout="vertical" onFinish={onSave} requiredMark={false}>
-        <Card title="AI 模型" style={{ marginBottom: 16 }}>
-          <Form.Item name="provider" label="提供商" rules={[{ required: true }]}>
-            <Select onChange={onProviderChange}>
-              <Select.Option value="openai">OpenAI 兼容 API</Select.Option>
-              <Select.Option value="ollama">Ollama (本地)</Select.Option>
-            </Select>
-          </Form.Item>
+        <Form.Item name="provider" hidden>
+          <Input />
+        </Form.Item>
 
-          {provider === "openai" && (
-            <>
-              <Form.Item label="快速配置">
-                <Select
-                  placeholder="选择预设服务商"
-                  onChange={onPresetChange}
-                  allowClear
-                >
-                  {Object.entries(PROVIDER_PRESETS).map(([key, p]) => (
-                    <Select.Option key={key} value={key}>{p.label}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item
-                name="api_key"
-                label="API Key"
-                rules={[{ required: true, message: "请输入 API Key" }]}
+        <div className="provider-cards-container">
+          <ProviderCard
+            selected={provider === "openai"}
+            onClick={() => handleProviderSwitch("openai")}
+            title="OpenAI 兼容 API"
+            description="DeepSeek、OpenAI、月之暗面、通义千问等云服务"
+            icon={<CloudOutlined />}
+          >
+            <Form.Item label="快速配置">
+              <Select
+                placeholder="选择预设服务商"
+                onChange={onPresetChange}
+                allowClear
               >
-                <Input.Password placeholder="sk-..." />
-              </Form.Item>
-              <Form.Item
-                name="api_base_url"
-                label="API 地址"
-                rules={[{ required: true }]}
-              >
-                <Input placeholder="https://api.deepseek.com" />
-              </Form.Item>
-            </>
-          )}
+                {Object.entries(PROVIDER_PRESETS).map(([key, p]) => (
+                  <Select.Option key={key} value={key}>{p.label}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="api_key"
+              label="API Key"
+              rules={[{ required: provider === "openai", message: "请输入 API Key" }]}
+            >
+              <Input.Password placeholder="sk-..." />
+            </Form.Item>
+            <Form.Item
+              name="api_base_url"
+              label="API 地址"
+              rules={[{ required: provider === "openai" }]}
+            >
+              <Input placeholder="https://api.deepseek.com" />
+            </Form.Item>
+            <Form.Item
+              name="model"
+              label="模型名称"
+              rules={[{ required: provider === "openai" }]}
+            >
+              <Input placeholder="deepseek-chat" />
+            </Form.Item>
+            <Form.Item
+              name="timeout"
+              label="超时时间（秒）"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={60} max={1200} style={{ width: "100%" }} />
+            </Form.Item>
+          </ProviderCard>
 
-          {provider === "ollama" && (
+          <ProviderCard
+            selected={provider === "ollama"}
+            onClick={() => handleProviderSwitch("ollama")}
+            title="Ollama 本地模型"
+            description="本地或局域网运行，无需 API Key"
+            icon={<LaptopOutlined />}
+          >
             <Form.Item
               name="ollama_url"
               label="Ollama 地址"
-              rules={[{ required: true }]}
+              rules={[{ required: provider === "ollama" }]}
             >
               <Input placeholder="http://localhost:11434" />
             </Form.Item>
-          )}
-
-          <Form.Item
-            name="model"
-            label="模型名称"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder={provider === "ollama" ? "qwen3:8b" : "deepseek-chat"} />
-          </Form.Item>
-          <Form.Item
-            name="timeout"
-            label="超时时间（秒）"
-            rules={[{ required: true }]}
-          >
-            <InputNumber min={60} max={1200} style={{ width: "100%" }} />
-          </Form.Item>
-        </Card>
-
-        <Collapse
-          items={[
-            {
-              key: "prompts",
-              label: "提示词模板（高级）",
-              children: (
-                <>
-                  <Form.Item name={["prompts", "world"]} label="世界观提示词">
-                    <Input.TextArea rows={6} />
-                  </Form.Item>
-                  <Form.Item name={["prompts", "character"]} label="角色提示词">
-                    <Input.TextArea rows={6} />
-                  </Form.Item>
-                  <Form.Item name={["prompts", "outline"]} label="大纲提示词">
-                    <Input.TextArea rows={6} />
-                  </Form.Item>
-                  <Form.Item name={["prompts", "chapter"]} label="章节提示词">
-                    <Input.TextArea rows={6} />
-                  </Form.Item>
-                </>
-              ),
-            },
-          ]}
-          style={{ marginBottom: 16 }}
-        />
+            <Form.Item
+              name="model"
+              label="模型"
+              rules={[{ required: provider === "ollama" }]}
+            >
+              <OllamaModelSelect
+                value={form.getFieldValue("model")}
+                onChange={(v) => form.setFieldsValue({ model: v })}
+              />
+            </Form.Item>
+            <Form.Item
+              name="timeout"
+              label="超时时间（秒）"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={60} max={1200} style={{ width: "100%" }} />
+            </Form.Item>
+          </ProviderCard>
+        </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <LoadingButton type="primary" htmlType="submit" loading={loading}>
