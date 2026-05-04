@@ -17,6 +17,51 @@ pub struct Prompts {
     pub extract_emotion: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ImageProvider {
+    #[default]
+    OpenAI,
+}
+
+fn default_image_model() -> String {
+    "dall-e-3".to_string()
+}
+
+fn default_image_size() -> String {
+    "1024x1024".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagePrompts {
+    #[serde(default = "default_image_style_prefix")]
+    pub style_prefix: String,
+    #[serde(default)]
+    pub cover: String,
+    #[serde(default)]
+    pub character_image: String,
+    #[serde(default)]
+    pub scene: String,
+    #[serde(default)]
+    pub extract_scene: String,
+}
+
+fn default_image_style_prefix() -> String {
+    "水墨风格，深色基调，金色点缀，东方美学".to_string()
+}
+
+impl Default for ImagePrompts {
+    fn default() -> Self {
+        Self {
+            style_prefix: default_image_style_prefix(),
+            cover: "为小说《{title}》绘制封面。类型：{genre}，主题：{theme}。\n要求：构图宏大，突出小说核心意象，适合作为书籍封面，无文字。{style_prefix}".to_string(),
+            character_image: "为小说《{title}》中的角色「{character_name}」绘制立绘。\n角色描述：{character_desc}\n要求：全身或半身像，突出角色外貌特征和气质，背景简洁。{style_prefix}".to_string(),
+            scene: "为小说《{title}》第{chapter_num}章「{chapter_title}」绘制场景插图。\n场景描述：{scene_desc}\n氛围关键词：{mood}\n要求：以场景氛围为主，不出现清晰人脸，无文字。{style_prefix}".to_string(),
+            extract_scene: "请从以下章节内容中提取适合生成场景插图的视觉描述。\n\n要求：\n1. 提取最具视觉冲击力的场景（一个即可）\n2. 将文学性描述转化为具体的视觉元素：构图、光影、色调、关键物体\n3. 用简洁的中文描述，100字以内\n4. 附带氛围关键词（2-3个词，如\"阴郁、紧张\"、\"温暖、治愈\"）\n\n请严格按以下JSON格式输出：\n{\"scene_desc\": \"视觉场景描述\", \"mood\": \"氛围关键词1、氛围关键词2\"}\n\n章节内容：\n{content}".to_string(),
+        }
+    }
+}
+
 impl Default for Prompts {
     fn default() -> Self {
         Self {
@@ -71,6 +116,18 @@ pub struct AppConfig {
     pub api_key: String,
     #[serde(default)]
     pub prompts: Prompts,
+    #[serde(default)]
+    pub image_provider: ImageProvider,
+    #[serde(default = "default_image_model")]
+    pub image_model: String,
+    #[serde(default)]
+    pub image_api_base_url: String,
+    #[serde(default)]
+    pub image_api_key: String,
+    #[serde(default = "default_image_size")]
+    pub image_size: String,
+    #[serde(default)]
+    pub image_prompts: ImagePrompts,
 }
 
 impl AppConfig {
@@ -84,6 +141,22 @@ impl AppConfig {
                 }
             }
             Provider::OpenAI => &self.model,
+        }
+    }
+
+    pub fn image_api_base_url(&self) -> &str {
+        if self.image_api_base_url.is_empty() {
+            &self.api_base_url
+        } else {
+            &self.image_api_base_url
+        }
+    }
+
+    pub fn image_api_key(&self) -> &str {
+        if self.image_api_key.is_empty() {
+            &self.api_key
+        } else {
+            &self.image_api_key
         }
     }
 }
@@ -100,6 +173,12 @@ impl Default for AppConfig {
             api_base_url: "https://api.deepseek.com".to_string(),
             api_key: String::new(),
             prompts: Prompts::default(),
+            image_provider: ImageProvider::OpenAI,
+            image_model: "dall-e-3".to_string(),
+            image_api_base_url: String::new(),
+            image_api_key: String::new(),
+            image_size: "1024x1024".to_string(),
+            image_prompts: ImagePrompts::default(),
         }
     }
 }

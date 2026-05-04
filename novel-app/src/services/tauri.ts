@@ -6,12 +6,15 @@ import type {
   ChapterMeta,
   ChapterProgressEvent,
   ExportData,
+  ImageProgressEvent,
+  ImageResult,
   NovelStatus,
   OllamaModel,
   OllamaTestResult,
   OutlineGenerationStatus,
   OutlineProgressEvent,
   Prompts,
+  SceneDescription,
 } from "../types";
 
 export async function selectNovelDir(): Promise<string> {
@@ -114,4 +117,58 @@ export async function saveExportFile(
   extension: string,
 ): Promise<string> {
   return invoke<string>("save_export_file", { content, filename, extension });
+}
+
+// ===== 图片生成 =====
+
+export async function generateCover(): Promise<ImageResult> {
+  return invoke<ImageResult>("generate_cover");
+}
+
+export async function generateCharacterImage(
+  characterName: string,
+  characterDesc: string,
+): Promise<ImageResult> {
+  return invoke<ImageResult>("generate_character_image", {
+    characterName,
+    characterDesc,
+  });
+}
+
+export async function generateSceneImage(
+  chapterNum: number,
+  sceneDesc: string,
+  mood: string,
+): Promise<ImageResult> {
+  return invoke<ImageResult>("generate_scene_image", {
+    chapterNum,
+    sceneDesc,
+    mood,
+  });
+}
+
+export async function extractSceneDescription(
+  chapterNum: number,
+): Promise<SceneDescription> {
+  return invoke<SceneDescription>("extract_scene_description", { chapterNum });
+}
+
+export async function listImages(): Promise<ImageResult[]> {
+  return invoke<ImageResult[]>("list_images");
+}
+
+export async function deleteImage(imageId: string): Promise<void> {
+  return invoke("delete_image", { imageId });
+}
+
+export async function getImagePath(filename: string): Promise<string> {
+  return invoke<string>("get_image_path", { filename });
+}
+
+export function onImageProgress(
+  handler: (e: ImageProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<ImageProgressEvent>("image-progress", (e) =>
+    handler(e.payload),
+  );
 }

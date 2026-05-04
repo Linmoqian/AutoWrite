@@ -66,6 +66,12 @@ export interface AppConfig {
   api_base_url: string;
   api_key: string;
   prompts: Prompts;
+  image_provider: ImageProvider;
+  image_model: string;
+  image_api_base_url: string;
+  image_api_key: string;
+  image_size: string;
+  image_prompts: ImagePrompts;
 }
 
 export interface OutlineProgressEvent {
@@ -112,4 +118,40 @@ export interface ExportData {
   novel: NovelData;
   outline: Volume[];
   chapters: ExportChapter[];
+}
+
+// ===== 图片生成相关类型 =====
+
+export type ImageKind = "cover" | "character" | "scene";
+
+export type ImageProvider = "openai";
+
+export interface ImageResult {
+  id: string;
+  kind: ImageKind;
+  prompt: string;
+  revisedPrompt?: string;
+  localPath: string;
+  fileSize: number;
+  created: string;
+  refId?: string;
+}
+
+export interface ImageProgressEvent {
+  stage: "preparing" | "generating" | "saving" | "done";
+  message: string;
+  imageId?: string;
+}
+
+export interface SceneDescription {
+  sceneDesc: string;
+  mood: string;
+}
+
+export interface ImagePrompts {
+  stylePrefix: string;
+  cover: string;
+  characterImage: string;
+  scene: string;
+  extractScene: string;
 }

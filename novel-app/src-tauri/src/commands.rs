@@ -369,3 +369,289 @@ pub async fn save_export_file(
     std::fs::write(path, content)?;
     Ok(path.to_string_lossy().to_string())
 }
+
+// ===== 图片生成命令 =====
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageProgressEvent {
+    pub stage: String,
+    pub message: String,
+    pub image_id: Option<String>,
+}
+
+#[tauri::command]
+pub async fn generate_cover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<crate::image::ImageResult> {
+    let dir = dir_from_state(&state)?;
+    let config = config_from_state(&state)?;
+    let novel = crate::files::read_novel(&dir)?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "preparing".to_string(),
+            message: format!("正在为《{}》生成封面...", novel.title),
+            image_id: None,
+        },
+    );
+
+    let prompt = crate::image::build_cover_prompt(
+        &config.image_prompts,
+        &novel.title,
+        &novel.genre,
+        &novel.theme,
+    );
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "generating".to_string(),
+            message: "正在调用图片 API...".to_string(),
+            image_id: None,
+        },
+    );
+
+    let generated = crate::image::generate_image(&config, &prompt).await?;
+
+    let id = crate::image::generate_id();
+    let local_path = crate::image::save_image_file(
+        &dir,
+        &crate::image::ImageKind::Cover,
+        &id,
+        &generated.bytes,
+    )?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "saving".to_string(),
+            message: "正在保存图片...".to_string(),
+            image_id: Some(id.clone()),
+        },
+    );
+
+    let result = crate::image::ImageResult {
+        id: id.clone(),
+        kind: crate::image::ImageKind::Cover,
+        prompt,
+        revised_prompt: generated.revised_prompt,
+        local_path,
+        file_size: generated.bytes.len() as u64,
+        created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
+        ref_id: None,
+    };
+
+    crate::image::append_image_meta(&dir, &result)?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "done".to_string(),
+            message: "封面生成完成".to_string(),
+            image_id: Some(id),
+        },
+    );
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn generate_character_image(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    character_name: String,
+    character_desc: String,
+) -> Result<crate::image::ImageResult> {
+    let dir = dir_from_state(&state)?;
+    let config = config_from_state(&state)?;
+    let novel = crate::files::read_novel(&dir)?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "preparing".to_string(),
+            message: format!("正在为角色「{}」生成立绘...", character_name),
+            image_id: None,
+        },
+    );
+
+    let prompt = crate::image::build_character_prompt(
+        &config.image_prompts,
+        &novel.title,
+        &character_name,
+        &character_desc,
+    );
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "generating".to_string(),
+            message: "正在调用图片 API...".to_string(),
+            image_id: None,
+        },
+    );
+
+    let generated = crate::image::generate_image(&config, &prompt).await?;
+
+    let id = crate::image::generate_id();
+    let local_path = crate::image::save_image_file(
+        &dir,
+        &crate::image::ImageKind::Character,
+        &id,
+        &generated.bytes,
+    )?;
+
+    let result = crate::image::ImageResult {
+        id: id.clone(),
+        kind: crate::image::ImageKind::Character,
+        prompt,
+        revised_prompt: generated.revised_prompt,
+        local_path,
+        file_size: generated.bytes.len() as u64,
+        created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
+        ref_id: Some(character_name.clone()),
+    };
+
+    crate::image::append_image_meta(&dir, &result)?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "done".to_string(),
+            message: format!("角色「{}」立绘生成完成", character_name),
+            image_id: Some(id),
+        },
+    );
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn generate_scene_image(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    chapter_num: u32,
+    scene_desc: String,
+    mood: String,
+) -> Result<crate::image::ImageResult> {
+    let dir = dir_from_state(&state)?;
+    let config = config_from_state(&state)?;
+    let novel = crate::files::read_novel(&dir)?;
+
+    let chapter_title = crate::files::get_chapter_outline(&dir, chapter_num)?
+        .unwrap_or_else(|| format!("第{}章", chapter_num));
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "preparing".to_string(),
+            message: format!(
+                "正在为第{}章「{}」生成场景插图...",
+                chapter_num, chapter_title
+            ),
+            image_id: None,
+        },
+    );
+
+    let prompt = crate::image::build_scene_prompt(
+        &config.image_prompts,
+        &novel.title,
+        chapter_num,
+        &chapter_title,
+        &scene_desc,
+        &mood,
+    );
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "generating".to_string(),
+            message: "正在调用图片 API...".to_string(),
+            image_id: None,
+        },
+    );
+
+    let generated = crate::image::generate_image(&config, &prompt).await?;
+
+    let id = crate::image::generate_id();
+    let local_path = crate::image::save_image_file(
+        &dir,
+        &crate::image::ImageKind::Scene,
+        &id,
+        &generated.bytes,
+    )?;
+
+    let result = crate::image::ImageResult {
+        id: id.clone(),
+        kind: crate::image::ImageKind::Scene,
+        prompt,
+        revised_prompt: generated.revised_prompt,
+        local_path,
+        file_size: generated.bytes.len() as u64,
+        created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
+        ref_id: Some(format!("ch{:03}", chapter_num)),
+    };
+
+    crate::image::append_image_meta(&dir, &result)?;
+
+    let _ = app.emit(
+        "image-progress",
+        ImageProgressEvent {
+            stage: "done".to_string(),
+            message: format!("第{}章场景插图生成完成", chapter_num),
+            image_id: Some(id),
+        },
+    );
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn extract_scene_description(
+    state: State<'_, AppState>,
+    chapter_num: u32,
+) -> Result<crate::image::SceneDescription> {
+    let dir = dir_from_state(&state)?;
+    let config = config_from_state(&state)?;
+
+    let chapters = crate::files::list_chapters(&dir)?;
+    let chapter = chapters
+        .iter()
+        .find(|c| c.chapter == chapter_num)
+        .ok_or_else(|| {
+            crate::error::AppError::Image(format!("第 {} 章不存在", chapter_num))
+        })?;
+
+    let filename = format!("{:03}-{}.md", chapter_num, chapter.title);
+    let (_, body) = crate::files::read_chapter(&dir, &filename)?;
+
+    crate::image::extract_scene(&config, &body).await
+}
+
+#[tauri::command]
+pub fn list_images(state: State<'_, AppState>) -> Result<Vec<crate::image::ImageResult>> {
+    let dir = dir_from_state(&state)?;
+    crate::image::list_images(&dir)
+}
+
+#[tauri::command]
+pub fn delete_image(state: State<'_, AppState>, image_id: String) -> Result<()> {
+    let dir = dir_from_state(&state)?;
+    crate::image::delete_image(&dir, &image_id)
+}
+
+#[tauri::command]
+pub fn get_image_path(state: State<'_, AppState>, filename: String) -> Result<String> {
+    let dir = dir_from_state(&state)?;
+    let path = crate::image::images_dir(&dir).join(&filename);
+    if !path.exists() {
+        return Err(crate::error::AppError::Image(format!(
+            "图片文件不存在: {}",
+            filename
+        )));
+    }
+    Ok(path.to_string_lossy().to_string())
+}

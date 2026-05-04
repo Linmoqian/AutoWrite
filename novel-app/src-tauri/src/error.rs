@@ -22,6 +22,8 @@ pub enum AppError {
     NovelAlreadyExists(String),
     #[error("导出错误: {0}")]
     Export(String),
+    #[error("图片生成失败: {0}")]
+    Image(String),
 }
 
 impl serde::Serialize for AppError {

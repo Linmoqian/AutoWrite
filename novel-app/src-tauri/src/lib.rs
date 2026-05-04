@@ -4,6 +4,7 @@ pub mod config;
 pub mod error;
 pub mod export;
 pub mod files;
+pub mod image;
 pub mod novel;
 
 use std::path::PathBuf;
@@ -49,6 +50,13 @@ pub fn run() {
             commands::get_export_data,
             commands::export_novel,
             commands::save_export_file,
+            commands::generate_cover,
+            commands::generate_character_image,
+            commands::generate_scene_image,
+            commands::extract_scene_description,
+            commands::list_images,
+            commands::delete_image,
+            commands::get_image_path,
         ])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
