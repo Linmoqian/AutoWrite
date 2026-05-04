@@ -128,24 +128,46 @@ function renderMdBody(body: string): string {
   let html = "";
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed === "") {
+    if (trimmed === "" || trimmed === "---" || trimmed === "***" || trimmed === "___") {
       continue;
     }
-    if (trimmed.startsWith("### ")) {
-      html += `<h3>${escHtml(trimmed.slice(4))}</h3>`;
-    } else if (trimmed.startsWith("## ")) {
-      html += `<h2>${escHtml(trimmed.slice(3))}</h2>`;
-    } else if (trimmed.startsWith("# ")) {
-      html += `<h1>${escHtml(trimmed.slice(2))}</h1>`;
-    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-      html += `<p style="text-indent:0">· ${escHtml(trimmed.slice(2))}</p>`;
-    } else if (trimmed.startsWith("> ")) {
-      html += `<p style="color:#666;text-indent:0">${escHtml(trimmed.slice(2))}</p>`;
+    const text = stripInlineMd(trimmed);
+    if (text.startsWith("### ")) {
+      html += `<h3>${escHtml(text.slice(4))}</h3>`;
+    } else if (text.startsWith("## ")) {
+      html += `<h2>${escHtml(text.slice(3))}</h2>`;
+    } else if (text.startsWith("# ")) {
+      html += `<h1>${escHtml(text.slice(2))}</h1>`;
+    } else if (text.startsWith("· ")) {
+      html += `<p style="text-indent:0">${escHtml(text)}</p>`;
+    } else if (text.startsWith("  ")) {
+      html += `<p style="color:#666;text-indent:0">${escHtml(text.trim())}</p>`;
     } else {
-      html += `<p>${escHtml(trimmed)}</p>`;
+      html += `<p>${escHtml(text)}</p>`;
     }
   }
   return html;
+}
+
+function stripInlineMd(text: string): string {
+  // 先处理块级前缀
+  let result = text;
+  // - item / * item → · item
+  if (/^[-*]\s/.test(result)) {
+    result = "· " + result.slice(2);
+  }
+  // > quote → 缩进
+  if (result.startsWith("> ")) {
+    result = "  " + result.slice(2);
+  }
+  // 去除行内格式符号
+  result = result
+    .replace(/\*\*(.+?)\*\*/g, "$1")   // **bold** → bold
+    .replace(/\*(.+?)\*/g, "$1")        // *italic* → italic
+    .replace(/`(.+?)`/g, "$1")          // `code` → code
+    .replace(/~~(.+?)~~/g, "$1")        // ~~strike~~ → strike
+    .replace(/\[(.+?)\]\(.+?\)/g, "$1");// [link](url) → link
+  return result;
 }
 
 function escHtml(text: string): string {

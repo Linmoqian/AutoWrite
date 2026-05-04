@@ -158,41 +158,126 @@ function pushBodyParagraphs(children: Paragraph[], body: string): void {
     if (trimmed === "") {
       continue;
     }
+    if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
+      children.push(new Paragraph({ spacing: { before: 200, after: 200 } }));
+      continue;
+    }
     if (trimmed.startsWith("### ")) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
-          children: [
-            new TextRun({ text: trimmed.slice(4), font: FONT_CN }),
-          ],
+          children: [new TextRun({ text: trimmed.slice(4), font: FONT_CN })],
         }),
       );
     } else if (trimmed.startsWith("## ")) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: [
-            new TextRun({ text: trimmed.slice(3), font: FONT_CN }),
-          ],
+          children: [new TextRun({ text: trimmed.slice(3), font: FONT_CN })],
         }),
       );
     } else if (trimmed.startsWith("# ")) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
+          children: [new TextRun({ text: trimmed.slice(2), font: FONT_CN })],
+        }),
+      );
+    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      children.push(
+        new Paragraph({
+          spacing: { line: 360 },
+          indent: { left: 480 },
           children: [
-            new TextRun({ text: trimmed.slice(2), font: FONT_CN }),
+            new TextRun({ text: `· ${trimmed.slice(2)}`, font: FONT_CN, size: 24 }),
+          ],
+        }),
+      );
+    } else if (trimmed.startsWith("> ")) {
+      children.push(
+        new Paragraph({
+          spacing: { line: 360 },
+          indent: { left: 480 },
+          children: [
+            new TextRun({
+              text: trimmed.slice(2),
+              font: FONT_CN,
+              size: 24,
+              italics: true,
+              color: "666666",
+            }),
           ],
         }),
       );
     } else {
+      const runs = parseInlineRuns(trimmed);
       children.push(
         new Paragraph({
           spacing: { line: 360 },
           indent: { firstLine: 480 },
-          children: [new TextRun({ text: trimmed, font: FONT_CN, size: 24 })],
+          children: runs,
         }),
       );
     }
   }
+}
+
+interface RunSegment {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+function parseInlineRuns(text: string): TextRun[] {
+  const segments: RunSegment[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    // **bold**
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    // *italic*
+    const italicMatch = remaining.match(/\*(.+?)\*/);
+    // `code`
+    const codeMatch = remaining.match(/`(.+?)`/);
+    // ~~strike~~
+    const strikeMatch = remaining.match(/~~(.+?)~~/);
+    // [link](url)
+    const linkMatch = remaining.match(/\[(.+?)\]\(.+?\)/);
+
+    type MdMatch = { index: number; len: number; text: string; bold: boolean; italic: boolean };
+    const candidates: MdMatch[] = [];
+
+    if (boldMatch && boldMatch.index !== undefined) {
+      candidates.push({ index: boldMatch.index, len: boldMatch[0].length, text: boldMatch[1], bold: true, italic: false });
+    }
+    if (italicMatch && italicMatch.index !== undefined) {
+      candidates.push({ index: italicMatch.index, len: italicMatch[0].length, text: italicMatch[1], bold: false, italic: true });
+    }
+    if (codeMatch && codeMatch.index !== undefined) {
+      candidates.push({ index: codeMatch.index, len: codeMatch[0].length, text: codeMatch[1], bold: false, italic: false });
+    }
+    if (strikeMatch && strikeMatch.index !== undefined) {
+      candidates.push({ index: strikeMatch.index, len: strikeMatch[0].length, text: strikeMatch[1], bold: false, italic: false });
+    }
+    if (linkMatch && linkMatch.index !== undefined) {
+      candidates.push({ index: linkMatch.index, len: linkMatch[0].length, text: linkMatch[1], bold: false, italic: true });
+    }
+
+    if (candidates.length === 0) {
+      segments.push({ text: remaining, bold: false, italic: false });
+      break;
+    }
+
+    const first = candidates.reduce((a, b) => (a.index < b.index ? a : b));
+
+    if (first.index > 0) {
+      segments.push({ text: remaining.slice(0, first.index), bold: false, italic: false });
+    }
+    segments.push({ text: first.text, bold: first.bold, italic: first.italic });
+    remaining = remaining.slice(first.index + first.len);
+  }
+
+  return segments.map(
+    (s) => new TextRun({ text: s.text, font: FONT_CN, size: 24, bold: s.bold, italics: s.italic }),
+  );
 }
