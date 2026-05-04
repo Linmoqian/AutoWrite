@@ -18,41 +18,87 @@ function filterThinkTags(text: string): string {
   return text.replace(/<think[\s\S]*?<\/think>/g, "");
 }
 
+// 模块级状态：跨组件挂载/卸载保持生成进度
+const genState = {
+  active: false,
+  chapterNum: 0,
+  text: "",
+  unlisten: null as (() => void) | null,
+  buffer: "",
+  flushTimer: 0,
+  completed: false,
+  error: "",
+};
+
 export default function Chapters() {
   const [chapters, setChapters] = useState<ChapterMeta[]>([]);
   const [selected, setSelected] = useState<ChapterContent | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [generatingChapter, setGeneratingChapter] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(genState.active);
+  const [generatingChapter, setGeneratingChapter] = useState<number | null>(
+    genState.active ? genState.chapterNum : null,
+  );
   const [viewingDuringGen, setViewingDuringGen] = useState(false);
   const [loadingChapter, setLoadingChapter] = useState(false);
-  const [streamingText, setStreamingText] = useState("");
+  const [streamingText, setStreamingText] = useState(genState.active ? genState.text : "");
   const streamRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
 
-  const bufferRef = useRef("");
-  const timerRef = useRef(0);
   const userScrolledRef = useRef(false);
 
   const flushBuffer = useCallback(() => {
-    if (bufferRef.current) {
-      const chunk = bufferRef.current;
-      bufferRef.current = "";
-      setStreamingText((prev) => prev + chunk);
+    if (genState.buffer) {
+      const chunk = genState.buffer;
+      genState.buffer = "";
+      genState.text += chunk;
+      if (mountedRef.current) {
+        setStreamingText(genState.text);
+      }
     }
-    timerRef.current = window.setTimeout(flushBuffer, 80);
+    genState.flushTimer = window.setTimeout(flushBuffer, 80);
   }, []);
 
   const refresh = async () => {
     try {
       const list = await listChapters();
-      setChapters(list);
+      if (mountedRef.current) setChapters(list);
     } catch (e) {
       message.error(String(e));
     }
   };
 
+  // 组件挂载/卸载跟踪
   useEffect(() => {
+    mountedRef.current = true;
+
+    // 恢复进行中的生成状态
+    if (genState.active) {
+      setGenerating(true);
+      setGeneratingChapter(genState.chapterNum);
+      setStreamingText(genState.text);
+      // 重新启动 buffer 刷新
+      genState.flushTimer = window.setTimeout(flushBuffer, 80);
+    }
+
+    // 检查是否有已完成但未处理的生成结果
+    if (genState.completed) {
+      genState.completed = false;
+      message.success(`第 ${genState.chapterNum} 章已生成`);
+      refresh();
+    }
+    if (genState.error) {
+      const err = genState.error;
+      genState.error = "";
+      message.error({ content: `生成失败: ${err}`, duration: 5 });
+    }
+
     refresh();
-  }, []);
+
+    return () => {
+      mountedRef.current = false;
+      // 不清理生成状态，保持模块级状态持久化
+      clearTimeout(genState.flushTimer);
+    };
+  }, [flushBuffer]);
 
   useEffect(() => {
     const el = streamRef.current;
@@ -72,7 +118,6 @@ export default function Chapters() {
   }, [streamingText, viewingDuringGen]);
 
   const handleSelect = async (ch: ChapterMeta) => {
-    // 生成中切换到其他章节查看
     if (generating && ch.chapter === generatingChapter) {
       setViewingDuringGen(false);
       setSelected(null);
@@ -92,36 +137,66 @@ export default function Chapters() {
   };
 
   const handleGenerate = async () => {
+    const num = chapters.length > 0 ? chapters[chapters.length - 1].chapter + 1 : 1;
+
+    // 清理之前的状态
+    genState.active = true;
+    genState.chapterNum = num;
+    genState.text = "";
+    genState.buffer = "";
+    genState.completed = false;
+    genState.error = "";
+
     setGenerating(true);
-    setGeneratingChapter(chapters.length > 0 ? chapters[chapters.length - 1].chapter + 1 : 1);
+    setGeneratingChapter(num);
     setSelected(null);
     setViewingDuringGen(false);
     setStreamingText("");
-    bufferRef.current = "";
     userScrolledRef.current = false;
-    timerRef.current = window.setTimeout(flushBuffer, 80);
 
-    const unlisten = await onChapterProgress((e) => {
+    // 启动 buffer 刷新
+    genState.flushTimer = window.setTimeout(flushBuffer, 80);
+
+    // 订阅事件（持久化，不随组件卸载清理）
+    genState.unlisten = await onChapterProgress((e) => {
       if (e.chunk) {
-        bufferRef.current += e.chunk;
+        genState.buffer += e.chunk;
       }
     });
 
     try {
-      const num = await generateChapter();
-      clearTimeout(timerRef.current);
+      await generateChapter();
+      clearTimeout(genState.flushTimer);
       flushBuffer();
-      message.success(`第 ${num} 章已生成`);
-      refresh();
+
+      genState.active = false;
+      genState.completed = true;
+
+      if (mountedRef.current) {
+        setGenerating(false);
+        setGeneratingChapter(null);
+        setViewingDuringGen(false);
+        setStreamingText("");
+        message.success(`第 ${num} 章已生成`);
+        refresh();
+      }
     } catch (e) {
-      message.error({ content: `生成失败: ${e}`, duration: 5 });
+      clearTimeout(genState.flushTimer);
+      genState.active = false;
+      genState.error = String(e);
+
+      if (mountedRef.current) {
+        setGenerating(false);
+        setGeneratingChapter(null);
+        setViewingDuringGen(false);
+        setStreamingText("");
+        message.error({ content: `生成失败: ${e}`, duration: 5 });
+      }
     } finally {
-      unlisten();
-      clearTimeout(timerRef.current);
-      setGenerating(false);
-      setGeneratingChapter(null);
-      setViewingDuringGen(false);
-      setStreamingText("");
+      if (genState.unlisten) {
+        genState.unlisten();
+        genState.unlisten = null;
+      }
     }
   };
 
@@ -144,7 +219,6 @@ export default function Chapters() {
 
   const displayText = filterThinkTags(streamingText);
 
-  // 生成中的虚拟章节卡片
   const generatingCard = generating ? {
     chapter: generatingChapter ?? (chapters.length + 1),
     title: "创作中...",
@@ -152,7 +226,6 @@ export default function Chapters() {
     created: "",
   } : null;
 
-  // 右侧内容
   const rightContent = generating && !viewingDuringGen ? (
     displayText ? (
       <div ref={streamRef} className="chapter-scroll">
@@ -199,7 +272,6 @@ export default function Chapters() {
     <Empty description="选择左侧章节查看内容" />
   );
 
-  // 判断当前选中：生成中未切换时选中生成卡片，否则按 selected 判断
   const isSelected = (ch: ChapterMeta) => {
     if (generating && !viewingDuringGen) return false;
     return selected?.meta.chapter === ch.chapter;
