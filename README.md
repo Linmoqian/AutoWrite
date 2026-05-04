@@ -28,6 +28,8 @@ cd novel-lite/web/client && npm install && npm run dev
 
 ## 模块结构
 
+```bash
+npm run tauri build
 ```
 novel-lite/
 ├── config.yaml       # 配置（模型、提示词模板）

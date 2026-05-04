@@ -1,33 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-/lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# 依赖
+node_modules/
 
-# 虚拟环境
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+# 构建产物
+dist/
 
 # IDE
 .idea/
@@ -36,40 +11,19 @@ venv.bak/
 *.swo
 *~
 
-# Playwright
-playwright-report/
-test-results/
-.playwright/
-
 # 敏感数据
 data/novels/
-data/fanqie_cookies.json
 *.log
 
 # 系统文件
 .DS_Store
 Thumbs.db
-
-# 备份文件
 *.bak
-
-# 实验数据
-experiment_results/
-
-# 废弃项目
-auto_novel/
-kanban/
-
-# 构建产物
-.next/
-dist/
 
 # 测试覆盖率
 .coverage
 htmlcov/
 .pytest_cache/
-
-# mypy
 .mypy_cache/
 
 # 小说生成内容（源码保留，生成产物忽略）
