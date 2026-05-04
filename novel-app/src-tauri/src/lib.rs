@@ -43,6 +43,8 @@ pub fn run() {
             commands::read_chapter,
             commands::load_config,
             commands::save_config,
+            commands::ollama_list_models,
+            commands::ollama_test_connection,
         ])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
