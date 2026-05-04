@@ -114,7 +114,7 @@ export default function Chapters() {
       message.success(`第 ${num} 章已生成`);
       refresh();
     } catch (e) {
-      message.error(`生成失败: ${e}`);
+      message.error({ content: `生成失败: ${e}`, duration: 5 });
     } finally {
       unlisten();
       clearTimeout(timerRef.current);
@@ -129,7 +129,7 @@ export default function Chapters() {
     return (
       <div className="fade-in">
         <h1 className="page-title">章节管理</h1>
-        <Empty description="暂无章节">
+        <Empty description="暂无章节，请先在「大纲管理」页面生成大纲">
           <LoadingButton
             type="primary"
             icon={<FileTextOutlined />}

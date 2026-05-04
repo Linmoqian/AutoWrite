@@ -12,7 +12,7 @@ pub enum AppError {
     Http(#[from] reqwest::Error),
     #[error("小说未找到: {0}")]
     NovelNotFound(String),
-    #[error("第 {0} 章大纲缺失")]
+    #[error("第 {0} 章大纲缺失，请先在「大纲管理」页面生成大纲")]
     OutlineMissing(u32),
     #[error("AI 调用失败: {0}")]
     AiFailed(String),
