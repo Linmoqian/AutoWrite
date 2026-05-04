@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "AI 小说创作",
+        "title": "自动化小说创作",
         "width": 1200,
         "height": 800,
         "resizable": true,

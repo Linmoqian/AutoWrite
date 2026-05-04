@@ -2,7 +2,7 @@
 
 基于 Ollama 本地大模型的 AI 小说创作系统。
 
-## 快速开始
+# 快速开始
 
 ```bash
 cd novel-lite && pip install -r requirements-novel.txt
