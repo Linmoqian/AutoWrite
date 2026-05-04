@@ -85,3 +85,15 @@ export interface ChapterProgressEvent {
   chunk: string;
   done: boolean;
 }
+
+export interface OllamaModel {
+  name: string;
+  size: string;
+  modified: string;
+}
+
+export interface OllamaTestResult {
+  connected: boolean;
+  latency_ms: number;
+  error?: string;
+}

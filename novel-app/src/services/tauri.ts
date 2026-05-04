@@ -6,8 +6,11 @@ import type {
   ChapterMeta,
   ChapterProgressEvent,
   NovelStatus,
+  OllamaModel,
+  OllamaTestResult,
   OutlineGenerationStatus,
   OutlineProgressEvent,
+  Prompts,
 } from "../types";
 
 export async function selectNovelDir(): Promise<string> {
@@ -24,8 +27,16 @@ export async function createNovel(
   theme: string,
   chapters: number,
   overwrite = false,
+  promptsOverride?: Prompts,
 ): Promise<void> {
-  return invoke("create_novel", { title, genre, theme, chapters, overwrite });
+  return invoke("create_novel", {
+    title,
+    genre,
+    theme,
+    chapters,
+    overwrite,
+    promptsOverride,
+  });
 }
 
 export async function generateOutline(): Promise<string> {
@@ -78,4 +89,12 @@ export function onChapterProgress(
   return listen<ChapterProgressEvent>("chapter-progress", (e) =>
     handler(e.payload),
   );
+}
+
+export async function ollamaListModels(): Promise<OllamaModel[]> {
+  return invoke<OllamaModel[]>("ollama_list_models");
+}
+
+export async function ollamaTestConnection(): Promise<OllamaTestResult> {
+  return invoke<OllamaTestResult>("ollama_test_connection");
 }
