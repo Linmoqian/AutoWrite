@@ -72,6 +72,7 @@ export interface AppConfig {
   image_api_key: string;
   image_size: string;
   image_prompts: ImagePrompts;
+  image_loras: LoraConfig;
 }
 
 export interface OutlineProgressEvent {
@@ -124,13 +125,21 @@ export interface ExportData {
 
 export type ImageKind = "cover" | "character" | "scene";
 
-export type ImageProvider = "openai";
+export type ImageProvider = "modelscope";
+
+export interface LoraEntry {
+  name: string;
+  weight?: number;
+}
+
+export interface LoraConfig {
+  entries: LoraEntry[];
+}
 
 export interface ImageResult {
   id: string;
   kind: ImageKind;
   prompt: string;
-  revisedPrompt?: string;
   localPath: string;
   fileSize: number;
   created: string;
@@ -138,7 +147,7 @@ export interface ImageResult {
 }
 
 export interface ImageProgressEvent {
-  stage: "preparing" | "generating" | "saving" | "done";
+  stage: "preparing" | "submitting" | "polling" | "downloading" | "saving" | "done";
   message: string;
   imageId?: string;
 }

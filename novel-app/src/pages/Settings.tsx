@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Card, Form, Input, InputNumber, Select, message } from "antd";
+import { Card, Form, Input, InputNumber, Select, Button, Collapse, message } from "antd";
 import {
   CheckCircleOutlined,
   CloudOutlined,
   LaptopOutlined,
   PictureOutlined,
+  PlusOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 
 import { loadConfig, saveConfig } from "../services/tauri";
@@ -168,18 +170,25 @@ export default function Settings() {
           <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <PictureOutlined style={{ color: "var(--gold)", fontSize: 18 }} />
             <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-primary)" }}>
-              图片生成配置
+              图片生成配置（魔搭 ModelScope）
             </span>
           </div>
-          <Form.Item name="image_provider" hidden><Input /></Form.Item>
           <Form.Item name="image_model" label="图片模型">
-            <Input placeholder="dall-e-3" />
+            <Input placeholder="Tongyi-MAI/Z-Image-Turbo" />
           </Form.Item>
-          <Form.Item name="image_api_base_url" label="图片 API 地址" tooltip="留空则使用文本生成 API 地址">
-            <Input placeholder="留空则复用文本 API 地址" />
+          <Form.Item
+            name="image_api_base_url"
+            label="ModelScope API 地址"
+            tooltip="留空则使用默认 ModelScope API 地址"
+          >
+            <Input placeholder="https://api-inference.modelscope.cn" />
           </Form.Item>
-          <Form.Item name="image_api_key" label="图片 API Key" tooltip="留空则使用文本生成 API Key">
-            <Input.Password placeholder="留空则复用文本 API Key" />
+          <Form.Item
+            name="image_api_key"
+            label="ModelScope API Token"
+            tooltip="在 modelscope.cn 注册获取"
+          >
+            <Input.Password placeholder="输入 ModelScope API Token" />
           </Form.Item>
           <Form.Item name="image_size" label="图片尺寸">
             <Select>
@@ -188,6 +197,61 @@ export default function Settings() {
               <Select.Option value="1792x1024">1792 × 1024（横版）</Select.Option>
             </Select>
           </Form.Item>
+          <Collapse
+            ghost
+            items={[
+              {
+                key: "lora",
+                label: "LoRA 配置（可选）",
+                children: (
+                  <>
+                    <Form.List name={["image_loras", "entries"]}>
+                      {(fields, { add, remove }) => (
+                        <>
+                          {fields.map(({ key, name, ...restField }) => (
+                            <div key={key} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                              <Form.Item
+                                {...restField}
+                                name={[name, "name"]}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              >
+                                <Input placeholder="LoRA 名称（如 user/lora-repo）" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, "weight"]}
+                                style={{ width: 120, marginBottom: 0 }}
+                              >
+                                <InputNumber min={0} max={1} step={0.1} placeholder="权重" />
+                              </Form.Item>
+                              <Button
+                                onClick={() => remove(name)}
+                                icon={<DeleteOutlined />}
+                                danger
+                              />
+                            </div>
+                          ))}
+                          {fields.length < 6 && (
+                            <Button
+                              onClick={() => add()}
+                              icon={<PlusOutlined />}
+                              type="dashed"
+                              block
+                            >
+                              添加 LoRA
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </Form.List>
+                    <div style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 8 }}>
+                      最多 6 个 LoRA，权重总和应为 1.0
+                    </div>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
 
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16 }}>

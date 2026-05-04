@@ -408,13 +408,25 @@ pub async fn generate_cover(
     let _ = app.emit(
         "image-progress",
         ImageProgressEvent {
-            stage: "generating".to_string(),
-            message: "正在调用图片 API...".to_string(),
+            stage: "submitting".to_string(),
+            message: "正在提交图片生成任务...".to_string(),
             image_id: None,
         },
     );
 
-    let generated = crate::image::generate_image(&config, &prompt).await?;
+    let app_emit = app.clone();
+    let generated =
+        crate::image::generate_image(&config, &prompt, |msg| {
+            let _ = app_emit.emit(
+                "image-progress",
+                ImageProgressEvent {
+                    stage: "polling".to_string(),
+                    message: msg.to_string(),
+                    image_id: None,
+                },
+            );
+        })
+        .await?;
 
     let id = crate::image::generate_id();
     let local_path = crate::image::save_image_file(
@@ -437,7 +449,7 @@ pub async fn generate_cover(
         id: id.clone(),
         kind: crate::image::ImageKind::Cover,
         prompt,
-        revised_prompt: generated.revised_prompt,
+        revised_prompt: None,
         local_path,
         file_size: generated.bytes.len() as u64,
         created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
@@ -488,13 +500,25 @@ pub async fn generate_character_image(
     let _ = app.emit(
         "image-progress",
         ImageProgressEvent {
-            stage: "generating".to_string(),
-            message: "正在调用图片 API...".to_string(),
+            stage: "submitting".to_string(),
+            message: "正在提交图片生成任务...".to_string(),
             image_id: None,
         },
     );
 
-    let generated = crate::image::generate_image(&config, &prompt).await?;
+    let app_emit = app.clone();
+    let generated =
+        crate::image::generate_image(&config, &prompt, |msg| {
+            let _ = app_emit.emit(
+                "image-progress",
+                ImageProgressEvent {
+                    stage: "polling".to_string(),
+                    message: msg.to_string(),
+                    image_id: None,
+                },
+            );
+        })
+        .await?;
 
     let id = crate::image::generate_id();
     let local_path = crate::image::save_image_file(
@@ -508,7 +532,7 @@ pub async fn generate_character_image(
         id: id.clone(),
         kind: crate::image::ImageKind::Character,
         prompt,
-        revised_prompt: generated.revised_prompt,
+        revised_prompt: None,
         local_path,
         file_size: generated.bytes.len() as u64,
         created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
@@ -568,13 +592,25 @@ pub async fn generate_scene_image(
     let _ = app.emit(
         "image-progress",
         ImageProgressEvent {
-            stage: "generating".to_string(),
-            message: "正在调用图片 API...".to_string(),
+            stage: "submitting".to_string(),
+            message: "正在提交图片生成任务...".to_string(),
             image_id: None,
         },
     );
 
-    let generated = crate::image::generate_image(&config, &prompt).await?;
+    let app_emit = app.clone();
+    let generated =
+        crate::image::generate_image(&config, &prompt, |msg| {
+            let _ = app_emit.emit(
+                "image-progress",
+                ImageProgressEvent {
+                    stage: "polling".to_string(),
+                    message: msg.to_string(),
+                    image_id: None,
+                },
+            );
+        })
+        .await?;
 
     let id = crate::image::generate_id();
     let local_path = crate::image::save_image_file(
@@ -588,7 +624,7 @@ pub async fn generate_scene_image(
         id: id.clone(),
         kind: crate::image::ImageKind::Scene,
         prompt,
-        revised_prompt: generated.revised_prompt,
+        revised_prompt: None,
         local_path,
         file_size: generated.bytes.len() as u64,
         created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),

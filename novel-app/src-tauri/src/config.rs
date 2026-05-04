@@ -21,11 +21,24 @@ pub struct Prompts {
 #[serde(rename_all = "lowercase")]
 pub enum ImageProvider {
     #[default]
-    OpenAI,
+    ModelScope,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct LoraEntry {
+    pub name: String,
+    #[serde(default)]
+    pub weight: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct LoraConfig {
+    #[serde(default)]
+    pub entries: Vec<LoraEntry>,
 }
 
 fn default_image_model() -> String {
-    "dall-e-3".to_string()
+    "Tongyi-MAI/Z-Image-Turbo".to_string()
 }
 
 fn default_image_size() -> String {
@@ -128,6 +141,8 @@ pub struct AppConfig {
     pub image_size: String,
     #[serde(default)]
     pub image_prompts: ImagePrompts,
+    #[serde(default)]
+    pub image_loras: LoraConfig,
 }
 
 impl AppConfig {
@@ -146,18 +161,14 @@ impl AppConfig {
 
     pub fn image_api_base_url(&self) -> &str {
         if self.image_api_base_url.is_empty() {
-            &self.api_base_url
+            "https://api-inference.modelscope.cn"
         } else {
             &self.image_api_base_url
         }
     }
 
     pub fn image_api_key(&self) -> &str {
-        if self.image_api_key.is_empty() {
-            &self.api_key
-        } else {
-            &self.image_api_key
-        }
+        &self.image_api_key
     }
 }
 
@@ -173,12 +184,13 @@ impl Default for AppConfig {
             api_base_url: "https://api.deepseek.com".to_string(),
             api_key: String::new(),
             prompts: Prompts::default(),
-            image_provider: ImageProvider::OpenAI,
-            image_model: "dall-e-3".to_string(),
+            image_provider: ImageProvider::ModelScope,
+            image_model: "Tongyi-MAI/Z-Image-Turbo".to_string(),
             image_api_base_url: String::new(),
             image_api_key: String::new(),
             image_size: "1024x1024".to_string(),
             image_prompts: ImagePrompts::default(),
+            image_loras: LoraConfig::default(),
         }
     }
 }

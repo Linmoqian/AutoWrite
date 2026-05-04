@@ -22,7 +22,9 @@ const { TextArea } = Input;
 
 const stageLabel: Record<ImageProgressEvent["stage"], string> = {
   preparing: "准备中...",
-  generating: "生成中...",
+  submitting: "提交任务中...",
+  polling: "生成中...",
+  downloading: "下载中...",
   saving: "保存中...",
   done: "完成",
 };
