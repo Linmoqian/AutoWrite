@@ -29,6 +29,8 @@ function filterThinkTags(text: string): string {
 
 export default function Outline() {
   const [volumes, setVolumes] = useState<Volume[]>([]);
+  const [world, setWorld] = useState<string | undefined>();
+  const [characters, setCharacters] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<OutlineStep | null>(null);
   const [streamingText, setStreamingText] = useState<StreamingText>({});
@@ -40,6 +42,8 @@ export default function Outline() {
     try {
       const status = await getStatus();
       setVolumes(status.outline);
+      setWorld(status.novel.world);
+      setCharacters(status.novel.characters);
     } catch (e) {
       message.error(String(e));
     }
@@ -113,7 +117,8 @@ export default function Outline() {
 
   const handleGenerate = async () => {
     setStreamingText({});
-    setCurrentStep("world");
+    const initialStep: OutlineStep = world && characters ? "outline" : world ? "characters" : "world";
+    setCurrentStep(initialStep);
     setLoading(true);
     userScrolledRef.current = false;
 
@@ -138,7 +143,12 @@ export default function Outline() {
           current={stepIndex}
           items={STEP_KEYS.map((key) => ({
             title: STEP_LABELS[key],
-            description: currentStep === key ? "生成中..." : "",
+            description:
+              currentStep === key
+                ? "生成中..."
+                : STEP_KEYS.indexOf(key) < stepIndex
+                  ? "已完成"
+                  : "",
           }))}
           style={{ marginBottom: 24 }}
         />
@@ -154,7 +164,10 @@ export default function Outline() {
     );
   }
 
-  if (volumes.length === 0) {
+  const hasWorldOrCharacters = !!world || !!characters;
+  const hasNothing = volumes.length === 0 && !hasWorldOrCharacters;
+
+  if (hasNothing) {
     return (
       <div className="fade-in">
         <h1 className="page-title">大纲管理</h1>
@@ -171,23 +184,53 @@ export default function Outline() {
     );
   }
 
-  const items = volumes.map((vol, idx) => ({
-    key: String(idx),
-    label: <Text strong>{vol.volume}</Text>,
-    children: (
-      <List
-        size="small"
-        dataSource={vol.chapters}
-        renderItem={(ch) => (
-          <List.Item>
-            <Text>
-              {String(ch.num).padStart(3, "0")}. {ch.title}
-            </Text>
-          </List.Item>
-        )}
-      />
-    ),
-  }));
+  const collapseItems = [];
+
+  if (world) {
+    collapseItems.push({
+      key: "world",
+      label: <Text strong>世界观</Text>,
+      children: (
+        <div className="md-body">
+          <Markdown>{filterThinkTags(world)}</Markdown>
+        </div>
+      ),
+    });
+  }
+
+  if (characters) {
+    collapseItems.push({
+      key: "characters",
+      label: <Text strong>角色</Text>,
+      children: (
+        <div className="md-body">
+          <Markdown>{filterThinkTags(characters)}</Markdown>
+        </div>
+      ),
+    });
+  }
+
+  if (volumes.length > 0) {
+    volumes.forEach((vol, idx) => {
+      collapseItems.push({
+        key: `vol-${idx}`,
+        label: <Text strong>{vol.volume}</Text>,
+        children: (
+          <List
+            size="small"
+            dataSource={vol.chapters}
+            renderItem={(ch) => (
+              <List.Item>
+                <Text>
+                  {String(ch.num).padStart(3, "0")}. {ch.title}
+                </Text>
+              </List.Item>
+            )}
+          />
+        ),
+      });
+    });
+  }
 
   return (
     <div className="fade-in">
@@ -207,10 +250,10 @@ export default function Outline() {
           icon={<ThunderboltOutlined />}
           onClick={handleGenerate}
         >
-          重新生成
+          {volumes.length > 0 ? "重新生成" : "生成章节大纲"}
         </LoadingButton>
       </div>
-      <Collapse items={items} defaultActiveKey={["0"]} />
+      <Collapse items={collapseItems} defaultActiveKey={["world", "characters", "vol-0"]} />
     </div>
   );
 }

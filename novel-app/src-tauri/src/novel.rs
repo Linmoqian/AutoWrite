@@ -94,28 +94,59 @@ where
     F: Fn(&str, &str, bool) + Clone + Send + Sync + 'static,
 {
     let steps = ["world", "characters", "outline"];
-
-    // Step 1: 生成世界观
     let novel = files::read_novel(dir)?;
-    let prompt = fill_template(
-        &config.prompts.world,
-        &[("genre", &novel.genre), ("theme", &novel.theme)],
-    );
-    let app_w = app.clone();
-    let world = streaming_step(config, &prompt, app_w, steps[0], on_progress.clone()).await?;
-    let mut novel = files::read_novel(dir)?;
-    novel.world = Some(world.clone());
-    files::write_novel(dir, &novel)?;
 
-    // Step 2: 生成角色
-    let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
-    let app_c = app.clone();
-    let characters = streaming_step(config, &prompt, app_c, steps[1], on_progress.clone()).await?;
-    let mut novel = files::read_novel(dir)?;
-    novel.characters = Some(characters.clone());
-    files::write_novel(dir, &novel)?;
+    // 辅助：为跳过的步骤发送完成事件
+    let emit_skip = |step: &str| {
+        on_progress(step, "", true);
+        let _ = app.emit(
+            "outline-progress",
+            OutlineProgressEvent {
+                step: step.to_string(),
+                chunk: String::new(),
+                done: true,
+            },
+        );
+    };
 
-    // Step 3: 生成大纲
+    // Step 1: 生成世界观（如已有则跳过）
+    let world = match novel.world.as_deref() {
+        Some(w) if !w.trim().is_empty() => {
+            emit_skip("world");
+            w.to_string()
+        }
+        _ => {
+            let prompt = fill_template(
+                &config.prompts.world,
+                &[("genre", &novel.genre), ("theme", &novel.theme)],
+            );
+            let result = streaming_step(config, &prompt, app.clone(), steps[0], on_progress.clone())
+                .await?;
+            let mut n = files::read_novel(dir)?;
+            n.world = Some(result.clone());
+            files::write_novel(dir, &n)?;
+            result
+        }
+    };
+
+    // Step 2: 生成角色（如已有则跳过）
+    let characters = match novel.characters.as_deref() {
+        Some(c) if !c.trim().is_empty() => {
+            emit_skip("characters");
+            c.to_string()
+        }
+        _ => {
+            let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
+            let result = streaming_step(config, &prompt, app.clone(), steps[1], on_progress.clone())
+                .await?;
+            let mut n = files::read_novel(dir)?;
+            n.characters = Some(result.clone());
+            files::write_novel(dir, &n)?;
+            result
+        }
+    };
+
+    // Step 3: 生成章节大纲
     let novel = files::read_novel(dir)?;
     let prompt = fill_template(
         &config.prompts.outline,
@@ -125,9 +156,8 @@ where
             ("total_chapters", &novel.target_chapters.to_string()),
         ],
     );
-    let app_o = app.clone();
     let outline_text =
-        streaming_step(config, &prompt, app_o, steps[2], on_progress.clone()).await?;
+        streaming_step(config, &prompt, app.clone(), steps[2], on_progress.clone()).await?;
     let outline = files::parse_outline_text(&outline_text)?;
     files::write_outline(dir, &outline)?;
 
