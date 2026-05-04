@@ -1,13 +1,14 @@
 {
-  "name": "novel-app",
+  "name": "autowrite-app",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",

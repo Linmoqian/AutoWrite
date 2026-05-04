@@ -110,7 +110,7 @@ pub fn run() {
 
 fn dirs_config_path() -> PathBuf {
     let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    let app_dir = config_dir.join("novel-app");
+    let app_dir = config_dir.join("autowrite");
     let _ = std::fs::create_dir_all(&app_dir);
     app_dir.join("config.yaml")
 }
