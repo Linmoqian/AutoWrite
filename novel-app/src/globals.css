@@ -476,6 +476,36 @@ body {
   color: var(--text-secondary);
 }
 
+/* Markdown 表格 */
+.md-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.95em;
+}
+
+.md-body thead {
+  background: var(--bg-elevated);
+}
+
+.md-body th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--gold);
+  border-bottom: 2px solid var(--border-light);
+}
+
+.md-body td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.md-body tbody tr:hover {
+  background: var(--bg-elevated);
+}
+
 /* 章节阅读区滚动容器 */
 .chapter-scroll {
   height: calc(100vh - 208px);
