@@ -1,7 +1,0 @@
-{
-  "strategy": "A_rolling_summary",
-  "description": "5章滚动摘要+200字叙述概括（当前系统基线）",
-  "model": "deepseek-chat",
-  "temperature": 0.7,
-  "timestamp": "2026-05-03T02:24:11.239912"
-}

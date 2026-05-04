@@ -1,7 +1,0 @@
-{
-  "strategy": "B_structured_facts",
-  "description": "结构化schema提取（角色状态/事件/悬念）",
-  "model": "deepseek-chat",
-  "temperature": 0.7,
-  "timestamp": "2026-05-03T02:27:37.961818"
-}

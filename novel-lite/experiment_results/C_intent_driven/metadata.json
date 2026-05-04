@@ -1,7 +1,0 @@
-{
-  "strategy": "C_intent_driven",
-  "description": "三层记忆（事实+情感+张力）+ 叙事意图头 + 单一叙事焦点提示词",
-  "model": "deepseek-chat",
-  "temperature": 0.7,
-  "timestamp": "2026-05-03T02:31:48.510330"
-}
