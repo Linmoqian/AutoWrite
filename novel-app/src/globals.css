@@ -606,3 +606,17 @@ body {
   border-top: 1px solid var(--border);
   padding-top: 16px;
 }
+
+/* ── 打印样式（PDF 导出） ── */
+
+@media print {
+  body > *:not(#print-container) {
+    display: none !important;
+  }
+
+  #print-container {
+    display: block !important;
+    position: static !important;
+    padding: 0 !important;
+  }
+}

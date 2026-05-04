@@ -98,3 +98,18 @@ export interface OllamaTestResult {
   latency_ms: number;
   error?: string;
 }
+
+export type ExportFormat = "md" | "txt" | "docx" | "pdf";
+
+export interface ExportChapter {
+  num: number;
+  title: string;
+  words: number;
+  body: string;
+}
+
+export interface ExportData {
+  novel: NovelData;
+  outline: Volume[];
+  chapters: ExportChapter[];
+}

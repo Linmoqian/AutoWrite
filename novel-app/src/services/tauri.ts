@@ -5,6 +5,7 @@ import type {
   ChapterContent,
   ChapterMeta,
   ChapterProgressEvent,
+  ExportData,
   NovelStatus,
   OllamaModel,
   OllamaTestResult,
@@ -97,4 +98,20 @@ export async function ollamaListModels(): Promise<OllamaModel[]> {
 
 export async function ollamaTestConnection(): Promise<OllamaTestResult> {
   return invoke<OllamaTestResult>("ollama_test_connection");
+}
+
+export async function getExportData(): Promise<ExportData> {
+  return invoke<ExportData>("get_export_data");
+}
+
+export async function exportNovel(format: "md" | "txt"): Promise<string> {
+  return invoke<string>("export_novel", { format });
+}
+
+export async function saveExportFile(
+  content: number[],
+  filename: string,
+  extension: string,
+): Promise<string> {
+  return invoke<string>("save_export_file", { content, filename, extension });
 }
