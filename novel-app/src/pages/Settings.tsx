@@ -161,7 +161,7 @@ export default function Settings() {
           </ProviderCard>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16 }}>
           <LoadingButton type="primary" htmlType="submit" loading={loading}>
             保存配置
           </LoadingButton>
