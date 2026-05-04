@@ -9,6 +9,7 @@ import {
   SettingOutlined,
   FolderOpenOutlined,
   ExportOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { getNovelDir, selectNovelDir } from "../services/tauri";
 
@@ -19,6 +20,7 @@ const menuItems = [
   { key: "/create", icon: <PlusOutlined />, label: "创建小说" },
   { key: "/outline", icon: <OrderedListOutlined />, label: "大纲管理" },
   { key: "/chapters", icon: <ReadOutlined />, label: "章节管理" },
+  { key: "/illustrations", icon: <PictureOutlined />, label: "小说配图" },
   { key: "/export", icon: <ExportOutlined />, label: "导出小说" },
   { key: "/settings", icon: <SettingOutlined />, label: "模型配置" },
 ];
