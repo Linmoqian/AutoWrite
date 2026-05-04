@@ -59,6 +59,8 @@ pub struct AppConfig {
     pub provider: Provider,
     #[serde(default = "default_model")]
     pub model: String,
+    #[serde(default)]
+    pub ollama_model: String,
     #[serde(default = "default_timeout")]
     pub timeout: u64,
     #[serde(default = "default_ollama_url")]
@@ -71,12 +73,28 @@ pub struct AppConfig {
     pub prompts: Prompts,
 }
 
+impl AppConfig {
+    pub fn active_model(&self) -> &str {
+        match self.provider {
+            Provider::Ollama => {
+                if self.ollama_model.is_empty() {
+                    &self.model
+                } else {
+                    &self.ollama_model
+                }
+            }
+            Provider::OpenAI => &self.model,
+        }
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             novel_dir: None,
             provider: Provider::OpenAI,
             model: "deepseek-chat".to_string(),
+            ollama_model: String::new(),
             timeout: 300,
             ollama_url: "http://localhost:11434".to_string(),
             api_base_url: "https://api.deepseek.com".to_string(),

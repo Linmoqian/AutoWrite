@@ -125,7 +125,7 @@ async fn generate_ollama(config: &AppConfig, prompt: &str) -> Result<String> {
 
     for attempt in 0..max_retries {
         let request = OllamaRequest {
-            model: config.model.clone(),
+            model: config.active_model().to_string(),
             messages: vec![Message {
                 role: "user".to_string(),
                 content: prompt.to_string(),
@@ -168,7 +168,7 @@ where
 
     for attempt in 0..max_retries {
         let request = OllamaRequest {
-            model: config.model.clone(),
+            model: config.active_model().to_string(),
             messages: vec![Message {
                 role: "user".to_string(),
                 content: prompt.to_string(),
@@ -265,7 +265,7 @@ async fn generate_openai(config: &AppConfig, prompt: &str) -> Result<String> {
 
     for attempt in 0..max_retries {
         let request = OpenAIRequest {
-            model: config.model.clone(),
+            model: config.active_model().to_string(),
             messages: vec![Message {
                 role: "user".to_string(),
                 content: prompt.to_string(),
@@ -330,7 +330,7 @@ where
 
     for attempt in 0..max_retries {
         let request = OpenAIRequest {
-            model: config.model.clone(),
+            model: config.active_model().to_string(),
             messages: vec![Message {
                 role: "user".to_string(),
                 content: prompt.to_string(),

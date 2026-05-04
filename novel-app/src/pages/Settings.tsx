@@ -68,14 +68,11 @@ export default function Settings() {
   const handleProviderSwitch = (p: Provider) => {
     setProvider(p);
     form.setFieldsValue({ provider: p });
-    if (p === "ollama") {
-      form.setFieldsValue({ model: "" });
-    }
   };
 
   return (
     <div className="fade-in" style={{ maxWidth: 700, margin: "0 auto" }}>
-      <h1 className="page-title">设置</h1>
+      <h1 className="page-title">模型配置</h1>
       <Form form={form} layout="vertical" onFinish={onSave} requiredMark={false}>
         <Form.Item name="provider" hidden>
           <Input />
@@ -145,13 +142,13 @@ export default function Settings() {
               <Input placeholder="http://localhost:11434" />
             </Form.Item>
             <Form.Item
-              name="model"
+              name="ollama_model"
               label="模型"
               rules={[{ required: provider === "ollama" }]}
             >
               <OllamaModelSelect
-                value={form.getFieldValue("model")}
-                onChange={(v) => form.setFieldsValue({ model: v })}
+                value={form.getFieldValue("ollama_model")}
+                onChange={(v) => form.setFieldsValue({ ollama_model: v })}
               />
             </Form.Item>
             <Form.Item

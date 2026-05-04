@@ -60,6 +60,7 @@ export interface AppConfig {
   novel_dir?: string;
   provider: Provider;
   model: string;
+  ollama_model: string;
   timeout: number;
   ollama_url: string;
   api_base_url: string;
