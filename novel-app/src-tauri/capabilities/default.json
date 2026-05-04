@@ -5,7 +5,6 @@
   "permissions": [
     "core:default",
     "dialog:default",
-    "dialog:allow-open",
-    "core:asset:default"
+    "dialog:allow-open"
   ]
 }

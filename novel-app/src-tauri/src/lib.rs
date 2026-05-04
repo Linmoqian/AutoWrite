@@ -24,6 +24,7 @@ pub fn run() {
         .ok()
         .and_then(|c| c.novel_dir)
         .map(PathBuf::from);
+    let saved_dir_for_setup = saved_dir.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -58,7 +59,11 @@ pub fn run() {
             commands::delete_image,
             commands::get_image_path,
         ])
-        .setup(|app| {
+        .setup(move |app| {
+            if let Some(dir) = saved_dir_for_setup.as_ref() {
+                commands::allow_image_assets(app.handle(), dir)?;
+            }
+
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;

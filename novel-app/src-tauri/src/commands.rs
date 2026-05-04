@@ -39,6 +39,12 @@ fn config_from_state(state: &State<AppState>) -> Result<AppConfig> {
     crate::config::load_config(&config_path)
 }
 
+pub fn allow_image_assets(app: &tauri::AppHandle, dir: &std::path::Path) -> Result<()> {
+    app.asset_protocol_scope()
+        .allow_directory(crate::image::images_dir(dir), true)
+        .map_err(|e| crate::error::AppError::Image(format!("图片预览授权失败: {}", e)))
+}
+
 #[tauri::command]
 pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
     use tauri_plugin_dialog::DialogExt;
@@ -52,6 +58,7 @@ pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>)
         .ok_or(crate::error::AppError::NoNovelDir)?
         .to_path_buf();
     let dir_str = dir.to_string_lossy().to_string();
+    allow_image_assets(&app, &dir)?;
     *state.novel_dir.lock().unwrap() = Some(dir);
     // 持久化到配置文件
     let config_path = state.config_path.lock().unwrap().clone();
@@ -680,8 +687,13 @@ pub fn delete_image(state: State<'_, AppState>, image_id: String) -> Result<()> 
 }
 
 #[tauri::command]
-pub fn get_image_path(state: State<'_, AppState>, filename: String) -> Result<String> {
+pub fn get_image_path(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    filename: String,
+) -> Result<String> {
     let dir = dir_from_state(&state)?;
+    allow_image_assets(&app, &dir)?;
     let path = crate::image::images_dir(&dir).join(&filename);
     if !path.exists() {
         return Err(crate::error::AppError::Image(format!(
