@@ -7,9 +7,9 @@ import {
   PictureOutlined,
 } from "@ant-design/icons";
 
-const { TextArea } = Input;
-
 import { loadConfig, saveConfig } from "../services/tauri";
+
+const { TextArea } = Input;
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import ProviderCard from "../components/ProviderCard";
