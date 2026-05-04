@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { List, Typography, Empty, Steps, message } from "antd";
+import { List, Typography, Empty, Steps, Collapse, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
   getStatus,
@@ -209,24 +209,28 @@ export default function Outline() {
       );
     }
     if (activeTab === "outline") {
-      return volumes.map((vol, idx) => (
-        <div key={idx} style={{ marginBottom: idx < volumes.length - 1 ? 16 : 0 }}>
-          <Text strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>
-            {vol.volume}
-          </Text>
-          <List
-            size="small"
-            dataSource={vol.chapters}
-            renderItem={(ch) => (
-              <List.Item>
-                <Text>
-                  {String(ch.num).padStart(3, "0")}. {ch.title}
-                </Text>
-              </List.Item>
-            )}
-          />
-        </div>
-      ));
+      return (
+        <Collapse
+          defaultActiveKey={["vol-0"]}
+          items={volumes.map((vol, idx) => ({
+            key: `vol-${idx}`,
+            label: <Text strong>{vol.volume}</Text>,
+            children: (
+              <List
+                size="small"
+                dataSource={vol.chapters}
+                renderItem={(ch) => (
+                  <List.Item>
+                    <Text>
+                      {String(ch.num).padStart(3, "0")}. {ch.title}
+                    </Text>
+                  </List.Item>
+                )}
+              />
+            ),
+          }))}
+        />
+      );
     }
     return null;
   };
