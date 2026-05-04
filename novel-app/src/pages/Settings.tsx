@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { Form, Input, InputNumber, Select, message } from "antd";
+import { Card, Collapse, Form, Input, InputNumber, Select, message } from "antd";
 import {
   CheckCircleOutlined,
   CloudOutlined,
   LaptopOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
+
+const { TextArea } = Input;
+
 import { loadConfig, saveConfig } from "../services/tauri";
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
@@ -160,6 +164,51 @@ export default function Settings() {
             </Form.Item>
           </ProviderCard>
         </div>
+
+        <Card style={{ marginBottom: 20 }} styles={{ body: { padding: 20 } }}>
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <PictureOutlined style={{ color: "var(--gold)", fontSize: 18 }} />
+            <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-primary)" }}>
+              图片生成配置
+            </span>
+          </div>
+          <Form.Item name="image_provider" hidden><Input /></Form.Item>
+          <Form.Item name="image_model" label="图片模型">
+            <Input placeholder="dall-e-3" />
+          </Form.Item>
+          <Form.Item name="image_api_base_url" label="图片 API 地址" tooltip="留空则使用文本生成 API 地址">
+            <Input placeholder="留空则复用文本 API 地址" />
+          </Form.Item>
+          <Form.Item name="image_api_key" label="图片 API Key" tooltip="留空则使用文本生成 API Key">
+            <Input.Password placeholder="留空则复用文本 API Key" />
+          </Form.Item>
+          <Form.Item name="image_size" label="图片尺寸">
+            <Select>
+              <Select.Option value="1024x1024">1024 × 1024（正方形）</Select.Option>
+              <Select.Option value="1024x1792">1024 × 1792（竖版）</Select.Option>
+              <Select.Option value="1792x1024">1792 × 1024（横版）</Select.Option>
+            </Select>
+          </Form.Item>
+          <Collapse ghost>
+            <Collapse.Panel header="自定义提示词模板" key="image-prompts">
+              <Form.Item name={["image_prompts", "stylePrefix"]} label="风格前缀">
+                <TextArea rows={2} />
+              </Form.Item>
+              <Form.Item name={["image_prompts", "cover"]} label="封面提示词">
+                <TextArea rows={2} />
+              </Form.Item>
+              <Form.Item name={["image_prompts", "characterImage"]} label="角色立绘提示词">
+                <TextArea rows={2} />
+              </Form.Item>
+              <Form.Item name={["image_prompts", "scene"]} label="场景提示词">
+                <TextArea rows={2} />
+              </Form.Item>
+              <Form.Item name={["image_prompts", "extractScene"]} label="场景提取提示词">
+                <TextArea rows={3} />
+              </Form.Item>
+            </Collapse.Panel>
+          </Collapse>
+        </Card>
 
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16 }}>
           <LoadingButton type="primary" htmlType="submit" loading={loading}>
