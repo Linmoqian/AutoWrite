@@ -1,6 +1,10 @@
 # Claude 配置
 AGENTS.md
 CLAUDE.md
+.claude/
+
+# GitHub CI
+.github/
 
 # 依赖
 node_modules/
