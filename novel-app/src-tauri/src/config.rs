@@ -47,15 +47,18 @@ fn default_image_size() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImagePrompts {
-    #[serde(default = "default_image_style_prefix")]
+    #[serde(default = "default_image_style_prefix", alias = "style_prefix")]
+    #[serde(rename = "stylePrefix")]
     pub style_prefix: String,
     #[serde(default)]
     pub cover: String,
-    #[serde(default)]
+    #[serde(default, alias = "character_image")]
+    #[serde(rename = "characterImage")]
     pub character_image: String,
     #[serde(default)]
     pub scene: String,
-    #[serde(default)]
+    #[serde(default, alias = "extract_scene")]
+    #[serde(rename = "extractScene")]
     pub extract_scene: String,
 }
 

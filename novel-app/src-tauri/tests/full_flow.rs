@@ -6,8 +6,8 @@ use novel_app_lib::files;
 use novel_app_lib::novel;
 
 fn setup_test_env() -> (PathBuf, AppConfig) {
-    let api_key = std::env::var("NOVEL_API_KEY")
-        .expect("请设置环境变量 NOVEL_API_KEY（DeepSeek API Key）");
+    let api_key =
+        std::env::var("NOVEL_API_KEY").expect("请设置环境变量 NOVEL_API_KEY（DeepSeek API Key）");
 
     let dir = std::env::temp_dir().join("novel-app-test-full-flow");
     let _ = std::fs::remove_dir_all(&dir);
@@ -22,6 +22,7 @@ fn setup_test_env() -> (PathBuf, AppConfig) {
         api_base_url: "https://api.deepseek.com".to_string(),
         api_key,
         prompts: config::Prompts::default(),
+        ..AppConfig::default()
     };
 
     (dir, config)
@@ -59,7 +60,16 @@ async fn full_flow_create_outline_and_chapter() {
 
     // ─── Step 1: 创建小说 ───
     step("创建小说", "run");
-    novel::create_novel(&dir, "测试仙侠录", "xuanhuan", "逆天改命", 5, &config).unwrap();
+    novel::create_novel(
+        &dir,
+        "测试仙侠录",
+        "xuanhuan",
+        "逆天改命",
+        5,
+        &config,
+        false,
+    )
+    .unwrap();
     step("创建小说", "ok");
 
     let novel_data = files::read_novel(&dir).unwrap();
@@ -149,7 +159,10 @@ async fn full_flow_create_outline_and_chapter() {
         &[
             ("genre", "xuanhuan"),
             ("theme", "逆天改命"),
-            ("intent_block", "当前核心张力：主角面临初次考验\n读者关注点：主角如何觉醒"),
+            (
+                "intent_block",
+                "当前核心张力：主角面临初次考验\n读者关注点：主角如何觉醒",
+            ),
             ("character_states", "- 暂无角色状态"),
             ("plot_events", "- 暂无"),
             ("tension_checklist", "- 暂无"),
@@ -266,15 +279,19 @@ async fn ai_streaming_test() {
     };
 
     let chunks = AtomicU32::new(0);
-    let result = novel_app_lib::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
-        chunks.fetch_add(1, Ordering::Relaxed);
-        Ok(())
-    })
-    .await
-    .expect("流式调用失败");
+    let result =
+        novel_app_lib::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
+            chunks.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        })
+        .await
+        .expect("流式调用失败");
 
     let total_chunks = chunks.load(Ordering::Relaxed);
     assert!(!result.is_empty(), "流式结果为空");
     assert!(total_chunks > 1, "应有多个流式块，实际: {}", total_chunks);
-    step(&format!("AI 流式调用测试通过 ({} 个块)", total_chunks), "ok");
+    step(
+        &format!("AI 流式调用测试通过 ({} 个块)", total_chunks),
+        "ok",
+    );
 }

@@ -31,6 +31,7 @@ fn save_and_load_roundtrip() {
         api_base_url: "https://api.openai.com".to_string(),
         api_key: "sk-test-key-12345".to_string(),
         prompts: config::Prompts::default(),
+        ..AppConfig::default()
     };
 
     config::save_config(&path, &original).unwrap();
@@ -48,7 +49,9 @@ fn save_and_load_roundtrip() {
 
 #[test]
 fn load_missing_file_returns_default() {
-    let path = std::env::temp_dir().join("novel-app-test-nonexistent").join("missing.yaml");
+    let path = std::env::temp_dir()
+        .join("novel-app-test-nonexistent")
+        .join("missing.yaml");
     let config = config::load_config(&path).unwrap();
     assert_eq!(config.provider, Provider::OpenAI);
 }
@@ -66,6 +69,7 @@ timeout: 120
     assert_eq!(config.api_base_url, ""); // default empty
     assert_eq!(config.api_key, ""); // default empty
     assert_eq!(config.ollama_url, "http://localhost:11434"); // default
+    assert_eq!(config.image_model, "Tongyi-MAI/Z-Image-Turbo"); // default
 }
 
 #[test]

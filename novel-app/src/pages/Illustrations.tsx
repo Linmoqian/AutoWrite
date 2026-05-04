@@ -15,6 +15,7 @@ import {
   onImageProgress,
   loadConfig,
   saveConfig,
+  getImagePath,
 } from "../services/tauri";
 import LoadingButton from "../components/LoadingButton";
 
@@ -40,6 +41,15 @@ const kindLabel: Record<ImageKind, string> = {
   character: "角色",
   scene: "场景",
 };
+
+async function hydrateImagePaths(images: ImageResult[]): Promise<ImageResult[]> {
+  return Promise.all(
+    images.map(async (image) => ({
+      ...image,
+      localPath: await getImagePath(image.localPath),
+    })),
+  );
+}
 
 // ===== Sub-components =====
 
@@ -186,8 +196,9 @@ export default function Illustrations() {
         listChapters(),
         loadConfig(),
       ]);
+      const imagesWithPaths = await hydrateImagePaths(imgList);
       if (mountedRef.current) {
-        setImages(imgList);
+        setImages(imagesWithPaths);
         setChapters(chList);
         if (config.image_prompts) {
           setImagePrompts(config.image_prompts);
@@ -203,7 +214,8 @@ export default function Illustrations() {
   async function refreshImages() {
     try {
       const list = await listImages();
-      if (mountedRef.current) setImages(list);
+      const imagesWithPaths = await hydrateImagePaths(list);
+      if (mountedRef.current) setImages(imagesWithPaths);
     } catch (e) {
       message.error(String(e));
     }

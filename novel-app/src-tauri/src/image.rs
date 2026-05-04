@@ -57,19 +57,39 @@ struct ModelScopeSubmitResponse {
 struct ModelScopeTaskResponse {
     task_status: String,
     output_images: Option<Vec<String>>,
+    message: Option<String>,
+    error: Option<String>,
 }
 
 pub struct GeneratedImageData {
     pub bytes: Vec<u8>,
 }
 
-fn serialize_loras(config: &crate::config::LoraConfig) -> Option<serde_json::Value> {
+fn normalize_base_url(base_url: &str) -> String {
+    base_url.trim().trim_end_matches('/').to_string()
+}
+
+fn serialize_loras(config: &crate::config::LoraConfig) -> Result<Option<serde_json::Value>> {
     if config.entries.is_empty() {
-        return None;
+        return Ok(None);
+    }
+    if config.entries.len() > 6 {
+        return Err(AppError::Image("ModelScope LoRA 最多支持 6 个".to_string()));
     }
     if config.entries.len() == 1 && config.entries[0].weight.is_none() {
-        return Some(serde_json::Value::String(config.entries[0].name.clone()));
+        return Ok(Some(serde_json::Value::String(
+            config.entries[0].name.clone(),
+        )));
     }
+
+    let explicit_weight_sum: f64 = config.entries.iter().filter_map(|entry| entry.weight).sum();
+    if explicit_weight_sum > 0.0 && (explicit_weight_sum - 1.0).abs() > 0.001 {
+        return Err(AppError::Image(format!(
+            "ModelScope 多 LoRA 权重总和必须为 1.0，当前为 {:.3}",
+            explicit_weight_sum
+        )));
+    }
+
     let mut map = serde_json::Map::new();
     for entry in &config.entries {
         let weight = entry
@@ -77,7 +97,7 @@ fn serialize_loras(config: &crate::config::LoraConfig) -> Option<serde_json::Val
             .unwrap_or_else(|| 1.0_f64 / config.entries.len() as f64);
         map.insert(entry.name.clone(), serde_json::Value::from(weight));
     }
-    Some(serde_json::Value::Object(map))
+    Ok(Some(serde_json::Value::Object(map)))
 }
 
 // ===== Prompt 构建 =====
@@ -142,7 +162,7 @@ pub async fn generate_image<F>(
 where
     F: FnMut(&str),
 {
-    let base_url = config.image_api_base_url();
+    let base_url = normalize_base_url(config.image_api_base_url());
     let api_key = config.image_api_key();
 
     if api_key.is_empty() {
@@ -155,7 +175,7 @@ where
         .timeout(Duration::from_secs(config.timeout))
         .build()?;
 
-    let loras = serialize_loras(&config.image_loras);
+    let loras = serialize_loras(&config.image_loras)?;
     let request = ModelScopeImageRequest {
         model: config.image_model.clone(),
         prompt: prompt.to_string(),
@@ -242,15 +262,20 @@ where
 
         match task_resp.task_status.as_str() {
             "SUCCEED" => {
-                let urls = task_resp.output_images.ok_or_else(|| {
-                    AppError::Image("任务成功但未返回图片".to_string())
-                })?;
-                break urls.into_iter().next().ok_or_else(|| {
-                    AppError::Image("任务成功但图片列表为空".to_string())
-                })?;
+                let urls = task_resp
+                    .output_images
+                    .ok_or_else(|| AppError::Image("任务成功但未返回图片".to_string()))?;
+                break urls
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| AppError::Image("任务成功但图片列表为空".to_string()))?;
             }
             "FAILED" => {
-                return Err(AppError::Image("图片生成任务失败".to_string()));
+                let reason = task_resp
+                    .message
+                    .or(task_resp.error)
+                    .unwrap_or_else(|| "ModelScope 未返回失败原因".to_string());
+                return Err(AppError::Image(format!("图片生成任务失败: {}", reason)));
             }
             _ => {
                 on_status("图片生成中，请稍候...");
@@ -264,6 +289,55 @@ where
     let bytes = download_image(&client, &image_url).await?;
 
     Ok(GeneratedImageData { bytes })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{LoraConfig, LoraEntry};
+
+    #[test]
+    fn normalize_base_url_removes_trailing_slash() {
+        assert_eq!(
+            normalize_base_url("https://api-inference.modelscope.cn/"),
+            "https://api-inference.modelscope.cn"
+        );
+    }
+
+    #[test]
+    fn serialize_single_lora_without_weight_as_string() {
+        let value = serialize_loras(&LoraConfig {
+            entries: vec![LoraEntry {
+                name: "user/lora".to_string(),
+                weight: None,
+            }],
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            Some(serde_json::Value::String("user/lora".to_string()))
+        );
+    }
+
+    #[test]
+    fn serialize_multiple_loras_requires_weight_sum_one() {
+        let err = serialize_loras(&LoraConfig {
+            entries: vec![
+                LoraEntry {
+                    name: "user/a".to_string(),
+                    weight: Some(0.7),
+                },
+                LoraEntry {
+                    name: "user/b".to_string(),
+                    weight: Some(0.4),
+                },
+            ],
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("权重总和必须为 1.0"));
+    }
 }
 
 async fn download_image(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
@@ -296,9 +370,8 @@ pub async fn extract_scene(config: &AppConfig, chapter_text: &str) -> Result<Sce
         .trim_end_matches("```")
         .trim();
 
-    let desc: SceneDescription = serde_json::from_str(cleaned).map_err(|e| {
-        AppError::Image(format!("解析场景描述失败: {}\n原始响应: {}", e, cleaned))
-    })?;
+    let desc: SceneDescription = serde_json::from_str(cleaned)
+        .map_err(|e| AppError::Image(format!("解析场景描述失败: {}\n原始响应: {}", e, cleaned)))?;
 
     Ok(desc)
 }
@@ -313,12 +386,7 @@ pub fn images_meta_file(dir: &Path) -> PathBuf {
     images_dir(dir).join("meta.json")
 }
 
-pub fn save_image_file(
-    dir: &Path,
-    kind: &ImageKind,
-    id: &str,
-    bytes: &[u8],
-) -> Result<String> {
+pub fn save_image_file(dir: &Path, kind: &ImageKind, id: &str, bytes: &[u8]) -> Result<String> {
     let img_dir = images_dir(dir);
     std::fs::create_dir_all(&img_dir)?;
 
