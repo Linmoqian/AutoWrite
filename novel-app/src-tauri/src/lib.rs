@@ -2,6 +2,7 @@ pub mod ai;
 pub mod commands;
 pub mod config;
 pub mod error;
+pub mod export;
 pub mod files;
 pub mod novel;
 
@@ -45,6 +46,9 @@ pub fn run() {
             commands::save_config,
             commands::ollama_list_models,
             commands::ollama_test_connection,
+            commands::get_export_data,
+            commands::export_novel,
+            commands::save_export_file,
         ])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;

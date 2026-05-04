@@ -20,6 +20,8 @@ pub enum AppError {
     NoNovelDir,
     #[error("目录下已有小说「{0}」，请先选择新目录")]
     NovelAlreadyExists(String),
+    #[error("导出错误: {0}")]
+    Export(String),
 }
 
 impl serde::Serialize for AppError {
