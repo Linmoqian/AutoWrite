@@ -17,16 +17,16 @@
 # 效果浏览
 
 - 自动生成世界观、角色、章节大纲
-![大纲管理](image.png)
+![大纲管理](images/outline.png)
 
 - 三层提示词工程进行章节创作
-![章节管理](image-1.png)
+![章节管理](images/chapter.png)
 
 - 根据小说内容进行配图创作，丰富小说表现力
-![小说配图](image-2.png)
+![小说配图](images/illustration.png)
 
 - 多种格式导出，满足不同需求
-![导出小说](image-3.png)
+![导出小说](images/export.png)
 
 # 画大饼
 
