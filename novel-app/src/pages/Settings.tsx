@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, Collapse, Form, Input, InputNumber, Select, message } from "antd";
+import { Card, Form, Input, InputNumber, Select, message } from "antd";
 import {
   CheckCircleOutlined,
   CloudOutlined,
@@ -9,7 +9,6 @@ import {
 
 import { loadConfig, saveConfig } from "../services/tauri";
 
-const { TextArea } = Input;
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import ProviderCard from "../components/ProviderCard";
@@ -189,25 +188,6 @@ export default function Settings() {
               <Select.Option value="1792x1024">1792 × 1024（横版）</Select.Option>
             </Select>
           </Form.Item>
-          <Collapse ghost>
-            <Collapse.Panel header="自定义提示词模板" key="image-prompts">
-              <Form.Item name={["image_prompts", "stylePrefix"]} label="风格前缀">
-                <TextArea rows={2} />
-              </Form.Item>
-              <Form.Item name={["image_prompts", "cover"]} label="封面提示词">
-                <TextArea rows={2} />
-              </Form.Item>
-              <Form.Item name={["image_prompts", "characterImage"]} label="角色立绘提示词">
-                <TextArea rows={2} />
-              </Form.Item>
-              <Form.Item name={["image_prompts", "scene"]} label="场景提示词">
-                <TextArea rows={2} />
-              </Form.Item>
-              <Form.Item name={["image_prompts", "extractScene"]} label="场景提取提示词">
-                <TextArea rows={3} />
-              </Form.Item>
-            </Collapse.Panel>
-          </Collapse>
         </Card>
 
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16 }}>

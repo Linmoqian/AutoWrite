@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, message } from "antd";
+import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, Collapse, message } from "antd";
 import { DeleteOutlined, EyeOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { ImageResult, ImageKind, ChapterMeta, ImageProgressEvent } from "../types";
+import type { ImageResult, ImageKind, ChapterMeta, ImageProgressEvent, ImagePrompts } from "../types";
 import {
   generateCover,
   generateCharacterImage,
@@ -13,6 +13,8 @@ import {
   deleteImage,
   listChapters,
   onImageProgress,
+  loadConfig,
+  saveConfig,
 } from "../services/tauri";
 import LoadingButton from "../components/LoadingButton";
 
@@ -155,6 +157,15 @@ export default function Illustrations() {
   const [sceneProgress, setSceneProgress] = useState("");
   const [extracting, setExtracting] = useState(false);
 
+  // Prompt templates
+  const [imagePrompts, setImagePrompts] = useState<ImagePrompts>({
+    stylePrefix: "",
+    cover: "",
+    characterImage: "",
+    scene: "",
+    extractScene: "",
+  });
+
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -168,10 +179,17 @@ export default function Illustrations() {
   async function loadData() {
     setLoading(true);
     try {
-      const [imgList, chList] = await Promise.all([listImages(), listChapters()]);
+      const [imgList, chList, config] = await Promise.all([
+        listImages(),
+        listChapters(),
+        loadConfig(),
+      ]);
       if (mountedRef.current) {
         setImages(imgList);
         setChapters(chList);
+        if (config.image_prompts) {
+          setImagePrompts(config.image_prompts);
+        }
       }
     } catch (e) {
       message.error(String(e));
@@ -204,6 +222,15 @@ export default function Illustrations() {
       refreshImages();
     } catch (e) {
       message.error(String(e));
+    }
+  }
+
+  async function handleSavePrompts() {
+    try {
+      const config = await loadConfig();
+      await saveConfig({ ...config, image_prompts: imagePrompts });
+    } catch {
+      // ignore save errors
     }
   }
 
@@ -341,6 +368,30 @@ export default function Illustrations() {
                   >
                     {coverProgress || "生成封面"}
                   </LoadingButton>
+                  <Collapse ghost style={{ marginTop: 12 }}>
+                    <Collapse.Panel header="提示词设置" key="cover-prompt">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div>
+                          <div style={{ marginBottom: 4, color: "var(--text-secondary)", fontSize: 13 }}>风格前缀（所有配图共用）</div>
+                          <TextArea
+                            value={imagePrompts.stylePrefix}
+                            onChange={(e) => setImagePrompts(prev => ({ ...prev, stylePrefix: e.target.value }))}
+                            onBlur={handleSavePrompts}
+                            rows={2}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ marginBottom: 4, color: "var(--text-secondary)", fontSize: 13 }}>封面提示词</div>
+                          <TextArea
+                            value={imagePrompts.cover}
+                            onChange={(e) => setImagePrompts(prev => ({ ...prev, cover: e.target.value }))}
+                            onBlur={handleSavePrompts}
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </Collapse.Panel>
+                  </Collapse>
                 </Card>
                 <ImageGallery
                   images={coverImages}
@@ -375,6 +426,19 @@ export default function Illustrations() {
                     >
                       {charProgress || "生成立绘"}
                     </LoadingButton>
+                    <Collapse ghost style={{ marginTop: 12 }}>
+                      <Collapse.Panel header="提示词设置" key="char-prompt">
+                        <div>
+                          <div style={{ marginBottom: 4, color: "var(--text-secondary)", fontSize: 13 }}>角色立绘提示词</div>
+                          <TextArea
+                            value={imagePrompts.characterImage}
+                            onChange={(e) => setImagePrompts(prev => ({ ...prev, characterImage: e.target.value }))}
+                            onBlur={handleSavePrompts}
+                            rows={3}
+                          />
+                        </div>
+                      </Collapse.Panel>
+                    </Collapse>
                   </div>
                 </Card>
                 <ImageGallery
@@ -426,6 +490,30 @@ export default function Illustrations() {
                     >
                       {sceneProgress || "生成插图"}
                     </LoadingButton>
+                    <Collapse ghost style={{ marginTop: 12 }}>
+                      <Collapse.Panel header="提示词设置" key="scene-prompt">
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          <div>
+                            <div style={{ marginBottom: 4, color: "var(--text-secondary)", fontSize: 13 }}>场景提示词</div>
+                            <TextArea
+                              value={imagePrompts.scene}
+                              onChange={(e) => setImagePrompts(prev => ({ ...prev, scene: e.target.value }))}
+                              onBlur={handleSavePrompts}
+                              rows={3}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ marginBottom: 4, color: "var(--text-secondary)", fontSize: 13 }}>场景提取提示词</div>
+                            <TextArea
+                              value={imagePrompts.extractScene}
+                              onChange={(e) => setImagePrompts(prev => ({ ...prev, extractScene: e.target.value }))}
+                              onBlur={handleSavePrompts}
+                              rows={4}
+                            />
+                          </div>
+                        </div>
+                      </Collapse.Panel>
+                    </Collapse>
                   </div>
                 </Card>
                 <ImageGallery
