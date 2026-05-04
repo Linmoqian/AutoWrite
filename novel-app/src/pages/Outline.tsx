@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Collapse, List, Typography, Empty, Steps, message } from "antd";
+import { List, Typography, Empty, Steps, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
   getStatus,
@@ -34,6 +34,7 @@ export default function Outline() {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<OutlineStep | null>(null);
   const [streamingText, setStreamingText] = useState<StreamingText>({});
+  const [viewTab, setViewTab] = useState<OutlineStep>("world");
   const streamRef = useRef<HTMLDivElement>(null);
   const wasRunningRef = useRef(false);
   const userScrolledRef = useRef(false);
@@ -184,38 +185,35 @@ export default function Outline() {
     );
   }
 
-  const collapseItems = [];
+  const availableSteps = STEP_KEYS.filter((key) => {
+    if (key === "world") return !!world;
+    if (key === "characters") return !!characters;
+    return volumes.length > 0;
+  });
 
-  if (world) {
-    collapseItems.push({
-      key: "world",
-      label: <Text strong>世界观</Text>,
-      children: (
+  const activeTab = availableSteps.includes(viewTab) ? viewTab : availableSteps[0];
+
+  const renderContent = () => {
+    if (activeTab === "world" && world) {
+      return (
         <div className="md-body">
           <Markdown>{filterThinkTags(world)}</Markdown>
         </div>
-      ),
-    });
-  }
-
-  if (characters) {
-    collapseItems.push({
-      key: "characters",
-      label: <Text strong>角色</Text>,
-      children: (
+      );
+    }
+    if (activeTab === "characters" && characters) {
+      return (
         <div className="md-body">
           <Markdown>{filterThinkTags(characters)}</Markdown>
         </div>
-      ),
-    });
-  }
-
-  if (volumes.length > 0) {
-    volumes.forEach((vol, idx) => {
-      collapseItems.push({
-        key: `vol-${idx}`,
-        label: <Text strong>{vol.volume}</Text>,
-        children: (
+      );
+    }
+    if (activeTab === "outline") {
+      return volumes.map((vol, idx) => (
+        <div key={idx} style={{ marginBottom: idx < volumes.length - 1 ? 16 : 0 }}>
+          <Text strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>
+            {vol.volume}
+          </Text>
           <List
             size="small"
             dataSource={vol.chapters}
@@ -227,10 +225,11 @@ export default function Outline() {
               </List.Item>
             )}
           />
-        ),
-      });
-    });
-  }
+        </div>
+      ));
+    }
+    return null;
+  };
 
   return (
     <div className="fade-in">
@@ -253,7 +252,31 @@ export default function Outline() {
           {volumes.length > 0 ? "重新生成" : "生成章节大纲"}
         </LoadingButton>
       </div>
-      <Collapse items={collapseItems} defaultActiveKey={["world", "characters", "vol-0"]} />
+      <Steps
+        current={STEP_KEYS.indexOf(activeTab)}
+        items={STEP_KEYS.map((key) => {
+          const available = availableSteps.includes(key);
+          const completed =
+            key === "world"
+              ? !!world
+              : key === "characters"
+                ? !!characters
+                : volumes.length > 0;
+          return {
+            title: STEP_LABELS[key],
+            status: activeTab === key ? "process" : completed ? "finish" : "wait",
+            disabled: !available,
+          };
+        })}
+        onChange={(idx) => {
+          const step = STEP_KEYS[idx];
+          if (availableSteps.includes(step)) setViewTab(step);
+        }}
+        style={{ marginBottom: 24, cursor: "pointer" }}
+      />
+      <div className="outline-content-area md-body" style={{ minHeight: 200 }}>
+        {renderContent()}
+      </div>
     </div>
   );
 }
