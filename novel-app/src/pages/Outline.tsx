@@ -10,6 +10,7 @@ import {
 import type { OutlineProgressEvent, Volume } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const { Text } = Typography;
 
@@ -155,7 +156,7 @@ export default function Outline() {
         />
         {displayText ? (
           <div ref={streamRef} className="streaming-area md-body">
-            <Markdown>{displayText}</Markdown>
+            <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
             <span className="cursor-blink">|</span>
           </div>
         ) : (
@@ -197,14 +198,14 @@ export default function Outline() {
     if (activeTab === "world" && world) {
       return (
         <div className="md-body">
-          <Markdown>{filterThinkTags(world)}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(world)}</Markdown>
         </div>
       );
     }
     if (activeTab === "characters" && characters) {
       return (
         <div className="md-body">
-          <Markdown>{filterThinkTags(characters)}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(characters)}</Markdown>
         </div>
       );
     }

@@ -11,6 +11,7 @@ import type { ChapterMeta, ChapterContent } from "../types";
 import ChapterCard from "../components/ChapterCard";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const { Text } = Typography;
 
@@ -230,7 +231,7 @@ export default function Chapters() {
     displayText ? (
       <div ref={streamRef} className="chapter-scroll">
         <div className="md-body">
-          <Markdown>{displayText}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
           <span className="cursor-blink">|</span>
         </div>
       </div>
@@ -265,7 +266,7 @@ export default function Chapters() {
           paddingTop: 20,
         }}
       >
-        <div className="chapter-body"><Markdown>{selected.body}</Markdown></div>
+        <div className="chapter-body"><Markdown remarkPlugins={[remarkGfm]}>{selected.body}</Markdown></div>
       </div>
     </div>
   ) : (

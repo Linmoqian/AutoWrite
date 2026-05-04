@@ -16,6 +16,7 @@ import { BookOutlined, FileTextOutlined } from "@ant-design/icons";
 import { getStatus } from "../services/tauri";
 import type { NovelStatus } from "../types";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const { Paragraph, Text } = Typography;
 
@@ -123,7 +124,7 @@ export default function Dashboard() {
             items={[{
               key: "world",
               label: <Text strong style={{ fontSize: 15 }}>世界观</Text>,
-              children: <div className="md-body"><Markdown>{novel.world}</Markdown></div>,
+              children: <div className="md-body"><Markdown remarkPlugins={[remarkGfm]}>{novel.world}</Markdown></div>,
             }]}
             style={{ border: "none" }}
           />
@@ -137,7 +138,7 @@ export default function Dashboard() {
             items={[{
               key: "characters",
               label: <Text strong style={{ fontSize: 15 }}>角色</Text>,
-              children: <div className="md-body"><Markdown>{novel.characters}</Markdown></div>,
+              children: <div className="md-body"><Markdown remarkPlugins={[remarkGfm]}>{novel.characters}</Markdown></div>,
             }]}
             style={{ border: "none" }}
           />
