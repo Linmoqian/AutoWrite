@@ -18,7 +18,7 @@ const menuItems = [
   { key: "/create", icon: <PlusOutlined />, label: "创建小说" },
   { key: "/outline", icon: <OrderedListOutlined />, label: "大纲管理" },
   { key: "/chapters", icon: <ReadOutlined />, label: "章节管理" },
-  { key: "/settings", icon: <SettingOutlined />, label: "设置" },
+  { key: "/settings", icon: <SettingOutlined />, label: "模型配置" },
 ];
 
 const FULL_WIDTH_ROUTES = ["/chapters"];
