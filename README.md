@@ -1,42 +1,36 @@
-# WriteOnMac
+# AI 小说创作桌面应用
 
-基于 Ollama 本地大模型的 AI 小说创作系统。
+什么时代了，还在古法创作小说？快来鞭打AI成为你的仆人，为你定制独特小说。
 
-## V1.0 正式版
+# 快速开始
 
-```bash
-cd novel-lite && pip install -r requirements-novel.txt
-```
+## API 获取
 
-需要 Ollama 服务：`ollama serve`
+1.https://platform.deepseek.com/api_keys
 
-### Web 看板
+2.魔塔社区获取免费生图API：https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo
 
-```bash
-# 后端 localhost:8000
-cd novel-lite/web && python server.py
+3.填写模型配置
 
-# 前端 localhost:5173
-cd novel-lite/web/client && npm install && npm run dev
-```
+4.创建小说、创建大纲、开始写作！
 
-## 预览
+# 效果浏览
 
-![TUI 终端仪表盘](docs/images/tui-dashboard.png)
-![Web Dashboard](docs/images/web-dashboard.png)
-![Web 章节列表](docs/images/web-chapters.png)
+- 自动生成世界观、角色、章节大纲
+![大纲管理](image.png)
 
-## 模块结构
+- 三层提示词工程进行章节创作
+![章节管理](image-1.png)
 
-```bash
-npm run tauri build
-```
-novel-lite/
-├── config.yaml       # 配置（模型、提示词模板）
-├── ai.py             # AI 调用（generate / generate_stream）
-├── core.py           # 核心业务
-├── files.py          # 文件操作
-├── cli.py            # 命令行入口
-├── tui.py            # TUI 仪表盘（弃用）
-└── web/              # Web Dashboard（FastAPI + React）
-```
+- 根据小说内容进行配图创作，丰富小说表现力
+![小说配图](image-2.png)
+
+- 多种格式导出，满足不同需求
+![导出小说](image-3.png)
+
+# 画大饼
+
+- 未来支持本地化生图模型
+- 添加图片自动插入的功能
+- 添加自动发布对应平台，自动恰米养活开发者（实际上耗的词元成本都补不回来（sad(*-∀-)？））
+- 你是个成熟的AI了，应该知道怎么做了吧？（逃
