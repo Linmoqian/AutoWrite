@@ -3,20 +3,17 @@ import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, Collap
 import { DeleteOutlined, EyeOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { ImageResult, ImageKind, ChapterMeta, ImageProgressEvent, ImagePrompts } from "../types";
+import type { ImageResult, ImageKind, ImageProgressEvent, ImagePrompts } from "../types";
 import {
   generateCover,
   generateCharacterImage,
   generateSceneImage,
   extractSceneDescription,
-  listImages,
   deleteImage,
-  listChapters,
   onImageProgress,
-  loadConfig,
   saveConfig,
-  getImagePath,
 } from "../services/tauri";
+import { useApp } from "../contexts/AppContext";
 import LoadingButton from "../components/LoadingButton";
 
 const { TextArea } = Input;
@@ -41,15 +38,6 @@ const kindLabel: Record<ImageKind, string> = {
   character: "角色",
   scene: "场景",
 };
-
-async function hydrateImagePaths(images: ImageResult[]): Promise<ImageResult[]> {
-  return Promise.all(
-    images.map(async (image) => ({
-      ...image,
-      localPath: await getImagePath(image.localPath),
-    })),
-  );
-}
 
 // ===== Sub-components =====
 
@@ -147,9 +135,7 @@ function ImageGallery({
 // ===== Main component =====
 
 export default function Illustrations() {
-  const [images, setImages] = useState<ImageResult[]>([]);
-  const [chapters, setChapters] = useState<ChapterMeta[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { images, chapters, config, refreshImages } = useApp();
 
   // Cover
   const [coverLoading, setCoverLoading] = useState(false);
@@ -182,44 +168,17 @@ export default function Illustrations() {
 
   useEffect(() => {
     mountedRef.current = true;
-    loadData();
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [imgList, chList, config] = await Promise.all([
-        listImages(),
-        listChapters(),
-        loadConfig(),
-      ]);
-      const imagesWithPaths = await hydrateImagePaths(imgList);
-      if (mountedRef.current) {
-        setImages(imagesWithPaths);
-        setChapters(chList);
-        if (config.image_prompts) {
-          setImagePrompts(config.image_prompts);
-        }
-      }
-    } catch (e) {
-      message.error(String(e));
-    } finally {
-      if (mountedRef.current) setLoading(false);
+  // Derive imagePrompts from context config
+  useEffect(() => {
+    if (config?.image_prompts) {
+      setImagePrompts(config.image_prompts);
     }
-  }
-
-  async function refreshImages() {
-    try {
-      const list = await listImages();
-      const imagesWithPaths = await hydrateImagePaths(list);
-      if (mountedRef.current) setImages(imagesWithPaths);
-    } catch (e) {
-      message.error(String(e));
-    }
-  }
+  }, [config]);
 
   function subscribeProgress(
     setter: (msg: string) => void,
@@ -241,8 +200,9 @@ export default function Illustrations() {
 
   async function handleSavePrompts() {
     try {
-      const config = await loadConfig();
-      await saveConfig({ ...config, image_prompts: imagePrompts });
+      if (config) {
+        await saveConfig({ ...config, image_prompts: imagePrompts });
+      }
     } catch {
       // ignore save errors
     }
@@ -353,14 +313,6 @@ export default function Illustrations() {
     value: ch.chapter,
     label: `第${ch.chapter}章 ${ch.title}`,
   }));
-
-  if (loading) {
-    return (
-      <div className="fade-in" style={{ textAlign: "center", padding: 64 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
 
   return (
     <div className="fade-in">

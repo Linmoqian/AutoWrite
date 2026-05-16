@@ -9,7 +9,8 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 
-import { loadConfig, saveConfig } from "../services/tauri";
+import { saveConfig } from "../services/tauri";
+import { useApp } from "../contexts/AppContext";
 
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
@@ -25,6 +26,7 @@ const PROVIDER_PRESETS: Record<string, { label: string; model: string; url: stri
 };
 
 export default function Settings() {
+  const { config: contextConfig, refreshConfig } = useApp();
   const [form] = Form.useForm<AppConfig>();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,12 +34,12 @@ export default function Settings() {
   const [savedConfig, setSavedConfig] = useState<AppConfig | null>(null);
 
   useEffect(() => {
-    loadConfig().then((config) => {
-      setSavedConfig(config);
-      form.setFieldsValue(config);
-      setProvider(config.provider || "openai");
-    });
-  }, [form]);
+    if (contextConfig) {
+      setSavedConfig(contextConfig);
+      form.setFieldsValue(contextConfig);
+      setProvider(contextConfig.provider || "openai");
+    }
+  }, [contextConfig, form]);
 
   const onPresetChange = (preset: string) => {
     const p = PROVIDER_PRESETS[preset];
@@ -54,6 +56,7 @@ export default function Settings() {
       await saveConfig(merged);
       setSavedConfig(merged);
       setSaved(true);
+      await refreshConfig();
       message.open({
         type: "success",
         content: "配置已保存",
