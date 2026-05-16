@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Steps, Collapse, Card, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
-  getStatus,
   getOutlineGenerationStatus,
   onOutlineProgress,
   startOutlineGeneration,
@@ -11,6 +10,7 @@ import type { OutlineProgressEvent, Volume } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useApp } from "../contexts/AppContext";
 
 const { Text } = Typography;
 
@@ -29,9 +29,10 @@ function filterThinkTags(text: string): string {
 }
 
 export default function Outline() {
-  const [volumes, setVolumes] = useState<Volume[]>([]);
-  const [world, setWorld] = useState<string | undefined>();
-  const [characters, setCharacters] = useState<string | undefined>();
+  const { novelStatus, refreshStatus } = useApp();
+  const volumes = novelStatus?.outline ?? [];
+  const world = novelStatus?.novel.world;
+  const characters = novelStatus?.novel.characters;
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<OutlineStep | null>(null);
   const [streamingText, setStreamingText] = useState<StreamingText>({});
@@ -39,17 +40,6 @@ export default function Outline() {
   const streamRef = useRef<HTMLDivElement>(null);
   const wasRunningRef = useRef(false);
   const userScrolledRef = useRef(false);
-
-  const refresh = async () => {
-    try {
-      const status = await getStatus();
-      setVolumes(status.outline);
-      setWorld(status.novel.world);
-      setCharacters(status.novel.characters);
-    } catch (e) {
-      message.error(String(e));
-    }
-  };
 
   const syncGenerationStatus = useCallback(async () => {
     try {
@@ -61,7 +51,7 @@ export default function Outline() {
       if (wasRunningRef.current && !status.running) {
         if (status.completed) {
           message.success("大纲生成完成");
-          refresh();
+          refreshStatus();
         } else if (status.error) {
           message.error(`生成失败: ${status.error}`);
         }
@@ -73,7 +63,7 @@ export default function Outline() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    refreshStatus();
     syncGenerationStatus();
   }, [syncGenerationStatus]);
 

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Card, message } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import {
-  listChapters,
   readChapter,
   generateChapter,
   onChapterProgress,
@@ -12,6 +11,7 @@ import ChapterCard from "../components/ChapterCard";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useApp } from "../contexts/AppContext";
 
 const { Text } = Typography;
 
@@ -32,7 +32,7 @@ const genState = {
 };
 
 export default function Chapters() {
-  const [chapters, setChapters] = useState<ChapterMeta[]>([]);
+  const { chapters, refreshChapters } = useApp();
   const [selected, setSelected] = useState<ChapterContent | null>(null);
   const [generating, setGenerating] = useState(genState.active);
   const [generatingChapter, setGeneratingChapter] = useState<number | null>(
@@ -58,15 +58,6 @@ export default function Chapters() {
     genState.flushTimer = window.setTimeout(flushBuffer, 80);
   }, []);
 
-  const refresh = async () => {
-    try {
-      const list = await listChapters();
-      if (mountedRef.current) setChapters(list);
-    } catch (e) {
-      message.error(String(e));
-    }
-  };
-
   // 组件挂载/卸载跟踪
   useEffect(() => {
     mountedRef.current = true;
@@ -84,7 +75,7 @@ export default function Chapters() {
     if (genState.completed) {
       genState.completed = false;
       message.success(`第 ${genState.chapterNum} 章已生成`);
-      refresh();
+      refreshChapters();
     }
     if (genState.error) {
       const err = genState.error;
@@ -92,7 +83,7 @@ export default function Chapters() {
       message.error({ content: `生成失败: ${err}`, duration: 5 });
     }
 
-    refresh();
+    refreshChapters();
 
     return () => {
       mountedRef.current = false;
@@ -179,7 +170,7 @@ export default function Chapters() {
         setViewingDuringGen(false);
         setStreamingText("");
         message.success(`第 ${num} 章已生成`);
-        refresh();
+        refreshChapters();
       }
     } catch (e) {
       clearTimeout(genState.flushTimer);
