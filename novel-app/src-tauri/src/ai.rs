@@ -27,6 +27,7 @@ struct OllamaRequest {
 #[derive(Serialize)]
 struct OllamaOptions {
     num_ctx: u32,
+    num_predict: u32,
 }
 
 #[derive(Deserialize)]
@@ -131,7 +132,7 @@ async fn generate_ollama(config: &AppConfig, prompt: &str) -> Result<String> {
                 content: prompt.to_string(),
             }],
             stream: false,
-            options: OllamaOptions { num_ctx: 4096 },
+            options: OllamaOptions { num_ctx: 8192, num_predict: 4096 },
         };
 
         match client.post(&url).json(&request).send().await {
@@ -174,7 +175,7 @@ where
                 content: prompt.to_string(),
             }],
             stream: true,
-            options: OllamaOptions { num_ctx: 4096 },
+            options: OllamaOptions { num_ctx: 8192, num_predict: 4096 },
         };
 
         match client.post(&url).json(&request).send().await {
