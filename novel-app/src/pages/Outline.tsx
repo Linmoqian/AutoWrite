@@ -108,6 +108,14 @@ export default function Outline() {
     }
   }, [streamingText]);
 
+  const availableSteps = STEP_KEYS.filter((key) => {
+    if (key === "world") return !!world;
+    if (key === "characters") return !!characters;
+    return volumes.length > 0;
+  });
+
+  const activeTab = availableSteps.includes(viewTab) ? viewTab : (availableSteps[0] || "world");
+
   const handleGenerate = async () => {
     if (!(await checkConnection())) return;
     setStreamingText({});
@@ -182,14 +190,6 @@ export default function Outline() {
       </div>
     );
   }
-
-  const availableSteps = STEP_KEYS.filter((key) => {
-    if (key === "world") return !!world;
-    if (key === "characters") return !!characters;
-    return volumes.length > 0;
-  });
-
-  const activeTab = availableSteps.includes(viewTab) ? viewTab : availableSteps[0];
 
   const renderContent = () => {
     if (activeTab === "world" && world) {
