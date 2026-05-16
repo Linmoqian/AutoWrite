@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout as AntLayout, Menu, Button } from "antd";
 import {
@@ -11,7 +11,7 @@ import {
   ExportOutlined,
   PictureOutlined,
 } from "@ant-design/icons";
-import { getNovelDir, selectNovelDir } from "../services/tauri";
+import { useApp } from "../contexts/AppContext";
 
 const { Sider, Content, Header } = AntLayout;
 
@@ -30,16 +30,7 @@ const FULL_WIDTH_ROUTES = ["/chapters"];
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [dir, setDir] = useState<string | null>(null);
-
-  useEffect(() => {
-    getNovelDir().then(setDir);
-  }, []);
-
-  const handleSelectDir = async () => {
-    const selected = await selectNovelDir();
-    setDir(selected);
-  };
+  const { novelDir: dir, selectDir } = useApp();
 
   const fullWidth = FULL_WIDTH_ROUTES.includes(location.pathname);
 
@@ -123,7 +114,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </span>
           <Button
             size="small"
-            onClick={handleSelectDir}
+            onClick={selectDir}
             icon={<FolderOpenOutlined />}
           >
             选择目录

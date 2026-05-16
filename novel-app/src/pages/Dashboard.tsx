@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -11,8 +10,7 @@ import {
   Collapse,
 } from "antd";
 import { BookOutlined, FileTextOutlined } from "@ant-design/icons";
-import { getStatus } from "../services/tauri";
-import type { NovelStatus } from "../types";
+import { useApp } from "../contexts/AppContext";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -20,30 +18,7 @@ const { Paragraph, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<NovelStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = async () => {
-    try {
-      const s = await getStatus();
-      setStatus(s);
-      setError(null);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  if (error) {
-    return (
-      <Empty description={error}>
-        <Button onClick={refresh}>重试</Button>
-      </Empty>
-    );
-  }
+  const { novelStatus: status, refreshStatus } = useApp();
 
   if (!status) {
     return <Empty description="请先选择小说目录并创建小说" />;
