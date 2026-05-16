@@ -13,8 +13,9 @@ import {
   Progress,
   Collapse,
 } from "antd";
-import { createNovel, getStatus, loadConfig } from "../services/tauri";
-import type { NovelStatus, Prompts } from "../types";
+import { createNovel } from "../services/tauri";
+import { useApp } from "../contexts/AppContext";
+import type { Prompts } from "../types";
 
 const genreOptions = [
   { value: "xuanhuan", label: "玄幻" },
@@ -29,6 +30,8 @@ const genreOptions = [
 
 export default function CreateNovel() {
   const navigate = useNavigate();
+  const { novelStatus: existingNovel, config, refreshAll } = useApp();
+
   const [loading, setLoading] = useState(false);
   const [pendingValues, setPendingValues] = useState<{
     title: string;
@@ -36,17 +39,12 @@ export default function CreateNovel() {
     theme: string;
     chapters: number;
   } | null>(null);
-
-  const [existingNovel, setExistingNovel] = useState<NovelStatus | null>(null);
   const [prompts, setPrompts] = useState<Prompts | null>(null);
   const [promptsExpanded, setPromptsExpanded] = useState(false);
 
   useEffect(() => {
-    getStatus()
-      .then((s) => setExistingNovel(s))
-      .catch(() => setExistingNovel(null));
-    loadConfig().then((c) => setPrompts(c.prompts));
-  }, []);
+    if (config?.prompts) setPrompts(config.prompts);
+  }, [config]);
 
   const doCreate = async (
     values: { title: string; genre: string; theme: string; chapters: number },
@@ -63,6 +61,7 @@ export default function CreateNovel() {
         promptsExpanded ? prompts ?? undefined : undefined,
       );
       message.success("小说创建成功");
+      await refreshAll();
       navigate("/");
     } catch (e: unknown) {
       const msg = String(e);
