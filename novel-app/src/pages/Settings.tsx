@@ -7,6 +7,7 @@ import {
   PictureOutlined,
   PlusOutlined,
   DeleteOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 
 import { saveConfig } from "../services/tauri";
@@ -261,6 +262,15 @@ export default function Settings() {
           <LoadingButton type="primary" htmlType="submit" loading={loading}>
             保存配置
           </LoadingButton>
+          <Button
+            icon={<QuestionCircleOutlined />}
+            onClick={() => {
+              localStorage.removeItem("autowrite_tour_done");
+              window.location.reload();
+            }}
+          >
+            重新显示新手引导
+          </Button>
           {saved && (
             <span style={{ color: "#52c41a", fontSize: 14 }}>
               <CheckCircleOutlined style={{ marginRight: 4 }} />

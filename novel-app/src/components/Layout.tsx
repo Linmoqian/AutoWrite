@@ -1,6 +1,7 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Layout as AntLayout, Menu, Button } from "antd";
+import { Layout as AntLayout, Menu, Button, Tour } from "antd";
+import type { TourProps } from "antd";
 import {
   BookOutlined,
   PlusOutlined,
@@ -14,6 +15,8 @@ import {
 import { useApp } from "../contexts/AppContext";
 
 const { Sider, Content, Header } = AntLayout;
+
+const TOUR_KEY = "autowrite_tour_done";
 
 const menuItems = [
   { key: "/", icon: <BookOutlined />, label: "仪表盘" },
@@ -31,6 +34,82 @@ export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { novelDir: dir, selectDir } = useApp();
+
+  const [tourOpen, setTourOpen] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem(TOUR_KEY)) {
+      setTourOpen(true);
+    }
+  }, []);
+
+  const handleClose = () => {
+    localStorage.setItem(TOUR_KEY, "1");
+    setTourOpen(false);
+  };
+
+  const steps: TourProps["steps"] = useMemo(
+    () => [
+      {
+        title: "欢迎来到小说大批发",
+        description:
+          "这是一个全自动 AI 小说创作工具。接下来会带你了解核心操作流程，只需 30 秒。",
+      },
+      {
+        title: "选择小说目录",
+        description:
+          "首先选择一个本地文件夹，所有小说数据（大纲、章节、配图）都会保存在这里。",
+        target: () => document.getElementById("tour-select-dir") as HTMLElement,
+        placement: "bottomRight",
+      },
+      {
+        title: "创建小说",
+        description:
+          "设定小说标题、类型、主题和目标章节数，AI 会根据你的设定进行创作。还可以自定义提示词模板。",
+        target: () =>
+          document.querySelector('[data-menu-id="/create"]') as HTMLElement,
+        placement: "right",
+      },
+      {
+        title: "生成大纲",
+        description:
+          "AI 会自动生成世界观、角色设定和章节大纲。三步流水线逐步生成，实时预览。",
+        target: () =>
+          document.querySelector('[data-menu-id="/outline"]') as HTMLElement,
+        placement: "right",
+      },
+      {
+        title: "逐章创作",
+        description:
+          "AI 带着三层记忆（角色状态、情节事件、情感弧线）流式生成每一章，保证剧情连贯。",
+        target: () =>
+          document.querySelector('[data-menu-id="/chapters"]') as HTMLElement,
+        placement: "right",
+      },
+      {
+        title: "小说配图",
+        description:
+          "基于小说内容自动生成封面、角色立绘和场景插图。使用魔搭 ModelScope 免费图片生成 API。",
+        target: () =>
+          document.querySelector('[data-menu-id="/illustrations"]') as HTMLElement,
+        placement: "right",
+      },
+      {
+        title: "配置模型（重要）",
+        description:
+          "文本生成：填写 DeepSeek / OpenAI 等 API Key（platform.deepseek.com 获取）。图片生成：在下方「图片生成配置」区域填写魔搭 ModelScope API Token（modelscope.cn 免费获取）。",
+        target: () =>
+          document.querySelector('[data-menu-id="/settings"]') as HTMLElement,
+        placement: "right",
+      },
+      {
+        title: "准备就绪！",
+        description:
+          "完整流程：选目录 → 配模型 → 创建小说 → 生成大纲 → 写章节。有问题随时在设置页重新查看引导。祝创作愉快！",
+      },
+    ],
+    [],
+  );
 
   const fullWidth = FULL_WIDTH_ROUTES.includes(location.pathname);
 
@@ -113,6 +192,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             )}
           </span>
           <Button
+            id="tour-select-dir"
             size="small"
             onClick={selectDir}
             icon={<FolderOpenOutlined />}
@@ -135,6 +215,17 @@ export default function Layout({ children }: { children: ReactNode }) {
           {children}
         </Content>
       </AntLayout>
+      <Tour
+        open={tourOpen}
+        onClose={handleClose}
+        onFinish={handleClose}
+        steps={steps}
+        indicatorsRender={(current, total) => (
+          <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+            {current + 1} / {total}
+          </span>
+        )}
+      />
     </AntLayout>
   );
 }
