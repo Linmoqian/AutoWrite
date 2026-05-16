@@ -63,6 +63,7 @@ export interface AppConfig {
   ollama_model: string;
   timeout: number;
   ollama_url: string;
+  num_ctx: number;
   api_base_url: string;
   api_key: string;
   prompts: Prompts;

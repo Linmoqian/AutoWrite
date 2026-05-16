@@ -108,6 +108,10 @@ fn default_ollama_url() -> String {
     "http://localhost:11434".to_string()
 }
 
+fn default_num_ctx() -> u32 {
+    32768
+}
+
 fn default_model() -> String {
     "deepseek-chat".to_string()
 }
@@ -126,6 +130,8 @@ pub struct AppConfig {
     pub timeout: u64,
     #[serde(default = "default_ollama_url")]
     pub ollama_url: String,
+    #[serde(default = "default_num_ctx")]
+    pub num_ctx: u32,
     #[serde(default)]
     pub api_base_url: String,
     #[serde(default)]
@@ -184,6 +190,7 @@ impl Default for AppConfig {
             ollama_model: String::new(),
             timeout: 300,
             ollama_url: "http://localhost:11434".to_string(),
+            num_ctx: 32768,
             api_base_url: "https://api.deepseek.com".to_string(),
             api_key: String::new(),
             prompts: Prompts::default(),

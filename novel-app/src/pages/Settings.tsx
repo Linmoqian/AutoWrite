@@ -161,6 +161,13 @@ export default function Settings() {
               />
             </Form.Item>
             <Form.Item
+              name="num_ctx"
+              label="上下文窗口 (tokens)"
+              tooltip="越大越能写长文，但占用更多显存。Gemma 4 建议 32768+"
+            >
+              <InputNumber min={2048} max={262144} step={4096} style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
               name="timeout"
               label="超时时间（秒）"
               rules={[{ required: true }]}
