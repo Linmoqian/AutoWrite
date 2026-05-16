@@ -387,30 +387,32 @@ pub struct ImageProgressEvent {
     pub image_id: Option<String>,
 }
 
-#[tauri::command]
-pub async fn generate_cover(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<crate::image::ImageResult> {
-    let dir = dir_from_state(&state)?;
-    let config = config_from_state(&state)?;
+async fn generate_image_common<F>(
+    app: &tauri::AppHandle,
+    state: &State<'_, AppState>,
+    kind: crate::image::ImageKind,
+    ref_id: Option<String>,
+    prompt_builder: F,
+    preparing_msg: String,
+    done_msg: String,
+) -> Result<crate::image::ImageResult>
+where
+    F: FnOnce(&crate::files::NovelData, &crate::config::ImagePrompts) -> String,
+{
+    let dir = dir_from_state(state)?;
+    let config = config_from_state(state)?;
     let novel = crate::files::read_novel(&dir)?;
 
     let _ = app.emit(
         "image-progress",
         ImageProgressEvent {
             stage: "preparing".to_string(),
-            message: format!("正在为《{}》生成封面...", novel.title),
+            message: preparing_msg,
             image_id: None,
         },
     );
 
-    let prompt = crate::image::build_cover_prompt(
-        &config.image_prompts,
-        &novel.title,
-        &novel.genre,
-        &novel.theme,
-    );
+    let prompt = prompt_builder(&novel, &config.image_prompts);
 
     let _ = app.emit(
         "image-progress",
@@ -436,12 +438,7 @@ pub async fn generate_cover(
         .await?;
 
     let id = crate::image::generate_id();
-    let local_path = crate::image::save_image_file(
-        &dir,
-        &crate::image::ImageKind::Cover,
-        &id,
-        &generated.bytes,
-    )?;
+    let local_path = crate::image::save_image_file(&dir, &kind, &id, &generated.bytes)?;
 
     let _ = app.emit(
         "image-progress",
@@ -454,13 +451,13 @@ pub async fn generate_cover(
 
     let result = crate::image::ImageResult {
         id: id.clone(),
-        kind: crate::image::ImageKind::Cover,
+        kind,
         prompt,
         revised_prompt: None,
         local_path,
         file_size: generated.bytes.len() as u64,
         created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
-        ref_id: None,
+        ref_id,
     };
 
     crate::image::append_image_meta(&dir, &result)?;
@@ -469,12 +466,34 @@ pub async fn generate_cover(
         "image-progress",
         ImageProgressEvent {
             stage: "done".to_string(),
-            message: "封面生成完成".to_string(),
+            message: done_msg,
             image_id: Some(id),
         },
     );
 
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn generate_cover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<crate::image::ImageResult> {
+    let novel = crate::files::read_novel(&dir_from_state(&state)?)?;
+    let title = novel.title.clone();
+
+    generate_image_common(
+        &app,
+        &state,
+        crate::image::ImageKind::Cover,
+        None,
+        |novel, prompts| {
+            crate::image::build_cover_prompt(prompts, &novel.title, &novel.genre, &novel.theme)
+        },
+        format!("正在为《{}》生成封面...", title),
+        "封面生成完成".to_string(),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -484,80 +503,21 @@ pub async fn generate_character_image(
     character_name: String,
     character_desc: String,
 ) -> Result<crate::image::ImageResult> {
-    let dir = dir_from_state(&state)?;
-    let config = config_from_state(&state)?;
-    let novel = crate::files::read_novel(&dir)?;
+    let name = character_name.clone();
+    let desc = character_desc.clone();
 
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "preparing".to_string(),
-            message: format!("正在为角色「{}」生成立绘...", character_name),
-            image_id: None,
+    generate_image_common(
+        &app,
+        &state,
+        crate::image::ImageKind::Character,
+        Some(character_name.clone()),
+        move |novel, prompts| {
+            crate::image::build_character_prompt(prompts, &novel.title, &name, &desc)
         },
-    );
-
-    let prompt = crate::image::build_character_prompt(
-        &config.image_prompts,
-        &novel.title,
-        &character_name,
-        &character_desc,
-    );
-
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "submitting".to_string(),
-            message: "正在提交图片生成任务...".to_string(),
-            image_id: None,
-        },
-    );
-
-    let app_emit = app.clone();
-    let generated =
-        crate::image::generate_image(&config, &prompt, |msg| {
-            let _ = app_emit.emit(
-                "image-progress",
-                ImageProgressEvent {
-                    stage: "polling".to_string(),
-                    message: msg.to_string(),
-                    image_id: None,
-                },
-            );
-        })
-        .await?;
-
-    let id = crate::image::generate_id();
-    let local_path = crate::image::save_image_file(
-        &dir,
-        &crate::image::ImageKind::Character,
-        &id,
-        &generated.bytes,
-    )?;
-
-    let result = crate::image::ImageResult {
-        id: id.clone(),
-        kind: crate::image::ImageKind::Character,
-        prompt,
-        revised_prompt: None,
-        local_path,
-        file_size: generated.bytes.len() as u64,
-        created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
-        ref_id: Some(character_name.clone()),
-    };
-
-    crate::image::append_image_meta(&dir, &result)?;
-
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "done".to_string(),
-            message: format!("角色「{}」立绘生成完成", character_name),
-            image_id: Some(id),
-        },
-    );
-
-    Ok(result)
+        format!("正在为角色「{}」生成立绘...", character_name),
+        format!("角色「{}」立绘生成完成", character_name),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -569,87 +529,32 @@ pub async fn generate_scene_image(
     mood: String,
 ) -> Result<crate::image::ImageResult> {
     let dir = dir_from_state(&state)?;
-    let config = config_from_state(&state)?;
-    let novel = crate::files::read_novel(&dir)?;
-
     let chapter_title = crate::files::get_chapter_outline(&dir, chapter_num)?
         .unwrap_or_else(|| format!("第{}章", chapter_num));
+    let title_for_msg = chapter_title.clone();
 
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "preparing".to_string(),
-            message: format!(
-                "正在为第{}章「{}」生成场景插图...",
-                chapter_num, chapter_title
-            ),
-            image_id: None,
+    let sd = scene_desc.clone();
+    let md = mood.clone();
+
+    generate_image_common(
+        &app,
+        &state,
+        crate::image::ImageKind::Scene,
+        Some(format!("ch{:03}", chapter_num)),
+        |novel, prompts| {
+            crate::image::build_scene_prompt(
+                prompts,
+                &novel.title,
+                chapter_num,
+                &chapter_title,
+                &sd,
+                &md,
+            )
         },
-    );
-
-    let prompt = crate::image::build_scene_prompt(
-        &config.image_prompts,
-        &novel.title,
-        chapter_num,
-        &chapter_title,
-        &scene_desc,
-        &mood,
-    );
-
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "submitting".to_string(),
-            message: "正在提交图片生成任务...".to_string(),
-            image_id: None,
-        },
-    );
-
-    let app_emit = app.clone();
-    let generated =
-        crate::image::generate_image(&config, &prompt, |msg| {
-            let _ = app_emit.emit(
-                "image-progress",
-                ImageProgressEvent {
-                    stage: "polling".to_string(),
-                    message: msg.to_string(),
-                    image_id: None,
-                },
-            );
-        })
-        .await?;
-
-    let id = crate::image::generate_id();
-    let local_path = crate::image::save_image_file(
-        &dir,
-        &crate::image::ImageKind::Scene,
-        &id,
-        &generated.bytes,
-    )?;
-
-    let result = crate::image::ImageResult {
-        id: id.clone(),
-        kind: crate::image::ImageKind::Scene,
-        prompt,
-        revised_prompt: None,
-        local_path,
-        file_size: generated.bytes.len() as u64,
-        created: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
-        ref_id: Some(format!("ch{:03}", chapter_num)),
-    };
-
-    crate::image::append_image_meta(&dir, &result)?;
-
-    let _ = app.emit(
-        "image-progress",
-        ImageProgressEvent {
-            stage: "done".to_string(),
-            message: format!("第{}章场景插图生成完成", chapter_num),
-            image_id: Some(id),
-        },
-    );
-
-    Ok(result)
+        format!("正在为第{}章「{}」生成场景插图...", chapter_num, title_for_msg),
+        format!("第{}章场景插图生成完成", chapter_num),
+    )
+    .await
 }
 
 #[tauri::command]
