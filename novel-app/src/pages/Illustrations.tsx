@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, Collapse, message } from "antd";
 import { DeleteOutlined, EyeOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { checkConnection } from "../hooks/useConnectionCheck";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ImageResult, ImageKind, ImageProgressEvent, ImagePrompts } from "../types";
@@ -211,6 +212,7 @@ export default function Illustrations() {
   // ===== Cover generation =====
 
   async function handleGenerateCover() {
+    if (!(await checkConnection())) return;
     setCoverLoading(true);
     setCoverProgress("准备生成封面...");
     const unlisten = await subscribeProgress(setCoverProgress);
@@ -237,6 +239,7 @@ export default function Illustrations() {
       return;
     }
     setCharLoading(true);
+    if (!(await checkConnection())) { setCharLoading(false); return; }
     setCharProgress("准备生成立绘...");
     const unlisten = await subscribeProgress(setCharProgress);
     try {
@@ -261,6 +264,7 @@ export default function Illustrations() {
       message.warning("请先选择章节");
       return;
     }
+    if (!(await checkConnection())) return;
     setExtracting(true);
     try {
       const result = await extractSceneDescription(sceneChapter);
@@ -285,6 +289,7 @@ export default function Illustrations() {
       message.warning("请输入场景描述");
       return;
     }
+    if (!(await checkConnection())) return;
     setSceneLoading(true);
     setSceneProgress("准备生成插图...");
     const unlisten = await subscribeProgress(setSceneProgress);

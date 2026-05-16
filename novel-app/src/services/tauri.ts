@@ -103,6 +103,16 @@ export async function ollamaTestConnection(): Promise<OllamaTestResult> {
   return invoke<OllamaTestResult>("ollama_test_connection");
 }
 
+export interface ConnectionTestResult {
+  connected: boolean;
+  latencyMs: number;
+  error?: string;
+}
+
+export async function testAiConnection(): Promise<ConnectionTestResult> {
+  return invoke<ConnectionTestResult>("test_ai_connection");
+}
+
 export async function getExportData(): Promise<ExportData> {
   return invoke<ExportData>("get_export_data");
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Steps, Collapse, Card, message } from "antd";
 import { ThunderboltOutlined } from "@ant-design/icons";
+import { checkConnection } from "../hooks/useConnectionCheck";
 import {
   getOutlineGenerationStatus,
   onOutlineProgress,
@@ -108,6 +109,7 @@ export default function Outline() {
   }, [streamingText]);
 
   const handleGenerate = async () => {
+    if (!(await checkConnection())) return;
     setStreamingText({});
     const initialStep: OutlineStep = activeTab;
     setCurrentStep(initialStep);

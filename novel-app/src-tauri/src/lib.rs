@@ -46,6 +46,7 @@ pub fn run() {
             commands::read_chapter,
             commands::load_config,
             commands::save_config,
+            commands::test_ai_connection,
             commands::ollama_list_models,
             commands::ollama_test_connection,
             commands::get_export_data,

@@ -377,6 +377,114 @@ pub async fn save_export_file(
     Ok(path.to_string_lossy().to_string())
 }
 
+// ===== 连接检测 =====
+
+#[derive(serde::Serialize)]
+pub struct ConnectionTestResult {
+    pub connected: bool,
+    pub latency_ms: u64,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn test_ai_connection(state: State<'_, AppState>) -> Result<ConnectionTestResult> {
+    let config = config_from_state(&state)?;
+
+    match config.provider {
+        crate::config::Provider::OpenAI => {
+            if config.api_key.is_empty() {
+                return Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms: 0,
+                    error: Some("未配置 API Key，请在「模型配置」页面填写".to_string()),
+                });
+            }
+            if config.api_base_url.is_empty() {
+                return Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms: 0,
+                    error: Some("未配置 API 地址，请在「模型配置」页面填写".to_string()),
+                });
+            }
+
+            let url = format!("{}/v1/models", config.api_base_url);
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()?;
+
+            let start = std::time::Instant::now();
+            let result = client
+                .get(&url)
+                .header("Authorization", format!("Bearer {}", config.api_key))
+                .send()
+                .await;
+            let latency_ms = start.elapsed().as_millis() as u64;
+
+            match result {
+                Ok(resp) if resp.status().is_success() => Ok(ConnectionTestResult {
+                    connected: true,
+                    latency_ms,
+                    error: None,
+                }),
+                Ok(resp) => {
+                    let status = resp.status();
+                    let hint = if status.as_u16() == 401 {
+                        "API Key 无效或已过期，请检查「模型配置」".to_string()
+                    } else {
+                        format!("API 返回错误 HTTP {}", status)
+                    };
+                    Ok(ConnectionTestResult {
+                        connected: false,
+                        latency_ms,
+                        error: Some(hint),
+                    })
+                }
+                Err(e) => Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms,
+                    error: Some(format!("连接失败: {}", e)),
+                }),
+            }
+        }
+        crate::config::Provider::Ollama => {
+            if config.ollama_url.is_empty() {
+                return Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms: 0,
+                    error: Some("未配置 Ollama 地址，请在「模型配置」页面填写".to_string()),
+                });
+            }
+
+            let url = format!("{}/api/tags", config.ollama_url);
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()?;
+
+            let start = std::time::Instant::now();
+            let result = client.get(&url).send().await;
+            let latency_ms = start.elapsed().as_millis() as u64;
+
+            match result {
+                Ok(resp) if resp.status().is_success() => Ok(ConnectionTestResult {
+                    connected: true,
+                    latency_ms,
+                    error: None,
+                }),
+                Ok(resp) => Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms,
+                    error: Some(format!("Ollama 返回错误 HTTP {}", resp.status())),
+                }),
+                Err(e) => Ok(ConnectionTestResult {
+                    connected: false,
+                    latency_ms,
+                    error: Some(format!("Ollama 连接失败: {}。请确认 Ollama 已启动", e)),
+                }),
+            }
+        }
+    }
+}
+
 // ===== 图片生成命令 =====
 
 #[derive(Clone, serde::Serialize)]

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Card, message } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
+import { checkConnection } from "../hooks/useConnectionCheck";
 import {
   readChapter,
   generateChapter,
@@ -129,6 +130,7 @@ export default function Chapters() {
   };
 
   const handleGenerate = async () => {
+    if (!(await checkConnection())) return;
     const num = chapters.length > 0 ? chapters[chapters.length - 1].chapter + 1 : 1;
 
     // 清理之前的状态
