@@ -18,7 +18,7 @@ const { Paragraph, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { novelStatus: status, refreshStatus } = useApp();
+  const { novelStatus: status } = useApp();
 
   if (!status) {
     return <Empty description="请先选择小说目录并创建小说" />;

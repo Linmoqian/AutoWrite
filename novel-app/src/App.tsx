@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider, theme } from "antd";
 import zhCN from "antd/locale/zh_CN";
+import { AppProvider } from "./contexts/AppContext";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import CreateNovel from "./pages/CreateNovel";
@@ -12,6 +13,7 @@ import Settings from "./pages/Settings";
 
 export default function App() {
   return (
+    <AppProvider>
     <ConfigProvider
       locale={zhCN}
       theme={{
@@ -61,5 +63,6 @@ export default function App() {
         </Layout>
       </BrowserRouter>
     </ConfigProvider>
+    </AppProvider>
   );
 }

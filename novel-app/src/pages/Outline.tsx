@@ -6,7 +6,7 @@ import {
   onOutlineProgress,
   startOutlineGeneration,
 } from "../services/tauri";
-import type { OutlineProgressEvent, Volume } from "../types";
+import type { OutlineProgressEvent } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
