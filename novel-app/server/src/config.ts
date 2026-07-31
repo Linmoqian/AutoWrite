@@ -9,7 +9,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import yaml from "js-yaml";
+import { yamlLoad, yamlDump } from "./lib/yaml-schema.js";
 
 import { AppError } from "./error.js";
 
@@ -253,7 +253,7 @@ export function loadConfig(pathStr: string): AppConfig {
   const content = fs.readFileSync(pathStr, "utf8");
   let raw: unknown;
   try {
-    raw = yaml.load(content);
+    raw = yamlLoad(content);
   } catch (e) {
     throw AppError.yaml(e);
   }
@@ -266,7 +266,7 @@ export function saveConfig(pathStr: string, config: AppConfig): void {
   const doc = configToYamlObject(config);
   let content: string;
   try {
-    content = yaml.dump(doc, { lineWidth: -1, noRefs: true });
+    content = yamlDump(doc);
   } catch (e) {
     throw AppError.yaml(e);
   }
