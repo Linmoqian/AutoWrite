@@ -20,5 +20,18 @@ export default defineConfig(async () => ({
     watch: {
       ignored: ["**/src-tauri/**"],
     },
+    // 转发 API 与 SSE 到 Node 后端（端口 3000）
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true,
+      },
+      "/events": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true,
+        // SSE 需关闭缓冲，否则事件会被 proxy 攒批
+        ws: false,
+      },
+    },
   },
 }));
