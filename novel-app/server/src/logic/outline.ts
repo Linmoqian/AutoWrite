@@ -41,7 +41,7 @@ export async function generateOutlineStreamingWithProgress(
 
   // Step 1: 生成世界观
   const world = needWorld
-    ? await runStep(dir, config, "world", () =>
+    ? await runStep(dir, config, "world", onProgress, () =>
         fillTemplate(config.prompts.world, {
           genre: novel.genre,
           theme: novel.theme,
@@ -51,7 +51,7 @@ export async function generateOutlineStreamingWithProgress(
 
   // Step 2: 生成角色
   const characters = needCharacters
-    ? await runStep(dir, config, "characters", () =>
+    ? await runStep(dir, config, "characters", onProgress, () =>
         fillTemplate(config.prompts.character, { world }),
       )
     : (emitSkip("characters", onProgress), novel.characters ?? "");
@@ -84,10 +84,11 @@ async function runStep(
   dir: string,
   config: AppConfig,
   step: Extract<OutlineStep, "world" | "characters">,
+  onProgress: OutlineProgressHandler,
   buildPrompt: () => string,
 ): Promise<string> {
   const prompt = buildPrompt();
-  const result = await streamingStep(config, prompt, step, onProgressNoop);
+  const result = await streamingStep(config, prompt, step, onProgress);
   const n = readNovel(dir);
   if (step === "world") {
     n.world = result;
@@ -176,6 +177,3 @@ function today(): string {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
-// 空操作 handler（用于 runStep，主进度通过 emit 推送，状态更新在 routes 层）
-const onProgressNoop: OutlineProgressHandler = () => {};

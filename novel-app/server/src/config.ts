@@ -130,6 +130,12 @@ export function defaultConfig(): AppConfig {
   };
 }
 
+// 把任意输入归一化为完整 AppConfig（缺失字段回退默认）。
+// 供 save_config 路由复用：前端可能传入部分对象，需像 serde 反序列化一样补全。
+export function normalizeConfig(raw: unknown): AppConfig {
+  return applySerdeDefaults(raw);
+}
+
 // serde(default) 语义：缺失字段回退。注意 api_base_url serde 默认是空串（非 deepseek）。
 // load_config 对缺失字段用 serde 默认（空串）；全新 defaultConfig() 才是 deepseek。严格复刻。
 function applySerdeDefaults(raw: unknown): AppConfig {
