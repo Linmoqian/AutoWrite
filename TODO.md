@@ -13,3 +13,5 @@
 [ ] 检查生成功能
 [ ] 自动发布功能
 [ ] 自动更新功能
+
+[x] 接入工程规范（docs/development/ + skills/，源：lin-workflow）
