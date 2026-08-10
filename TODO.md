@@ -15,3 +15,4 @@
 [ ] 自动更新功能
 
 [x] 接入工程规范（docs/development/ + skills/，源：lin-workflow）
+[x] 回切 Rust 后端，移除 Node.js server 层

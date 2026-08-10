@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, Collapse, message } from "antd";
 import { DeleteOutlined, EyeOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { checkConnection } from "../hooks/useConnectionCheck";
-import type { UnlistenFn } from "../services/tauri";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ImageResult, ImageKind, ImageProgressEvent, ImagePrompts } from "../types";
 import {
   generateCover,
@@ -50,8 +51,7 @@ function ImageCard({
   onDelete: (id: string) => void;
   onPreview: (src: string) => void;
 }) {
-  // image.localPath 已由 AppContext.refreshImages 转换为可访问的 /api/images/ URL
-  const src = image.localPath;
+  const src = convertFileSrc(image.localPath);
 
   return (
     <div className="image-card">
