@@ -1,0 +1,15 @@
+[package]
+name = "autowrite-cli"
+version = "1.0.0"
+edition = "2021"
+
+[[bin]]
+name = "autowrite-cli"
+path = "src/main.rs"
+
+[dependencies]
+autowrite-core = { path = "../core" }
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+serde_yaml = "0.9"
+dirs = "6"
