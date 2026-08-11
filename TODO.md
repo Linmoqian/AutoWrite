@@ -21,4 +21,4 @@
 [x] 阶段 2：Rust 后端结构化拆分
 [x] 阶段 3：前端工程化基础设施
 [x] 阶段 4a：Redux Toolkit 替换 AppContext
-[ ] 阶段 5：CI workflow + 文档更新 + 收尾
+[x] 阶段 5：CI workflow + 文档更新 + 收尾

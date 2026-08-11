@@ -37,7 +37,7 @@ pub async fn export_novel(
     let file_path = app
         .dialog()
         .file()
-        .add_filter(&format.to_uppercase(), &[&ext])
+        .add_filter(format.to_uppercase(), &[&ext])
         .set_file_name(&default_name)
         .blocking_save_file()
         .ok_or(crate::error::AppError::Export("用户取消导出".into()))?;
@@ -62,7 +62,7 @@ pub async fn save_export_file(
     let file_path = app
         .dialog()
         .file()
-        .add_filter(&extension.to_uppercase(), &[&extension])
+        .add_filter(extension.to_uppercase(), &[&extension])
         .set_file_name(&filename)
         .blocking_save_file()
         .ok_or(crate::error::AppError::Export("用户取消导出".into()))?;

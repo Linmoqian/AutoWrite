@@ -99,18 +99,18 @@ fn strip_markdown(text: &str) -> String {
         let trimmed = line.trim();
         let processed = if trimmed == "---" {
             String::new()
-        } else if trimmed.starts_with("# ") {
-            format!("\n{}\n", strip_formatting(&trimmed[2..]))
-        } else if trimmed.starts_with("## ") {
-            format!("\n{}\n", strip_formatting(&trimmed[3..]))
-        } else if trimmed.starts_with("### ") {
-            format!("\n{}\n", strip_formatting(&trimmed[4..]))
-        } else if trimmed.starts_with("> ") {
-            format!("  {}", strip_formatting(&trimmed[2..]))
-        } else if trimmed.starts_with("- ") {
-            format!("  · {}", strip_formatting(&trimmed[2..]))
-        } else if trimmed.starts_with("* ") {
-            format!("  · {}", strip_formatting(&trimmed[2..]))
+        } else if let Some(rest) = trimmed.strip_prefix("# ") {
+            format!("\n{}\n", strip_formatting(rest))
+        } else if let Some(rest) = trimmed.strip_prefix("## ") {
+            format!("\n{}\n", strip_formatting(rest))
+        } else if let Some(rest) = trimmed.strip_prefix("### ") {
+            format!("\n{}\n", strip_formatting(rest))
+        } else if let Some(rest) = trimmed.strip_prefix("> ") {
+            format!("  {}", strip_formatting(rest))
+        } else if let Some(rest) = trimmed.strip_prefix("- ") {
+            format!("  · {}", strip_formatting(rest))
+        } else if let Some(rest) = trimmed.strip_prefix("* ") {
+            format!("  · {}", strip_formatting(rest))
         } else {
             strip_formatting(trimmed).to_string()
         };

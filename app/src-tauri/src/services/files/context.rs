@@ -100,12 +100,12 @@ pub fn read_context(dir: &Path) -> Result<ContextData> {
                         });
                     }
                     if let Some(ref mut intent) = result.current_intent {
-                        if text.starts_with("角色想要：") {
-                            intent.character_wants = text["角色想要：".len()..].to_string();
-                        } else if text.starts_with("阻碍：") {
-                            intent.obstacle = text["阻碍：".len()..].to_string();
-                        } else if text.starts_with("读者关注：") {
-                            intent.reader_should_care = text["读者关注：".len()..].to_string();
+                        if let Some(rest) = text.strip_prefix("角色想要：") {
+                            intent.character_wants = rest.to_string();
+                        } else if let Some(rest) = text.strip_prefix("阻碍：") {
+                            intent.obstacle = rest.to_string();
+                        } else if let Some(rest) = text.strip_prefix("读者关注：") {
+                            intent.reader_should_care = rest.to_string();
                         }
                     }
                 }

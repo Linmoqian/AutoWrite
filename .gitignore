@@ -11,6 +11,9 @@ test-novel/
 # 构建产物
 dist/
 
+# Rust 构建产物
+target/
+
 # IDE
 .idea/
 .vscode/
@@ -38,15 +41,3 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 .mypy_cache/
-
-# 小说生成内容（源码保留，生成产物忽略）
-novel-lite/chapters/
-novel-lite/polished/
-novel-lite/*.bak
-novel-lite/*.tmp
-novel-lite/novel.md
-novel-lite/outline.md
-novel-lite/context.md
-novel-lite/*完整版.md
-novel-lite/*正文汇总.md
-novel-lite/*.txt

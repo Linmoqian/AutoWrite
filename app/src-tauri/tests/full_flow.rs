@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use autowrite_lib::domain::config::{AppConfig, Provider, Prompts, fill_template};
@@ -41,7 +42,7 @@ fn step(step: &str, status: &str) {
     );
 }
 
-fn first_chapter_filename(dir: &PathBuf) -> String {
+fn first_chapter_filename(dir: &Path) -> String {
     let ch_dir = files::chapters_dir(dir);
     for entry in std::fs::read_dir(&ch_dir).unwrap() {
         let path = entry.unwrap().path();

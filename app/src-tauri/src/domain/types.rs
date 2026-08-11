@@ -52,6 +52,7 @@ pub struct NarrativeIntent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ContextData {
     pub current_chapter: u32,
     #[serde(default)]
@@ -72,21 +73,6 @@ pub struct ContextData {
     pub current_intent: Option<NarrativeIntent>,
 }
 
-impl Default for ContextData {
-    fn default() -> Self {
-        Self {
-            current_chapter: 0,
-            recent_summaries: Vec::new(),
-            character_states: Vec::new(),
-            pending_plots: Vec::new(),
-            plot_events: Vec::new(),
-            unresolved_threads: Vec::new(),
-            emotional_arc: Vec::new(),
-            tension_checklist: Vec::new(),
-            current_intent: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChapterMeta {

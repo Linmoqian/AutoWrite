@@ -47,7 +47,7 @@ pub fn parse_outline_text(text: &str) -> Result<Vec<Volume>> {
                 outline.push(vol);
             }
             current_volume = Some(Volume {
-                volume: line[3..].to_string(),
+                volume: line.strip_prefix("## ").unwrap_or(line).to_string(),
                 chapters: Vec::new(),
             });
         } else if line.starts_with("- ") || line.starts_with("* ") {
