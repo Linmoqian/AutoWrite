@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, Button, message, Spin, Empty, Descriptions, Tag } from "antd";
-import {
-  FileTextOutlined,
-  FileOutlined,
-  FileWordOutlined,
-  FilePdfOutlined,
-  DownloadOutlined,
-} from "@ant-design/icons";
+import { FileText, File, FileType2, FileType, Download } from "lucide-react";
 import type { ExportData, ExportFormat } from "../types";
 import { getExportData, exportNovel, saveExportFile } from "../services/tauri";
 import { generateDocx } from "../utils/exportDocx";
@@ -22,28 +16,28 @@ const FORMATS: {
   {
     key: "md",
     label: "Markdown",
-    icon: <FileTextOutlined style={{ fontSize: 28 }} />,
+    icon: <FileText size={28} />,
     desc: "保留完整 Markdown 格式",
     color: "#d4a574",
   },
   {
     key: "txt",
     label: "纯文本",
-    icon: <FileOutlined style={{ fontSize: 28 }} />,
+    icon: <File size={28} />,
     desc: "纯文本格式，兼容性最好",
     color: "#8bc34a",
   },
   {
     key: "docx",
     label: "Word 文档",
-    icon: <FileWordOutlined style={{ fontSize: 28 }} />,
+    icon: <FileType2 size={28} />,
     desc: "Word 文档格式，方便编辑",
     color: "#42a5f5",
   },
   {
     key: "pdf",
     label: "PDF",
-    icon: <FilePdfOutlined style={{ fontSize: 28 }} />,
+    icon: <FileType size={28} />,
     desc: "打印为 PDF，阅读体验佳",
     color: "#ef5350",
   },
@@ -206,7 +200,7 @@ export default function ExportPage() {
         <Button
           type="primary"
           size="large"
-          icon={<DownloadOutlined />}
+          icon={<Download size={16} />}
           loading={exporting}
           disabled={!selectedFormat || data.chapters.length === 0}
           onClick={handleExport}

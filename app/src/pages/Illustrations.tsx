@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, Tabs, Input, Select, Tag, Button, Popconfirm, Empty, Spin, Collapse, message } from "antd";
-import { DeleteOutlined, EyeOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { Trash2, Eye, Zap } from "lucide-react";
 import { checkConnection } from "../hooks/useConnectionCheck";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -68,14 +68,14 @@ function ImageCard({
           className="image-card__delete"
           type="text"
           size="small"
-          icon={<DeleteOutlined />}
+          icon={<Trash2 size={14} />}
           onClick={(e) => e.stopPropagation()}
         />
       </Popconfirm>
       <div className="image-card__preview" onClick={() => onPreview(src)}>
         <img src={src} alt={image.refId || kindLabel[image.kind]} />
         <div className="image-card__overlay">
-          <EyeOutlined />
+          <Eye size={14} />
         </div>
       </div>
       <div className="image-card__info">
@@ -438,7 +438,7 @@ export default function Illustrations() {
                       <Button
                         loading={extracting}
                         onClick={handleExtractScene}
-                        icon={<ThunderboltOutlined />}
+                        icon={<Zap size={14} />}
                       >
                         AI 提取场景
                       </Button>

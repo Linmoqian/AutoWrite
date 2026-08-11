@@ -9,7 +9,7 @@ import {
   Typography,
   Collapse,
 } from "antd";
-import { BookOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Book, FileText } from "lucide-react";
 import { useApp } from "../contexts/AppContext";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -39,7 +39,7 @@ export default function Dashboard() {
           <Statistic
             title="类型"
             value={novel.genre}
-            prefix={<BookOutlined />}
+            prefix={<Book size={18} />}
           />
         </Card>
         <Card>
@@ -49,7 +49,7 @@ export default function Dashboard() {
           <Statistic
             title="目标章节"
             value={novel.target_chapters}
-            prefix={<FileTextOutlined />}
+            prefix={<FileText size={18} />}
           />
         </Card>
       </div>

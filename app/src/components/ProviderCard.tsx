@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CheckCircleOutlined } from "@ant-design/icons";
+import { CircleCheck } from "lucide-react";
 
 interface ProviderCardProps {
   selected: boolean;
@@ -35,7 +35,7 @@ export default function ProviderCard({
           <div className="provider-card__desc">{description}</div>
         </div>
         {selected && (
-          <CheckCircleOutlined className="provider-card__check" />
+          <CircleCheck size={20} className="provider-card__check" />
         )}
       </div>
       {selected && <div className="provider-card__body">{children}</div>}

@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Select, Button, Space, message, Tooltip } from "antd";
-import {
-  ReloadOutlined,
-  ThunderboltOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-} from "@ant-design/icons";
+import { RefreshCw, Zap, CircleCheck, CircleX } from "lucide-react";
 import { ollamaListModels, ollamaTestConnection } from "../services/tauri";
 import type { OllamaModel, OllamaTestResult } from "../types";
 
@@ -82,14 +77,14 @@ export default function OllamaModelSelect({ value, onChange }: OllamaModelSelect
           }}
         />
         <Tooltip title="刷新模型列表">
-          <Button icon={<ReloadOutlined />} onClick={fetchModels} loading={loading} />
+          <Button icon={<RefreshCw size={14} />} onClick={fetchModels} loading={loading} />
         </Tooltip>
       </Space.Compact>
 
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <Button
           size="small"
-          icon={<ThunderboltOutlined />}
+          icon={<Zap size={14} />}
           onClick={handleTest}
           loading={testing}
         >
@@ -99,7 +94,7 @@ export default function OllamaModelSelect({ value, onChange }: OllamaModelSelect
           <span style={{ fontSize: 13 }}>
             {testResult.connected ? (
               <>
-                <CheckCircleOutlined style={{ color: "#52c41a", marginRight: 4 }} />
+                <CircleCheck size={13} style={{ color: "#52c41a", marginRight: 4 }} />
                 <span style={{ color: "#52c41a" }}>已连接</span>
                 <span style={{ color: "var(--text-secondary)", marginLeft: 8 }}>
                   {testResult.latency_ms} ms
@@ -107,7 +102,7 @@ export default function OllamaModelSelect({ value, onChange }: OllamaModelSelect
               </>
             ) : (
               <>
-                <CloseCircleOutlined style={{ color: "var(--red)", marginRight: 4 }} />
+                <CircleX size={13} style={{ color: "var(--red)", marginRight: 4 }} />
                 <span style={{ color: "var(--red)" }}>
                   {testResult.error || "连接失败"}
                 </span>

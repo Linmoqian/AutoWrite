@@ -1,5 +1,5 @@
 import { Typography } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { LoaderCircle } from "lucide-react";
 import type { ChapterMeta } from "../types";
 
 const { Text } = Typography;
@@ -51,7 +51,7 @@ export default function ChapterCard({
       <div style={{ marginTop: 4 }}>
         {generating ? (
           <Text style={{ fontSize: 12, color: "var(--gold)" }}>
-            <LoadingOutlined style={{ marginRight: 4 }} />
+            <LoaderCircle size={12} className="spin" style={{ marginRight: 4 }} />
             创作中
           </Text>
         ) : (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Steps, Collapse, Card, message } from "antd";
-import { ThunderboltOutlined } from "@ant-design/icons";
+import { Zap } from "lucide-react";
 import { checkConnection } from "../hooks/useConnectionCheck";
 import {
   getOutlineGenerationStatus,
@@ -180,7 +180,7 @@ export default function Outline() {
           <Empty description="暂无大纲，请先生成">
             <LoadingButton
               type="primary"
-              icon={<ThunderboltOutlined />}
+              icon={<Zap size={14} />}
               onClick={handleGenerate}
             >
               生成大纲
@@ -248,7 +248,7 @@ export default function Outline() {
         </h1>
         <LoadingButton
           type="primary"
-          icon={<ThunderboltOutlined />}
+          icon={<Zap size={14} />}
           onClick={handleGenerate}
         >
           {hasNothing

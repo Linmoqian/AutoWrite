@@ -3,15 +3,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Layout as AntLayout, Menu, Button, Tour } from "antd";
 import type { TourProps } from "antd";
 import {
-  BookOutlined,
-  PlusOutlined,
-  OrderedListOutlined,
-  ReadOutlined,
-  SettingOutlined,
-  FolderOpenOutlined,
-  ExportOutlined,
-  PictureOutlined,
-} from "@ant-design/icons";
+  Book,
+  Plus,
+  ListOrdered,
+  BookOpen,
+  Settings,
+  FolderOpen,
+  Download,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useApp } from "../contexts/AppContext";
 
 const { Sider, Content, Header } = AntLayout;
@@ -19,13 +19,13 @@ const { Sider, Content, Header } = AntLayout;
 const TOUR_KEY = "autowrite_tour_done";
 
 const menuItems = [
-  { key: "/", icon: <BookOutlined />, label: "仪表盘" },
-  { key: "/create", icon: <PlusOutlined />, label: "创建小说" },
-  { key: "/outline", icon: <OrderedListOutlined />, label: "大纲管理" },
-  { key: "/chapters", icon: <ReadOutlined />, label: "章节管理" },
-  { key: "/illustrations", icon: <PictureOutlined />, label: "小说配图" },
-  { key: "/export", icon: <ExportOutlined />, label: "导出小说" },
-  { key: "/settings", icon: <SettingOutlined />, label: "模型配置" },
+  { key: "/", icon: <Book size={14} />, label: "仪表盘" },
+  { key: "/create", icon: <Plus size={14} />, label: "创建小说" },
+  { key: "/outline", icon: <ListOrdered size={14} />, label: "大纲管理" },
+  { key: "/chapters", icon: <BookOpen size={14} />, label: "章节管理" },
+  { key: "/illustrations", icon: <ImageIcon size={14} />, label: "小说配图" },
+  { key: "/export", icon: <Download size={14} />, label: "导出小说" },
+  { key: "/settings", icon: <Settings size={14} />, label: "模型配置" },
 ];
 
 const FULL_WIDTH_ROUTES = ["/chapters"];
@@ -184,7 +184,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
             {dir ? (
               <>
-                <FolderOpenOutlined style={{ marginRight: 6 }} />
+                <FolderOpen size={13} style={{ marginRight: 6 }} />
                 {dir}
               </>
             ) : (
@@ -195,7 +195,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             id="tour-select-dir"
             size="small"
             onClick={selectDir}
-            icon={<FolderOpenOutlined />}
+            icon={<FolderOpen size={14} />}
           >
             选择目录
           </Button>

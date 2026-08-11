@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card, Form, Input, InputNumber, Select, Button, Collapse, message } from "antd";
 import {
-  CheckCircleOutlined,
-  CloudOutlined,
-  LaptopOutlined,
-  PictureOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  QuestionCircleOutlined,
-} from "@ant-design/icons";
+  CircleCheck,
+  Cloud,
+  Laptop,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  CircleHelp,
+} from "lucide-react";
 
 import { saveConfig } from "../services/tauri";
 import { useApp } from "../contexts/AppContext";
@@ -62,7 +62,7 @@ export default function Settings() {
         type: "success",
         content: "配置已保存",
         duration: 3,
-        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+        icon: <CircleCheck size={16} style={{ color: "#52c41a" }} />,
         style: {
           marginTop: "48px",
         },
@@ -93,7 +93,7 @@ export default function Settings() {
             onClick={() => handleProviderSwitch("openai")}
             title="OpenAI 兼容 API"
             description="DeepSeek、OpenAI、月之暗面、通义千问等云服务"
-            icon={<CloudOutlined />}
+            icon={<Cloud size={24} />}
           >
             <Form.Item label="快速配置">
               <Select
@@ -141,7 +141,7 @@ export default function Settings() {
             onClick={() => handleProviderSwitch("ollama")}
             title="Ollama 本地模型"
             description="本地或局域网运行，无需 API Key"
-            icon={<LaptopOutlined />}
+            icon={<Laptop size={24} />}
           >
             <Form.Item
               name="ollama_url"
@@ -179,7 +179,7 @@ export default function Settings() {
 
         <Card style={{ marginBottom: 20 }} styles={{ body: { padding: 20 } }}>
           <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <PictureOutlined style={{ color: "var(--gold)", fontSize: 18 }} />
+            <ImageIcon size={18} style={{ color: "var(--gold)" }} />
             <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-primary)" }}>
               图片生成配置（魔搭 ModelScope）
             </span>
@@ -237,7 +237,7 @@ export default function Settings() {
                               </Form.Item>
                               <Button
                                 onClick={() => remove(name)}
-                                icon={<DeleteOutlined />}
+                                icon={<Trash2 size={14} />}
                                 danger
                               />
                             </div>
@@ -245,7 +245,7 @@ export default function Settings() {
                           {fields.length < 6 && (
                             <Button
                               onClick={() => add()}
-                              icon={<PlusOutlined />}
+                              icon={<Plus size={14} />}
                               type="dashed"
                               block
                             >
@@ -270,7 +270,7 @@ export default function Settings() {
             保存配置
           </LoadingButton>
           <Button
-            icon={<QuestionCircleOutlined />}
+            icon={<CircleHelp size={14} />}
             onClick={() => {
               localStorage.removeItem("autowrite_tour_done");
               window.location.reload();
@@ -280,7 +280,7 @@ export default function Settings() {
           </Button>
           {saved && (
             <span style={{ color: "#52c41a", fontSize: 14 }}>
-              <CheckCircleOutlined style={{ marginRight: 4 }} />
+              <CircleCheck size={14} style={{ marginRight: 4 }} />
               已保存
             </span>
           )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { List, Typography, Empty, Card, message } from "antd";
-import { FileTextOutlined } from "@ant-design/icons";
+import { FileText } from "lucide-react";
 import { checkConnection } from "../hooks/useConnectionCheck";
 import {
   readChapter,
@@ -202,7 +202,7 @@ export default function Chapters() {
           <Empty description="暂无章节，请先在「大纲管理」页面生成大纲">
             <LoadingButton
               type="primary"
-              icon={<FileTextOutlined />}
+              icon={<FileText size={14} />}
               onClick={handleGenerate}
             >
               写第一章
@@ -289,7 +289,7 @@ export default function Chapters() {
         </h1>
         <LoadingButton
           type="primary"
-          icon={<FileTextOutlined />}
+          icon={<FileText size={14} />}
           onClick={handleGenerate}
           loading={generating}
         >
