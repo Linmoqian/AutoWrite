@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import AppLayout from "@/layouts/AppLayout";
-import Dashboard from "@/pages/Dashboard";
-import CreateNovel from "@/pages/CreateNovel";
-import Outline from "@/pages/Outline";
-import Chapters from "@/pages/Chapters";
-import Illustrations from "@/pages/Illustrations";
-import Export from "@/pages/Export";
-import Settings from "@/pages/Settings";
+import Dashboard from "@/features/dashboard";
+import CreateNovel from "@/features/create-novel";
+import Outline from "@/features/outline";
+import Chapters from "@/features/chapters";
+import Illustrations from "@/features/illustrations";
+import Export from "@/features/export";
+import Settings from "@/features/settings";
 
 export default function App() {
   return (

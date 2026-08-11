@@ -46,5 +46,13 @@ export default tseslint.config(
       react: { version: "detect" },
     },
   },
+  {
+    // shadcn/ui 标准组件导出 cva 变体（badgeVariants/buttonVariants 等），
+    // 这是 shadcn 约定，不拆文件。对 components/ui/** 关闭此规则。
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
   prettierConfig,
 );

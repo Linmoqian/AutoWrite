@@ -14,18 +14,27 @@ const FONT_CN = "SimSun";
 export async function generateDocx(data: ExportData): Promise<Uint8Array> {
   const children: Paragraph[] = [];
 
-  // 标题页
+  pushTitlePage(children, data);
+  pushWorldView(children, data);
+  pushCharacters(children, data);
+  pushTableOfContents(children, data);
+  pushChapters(children, data);
+
+  const doc = new Document({
+    sections: [{ children }],
+    styles: { default: buildDocxStyles() },
+  });
+
+  return Packer.toBuffer(doc) as Promise<Uint8Array>;
+}
+
+function pushTitlePage(children: Paragraph[], data: ExportData): void {
   children.push(
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 400 },
       children: [
-        new TextRun({
-          text: data.novel.title,
-          size: 56,
-          bold: true,
-          font: FONT_CN,
-        }),
+        new TextRun({ text: data.novel.title, size: 56, bold: true, font: FONT_CN }),
       ],
     }),
   );
@@ -57,64 +66,65 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
       ],
     }),
   );
+}
 
-  // 世界观
-  if (data.novel.worldView) {
-    children.push(new Paragraph({ children: [new PageBreak()] }));
+function pushWorldView(children: Paragraph[], data: ExportData): void {
+  if (!data.novel.worldView) return;
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun({ text: "世界观", font: FONT_CN })],
+    }),
+  );
+  pushBodyParagraphs(children, data.novel.worldView);
+}
+
+function pushCharacters(children: Paragraph[], data: ExportData): void {
+  if (!data.novel.characters) return;
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun({ text: "角色", font: FONT_CN })],
+    }),
+  );
+  pushBodyParagraphs(children, data.novel.characters);
+}
+
+function pushTableOfContents(children: Paragraph[], data: ExportData): void {
+  if (data.outline.length === 0) return;
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun({ text: "目录", font: FONT_CN })],
+    }),
+  );
+  for (const volume of data.outline) {
     children.push(
       new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: "世界观", font: FONT_CN })],
+        heading: HeadingLevel.HEADING_2,
+        children: [new TextRun({ text: volume.title, font: FONT_CN })],
       }),
     );
-    pushBodyParagraphs(children, data.novel.worldView);
-  }
-
-  // 角色
-  if (data.novel.characters) {
-    children.push(
-      new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: "角色", font: FONT_CN })],
-      }),
-    );
-    pushBodyParagraphs(children, data.novel.characters);
-  }
-
-  // 目录
-  if (data.outline.length > 0) {
-    children.push(new Paragraph({ children: [new PageBreak()] }));
-    children.push(
-      new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: "目录", font: FONT_CN })],
-      }),
-    );
-    for (const volume of data.outline) {
+    for (const ch of volume.chapters) {
       children.push(
         new Paragraph({
-          heading: HeadingLevel.HEADING_2,
-          children: [new TextRun({ text: volume.title, font: FONT_CN })],
+          indent: { left: 360 },
+          children: [
+            new TextRun({
+              text: `${String(ch.number).padStart(3, "0")}. ${ch.title}`,
+              font: FONT_CN,
+              size: 21,
+            }),
+          ],
         }),
       );
-      for (const ch of volume.chapters) {
-        children.push(
-          new Paragraph({
-            indent: { left: 360 },
-            children: [
-              new TextRun({
-                text: `${String(ch.number).padStart(3, "0")}. ${ch.title}`,
-                font: FONT_CN,
-                size: 21,
-              }),
-            ],
-          }),
-        );
-      }
     }
   }
+}
 
-  // 章节
+function pushChapters(children: Paragraph[], data: ExportData): void {
   for (const chapter of data.chapters) {
     children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(
@@ -130,25 +140,14 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
     );
     pushBodyParagraphs(children, chapter.body);
   }
+}
 
-  const doc = new Document({
-    sections: [{ children }],
-    styles: {
-      default: {
-        document: {
-          run: { font: FONT_CN, size: 24 },
-        },
-        heading1: {
-          run: { font: FONT_CN, size: 36, bold: true },
-        },
-        heading2: {
-          run: { font: FONT_CN, size: 30, bold: true },
-        },
-      },
-    },
-  });
-
-  return Packer.toBuffer(doc) as Promise<Uint8Array>;
+function buildDocxStyles() {
+  return {
+    document: { run: { font: FONT_CN, size: 24 } },
+    heading1: { run: { font: FONT_CN, size: 36, bold: true } },
+    heading2: { run: { font: FONT_CN, size: 30, bold: true } },
+  };
 }
 
 function pushBodyParagraphs(children: Paragraph[], body: string): void {
