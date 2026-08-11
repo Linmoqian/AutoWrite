@@ -13,6 +13,11 @@ export default defineConfig(async () => ({
     },
   },
   clearScreen: false,
+  build: {
+    // emptyOutDir=false：避免 vite 的 prepareOutDir 触发环境 safe-delete 守卫
+    // 对批量删除的拦截。由 CI 或开发者手动清理 dist（如 trash dist/*）。
+    emptyOutDir: false,
+  },
   server: {
     port: 1422,
     strictPort: true,
