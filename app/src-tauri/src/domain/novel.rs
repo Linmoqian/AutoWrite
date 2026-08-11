@@ -3,6 +3,7 @@ use tauri::Emitter;
 
 use crate::domain::config::{fill_template, AppConfig};
 use crate::domain::types::*;
+use crate::dto::novel::map_step;
 use crate::error::{AppError, Result};
 use crate::services::{ai, files};
 
@@ -90,7 +91,7 @@ where
         let _ = app.emit(
             "outline-progress",
             OutlineProgressEvent {
-                step: step.to_string(),
+                step: map_step(step).to_string(),
                 chunk: String::new(),
                 done: true,
             },
@@ -181,7 +182,7 @@ where
         let _ = app.emit(
             "outline-progress",
             OutlineProgressEvent {
-                step: step_owned.clone(),
+                step: map_step(&step_owned).to_string(),
                 chunk: chunk.to_string(),
                 done: false,
             },
@@ -194,7 +195,7 @@ where
     let _ = app_for_done.emit(
         "outline-progress",
         OutlineProgressEvent {
-            step: step.to_string(),
+            step: map_step(step).to_string(),
             chunk: String::new(),
             done: true,
         },

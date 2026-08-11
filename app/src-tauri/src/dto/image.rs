@@ -1,32 +1,39 @@
+use std::path::Path;
+
 use serde::Serialize;
 
 use crate::services::image::{ImageKind, ImageResult, SceneDescription};
 
-/// IPC 视图：图片生成结果。
+/// IPC 视图：图片生成结果。对齐前端 `ImageResult`（SPEC 6.3）。
+///
+/// - `filename`：领域 `local_path`（全路径）取 basename。
+/// - `ref_text`：领域 `ref_id`。
+/// - `created_at`：领域 `created`。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImageResultDto {
     pub id: String,
     pub kind: ImageKind,
     pub prompt: String,
-    pub revised_prompt: Option<String>,
-    pub local_path: String,
-    pub file_size: u64,
-    pub created: String,
-    pub ref_id: Option<String>,
+    pub filename: String,
+    pub ref_text: Option<String>,
+    pub created_at: String,
 }
 
 impl From<ImageResult> for ImageResultDto {
     fn from(r: ImageResult) -> Self {
+        let filename = Path::new(&r.local_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string())
+            .unwrap_or(r.local_path);
         Self {
             id: r.id,
             kind: r.kind,
             prompt: r.prompt,
-            revised_prompt: r.revised_prompt,
-            local_path: r.local_path,
-            file_size: r.file_size,
-            created: r.created,
-            ref_id: r.ref_id,
+            filename,
+            ref_text: r.ref_id,
+            created_at: r.created,
         }
     }
 }

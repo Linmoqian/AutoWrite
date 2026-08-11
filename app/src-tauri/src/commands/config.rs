@@ -2,22 +2,33 @@ use tauri::State;
 
 use super::config_from_state;
 use crate::domain::config::AppConfig;
+use crate::dto::AppConfigDto;
 use crate::error::Result;
 use crate::state::AppState;
 
 #[tauri::command]
-pub fn load_config(state: State<'_, AppState>) -> Result<AppConfig> {
-    config_from_state(&state)
+pub fn load_config(state: State<'_, AppState>) -> Result<AppConfigDto> {
+    let config = config_from_state(&state)?;
+    Ok(config.into())
 }
 
 #[tauri::command]
-pub fn save_config(state: State<'_, AppState>, config: AppConfig) -> Result<()> {
+pub fn save_config(state: State<'_, AppState>, config: AppConfigDto) -> Result<()> {
     let config_path = state
         .config_path
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clone();
-    crate::services::config::save_config(&config_path, &config)
+
+    // 前端不感知 novel_dir（IPC 契约无该字段），保存时保留磁盘现有值，避免丢失。
+    let mut domain: AppConfig = config.into();
+    if domain.novel_dir.is_none() {
+        if let Ok(existing) = crate::services::config::load_config(&config_path) {
+            domain.novel_dir = existing.novel_dir;
+        }
+    }
+
+    crate::services::config::save_config(&config_path, &domain)
 }
 
 #[derive(serde::Serialize)]

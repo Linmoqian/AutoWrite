@@ -1,24 +1,24 @@
 use serde::Serialize;
 
-use crate::domain::types::{NovelData, Volume};
+use crate::dto::novel::{NovelDataDto, VolumeDto};
 use crate::services::export::{ExportChapter, ExportData};
 
-/// IPC 视图：导出章节（序号、标题、字数、正文）。
+/// IPC 视图：导出章节（序号、标题、字数、正文）。对齐前端 `ExportChapter`（SPEC 6.3）。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportChapterDto {
-    pub num: u32,
+    pub number: u32,
     pub title: String,
-    pub words: u32,
+    pub word_count: u32,
     pub body: String,
 }
 
 impl From<ExportChapter> for ExportChapterDto {
     fn from(c: ExportChapter) -> Self {
         Self {
-            num: c.num,
+            number: c.num,
             title: c.title,
-            words: c.words,
+            word_count: c.words,
             body: c.body,
         }
     }
@@ -28,16 +28,16 @@ impl From<ExportChapter> for ExportChapterDto {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportDataDto {
-    pub novel: NovelData,
-    pub outline: Vec<Volume>,
+    pub novel: NovelDataDto,
+    pub outline: Vec<VolumeDto>,
     pub chapters: Vec<ExportChapterDto>,
 }
 
 impl From<ExportData> for ExportDataDto {
     fn from(d: ExportData) -> Self {
         Self {
-            novel: d.novel,
-            outline: d.outline,
+            novel: d.novel.into(),
+            outline: d.outline.into_iter().map(Into::into).collect(),
             chapters: d.chapters.into_iter().map(Into::into).collect(),
         }
     }

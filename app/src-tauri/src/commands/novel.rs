@@ -105,7 +105,9 @@ pub async fn start_outline_generation(
             status.error = result.err().map(|e| e.to_string());
             status.clone()
         };
-        let _ = app_for_task.emit("outline-generation-status", status_snapshot);
+        // 经 DTO 转换：步骤名 "world" → "worldView"，与轮询契约一致。
+        let snapshot_dto: OutlineGenerationStatusDto = status_snapshot.into();
+        let _ = app_for_task.emit("outline-generation-status", snapshot_dto);
     });
 
     Ok(())
@@ -139,18 +141,46 @@ pub fn get_status(state: State<'_, AppState>) -> Result<NovelStatusDto> {
 #[tauri::command]
 pub fn list_chapters(state: State<'_, AppState>) -> Result<Vec<ChapterMetaDto>> {
     let dir = dir_from_state(&state)?;
-    Ok(crate::services::files::list_chapters(&dir)?
-        .into_iter()
-        .map(Into::into)
-        .collect())
+    let ch_dir = crate::services::files::chapters_dir(&dir);
+    if !ch_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    // 领域 ChapterMeta 无 filename 字段，遍历目录取真实文件名注入 DTO。
+    // 与 services::files::list_chapters 一致的解析逻辑，但保留文件名。
+    let mut entries: Vec<ChapterMetaDto> = Vec::new();
+    for entry in std::fs::read_dir(&ch_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let content = content.replace("\r\n", "\n");
+        let (meta_yaml, _) = crate::services::files::parse_yaml_front_matter(&content);
+        if meta_yaml.is_null() {
+            continue;
+        }
+        let Ok(meta) = serde_yaml::from_value::<crate::domain::types::ChapterMeta>(meta_yaml)
+        else {
+            continue;
+        };
+        let filename = entry
+            .file_name()
+            .to_string_lossy()
+            .to_string();
+        entries.push(ChapterMetaDto::from_meta(meta, filename));
+    }
+    entries.sort_by_key(|c| c.number);
+    Ok(entries)
 }
 
 #[tauri::command]
 pub fn read_chapter(state: State<'_, AppState>, filename: String) -> Result<ChapterContentDto> {
     let dir = dir_from_state(&state)?;
     let (meta, body) = crate::services::files::read_chapter(&dir, &filename)?;
-    Ok(ChapterContentDto {
-        meta: meta.into(),
-        body,
-    })
+    Ok(ChapterContentDto::from_parts(meta, filename, body))
 }
