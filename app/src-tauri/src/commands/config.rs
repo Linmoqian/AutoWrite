@@ -1,9 +1,9 @@
 use tauri::State;
 
+use super::config_from_state;
 use crate::domain::config::AppConfig;
 use crate::error::Result;
 use crate::state::AppState;
-use super::config_from_state;
 
 #[tauri::command]
 pub fn load_config(state: State<'_, AppState>) -> Result<AppConfig> {

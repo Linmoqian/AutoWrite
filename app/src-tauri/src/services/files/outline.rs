@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use super::{outline_file, read_file_content, write_file_atomic};
 use crate::domain::types::{ChapterEntry, Volume};
 use crate::error::Result;
-use super::{outline_file, read_file_content, write_file_atomic};
 
 pub fn write_outline(dir: &Path, outline: &[Volume]) -> Result<()> {
     let mut lines = vec!["# 大纲\n".to_string()];

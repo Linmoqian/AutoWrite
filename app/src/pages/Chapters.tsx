@@ -1,100 +1,53 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { List, Typography, Empty, Card, message } from "antd";
-import { FileText } from "lucide-react";
-import { checkConnection } from "../hooks/useConnectionCheck";
-import {
-  readChapter,
-  generateChapter,
-  onChapterProgress,
-} from "../services/tauri";
-import type { ChapterMeta, ChapterContent } from "../types";
-import ChapterCard from "../components/ChapterCard";
-import LoadingButton from "../components/LoadingButton";
+import { FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useNovelStore } from "@/stores/novel-store";
+import { useConnectionCheck } from "@/hooks/use-connection-check";
+import { generateChapter, onChapterProgress } from "@/services/tauri";
+import { filterThinkTags } from "@/lib/filter-think-tags";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChapterCard } from "@/components/common/ChapterCard";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useAppSelector, useAppDispatch } from "../store";
-import { refreshChapters as refreshChaptersThunk } from "../store/appSlice";
-
-const { Text } = Typography;
-
-function filterThinkTags(text: string): string {
-  return text.replace(/<think[\s\S]*?<\/think>/g, "");
-}
-
-// 模块级状态：跨组件挂载/卸载保持生成进度
-const genState = {
-  active: false,
-  chapterNum: 0,
-  text: "",
-  unlisten: null as (() => void) | null,
-  buffer: "",
-  flushTimer: 0,
-  completed: false,
-  error: "",
-};
 
 export default function Chapters() {
-  const chapters = useAppSelector((s) => s.app.chapters);
-  const dispatch = useAppDispatch();
-  const refreshChapters = () => dispatch(refreshChaptersThunk());
-  const [selected, setSelected] = useState<ChapterContent | null>(null);
-  const [generating, setGenerating] = useState(genState.active);
-  const [generatingChapter, setGeneratingChapter] = useState<number | null>(
-    genState.active ? genState.chapterNum : null,
-  );
-  const [viewingDuringGen, setViewingDuringGen] = useState(false);
-  const [loadingChapter, setLoadingChapter] = useState(false);
-  const [streamingText, setStreamingText] = useState(genState.active ? genState.text : "");
-  const streamRef = useRef<HTMLDivElement>(null);
-  const mountedRef = useRef(true);
+  const chapters = useNovelStore((s) => s.chapters);
+  const selected = useNovelStore((s) => s.selectedChapter);
+  const streamingText = useNovelStore((s) => s.streamingText);
+  const isGenerating = useNovelStore((s) => s.isGenerating);
+  const generatingChapter = useNovelStore((s) => s.generatingChapter);
+  const refreshChapters = useNovelStore((s) => s.refreshChapters);
+  const selectChapter = useNovelStore((s) => s.selectChapter);
+  const startGeneration = useNovelStore((s) => s.startGeneration);
+  const setStreamingText = useNovelStore((s) => s.setStreamingText);
+  const finishGeneration = useNovelStore((s) => s.finishGeneration);
+  const setError = useNovelStore((s) => s.setError);
+  const clearSelection = useNovelStore((s) => s.clearSelection);
+  const { checkConnection } = useConnectionCheck();
 
+  const [viewingDuringGen, setViewingDuringGen] = useState(false);
+  const [loadingChapter, setLoadingChapterState] = useState(false);
+  const bufferRef = useRef("");
+  const flushTimerRef = useRef(0);
+  const streamRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
 
   const flushBuffer = useCallback(() => {
-    if (genState.buffer) {
-      const chunk = genState.buffer;
-      genState.buffer = "";
-      genState.text += chunk;
-      if (mountedRef.current) {
-        setStreamingText(genState.text);
-      }
+    if (bufferRef.current) {
+      const chunk = bufferRef.current;
+      bufferRef.current = "";
+      const current = useNovelStore.getState().streamingText;
+      setStreamingText(current + chunk);
     }
-    genState.flushTimer = window.setTimeout(flushBuffer, 80);
-  }, []);
+    flushTimerRef.current = window.setTimeout(flushBuffer, 80);
+  }, [setStreamingText]);
 
-  // 组件挂载/卸载跟踪
   useEffect(() => {
-    mountedRef.current = true;
-
-    // 恢复进行中的生成状态
-    if (genState.active) {
-      setGenerating(true);
-      setGeneratingChapter(genState.chapterNum);
-      setStreamingText(genState.text);
-      // 重新启动 buffer 刷新
-      genState.flushTimer = window.setTimeout(flushBuffer, 80);
-    }
-
-    // 检查是否有已完成但未处理的生成结果
-    if (genState.completed) {
-      genState.completed = false;
-      message.success(`第 ${genState.chapterNum} 章已生成`);
-      refreshChapters();
-    }
-    if (genState.error) {
-      const err = genState.error;
-      genState.error = "";
-      message.error({ content: `生成失败: ${err}`, duration: 5 });
-    }
-
     refreshChapters();
-
-    return () => {
-      mountedRef.current = false;
-      // 不清理生成状态，保持模块级状态持久化
-      clearTimeout(genState.flushTimer);
-    };
-  }, [flushBuffer]);
+    return () => clearTimeout(flushTimerRef.current);
+  }, [refreshChapters]);
 
   useEffect(() => {
     const el = streamRef.current;
@@ -105,7 +58,7 @@ export default function Chapters() {
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [isGenerating]);
 
   useEffect(() => {
     if (streamRef.current && !viewingDuringGen && !userScrolledRef.current) {
@@ -113,231 +66,196 @@ export default function Chapters() {
     }
   }, [streamingText, viewingDuringGen]);
 
-  const handleSelect = async (ch: ChapterMeta) => {
-    if (generating && ch.chapter === generatingChapter) {
+  const handleSelect = async (filename: string, number: number) => {
+    if (isGenerating && number === generatingChapter) {
       setViewingDuringGen(false);
-      setSelected(null);
       return;
     }
-    setLoadingChapter(true);
+    setLoadingChapterState(true);
     try {
-      const filename = `${String(ch.chapter).padStart(3, "0")}-${ch.title.slice(0, 10)}.md`;
-      const content = await readChapter(filename);
-      setSelected(content);
-      setViewingDuringGen(generating);
+      await selectChapter(filename);
+      setViewingDuringGen(isGenerating);
     } catch (e) {
-      message.error(String(e));
+      toast.error(String(e));
     } finally {
-      setLoadingChapter(false);
+      setLoadingChapterState(false);
     }
   };
 
   const handleGenerate = async () => {
     if (!(await checkConnection())) return;
-    const num = chapters.length > 0 ? chapters[chapters.length - 1].chapter + 1 : 1;
-
-    // 清理之前的状态
-    genState.active = true;
-    genState.chapterNum = num;
-    genState.text = "";
-    genState.buffer = "";
-    genState.completed = false;
-    genState.error = "";
-
-    setGenerating(true);
-    setGeneratingChapter(num);
-    setSelected(null);
-    setViewingDuringGen(false);
-    setStreamingText("");
+    const num = chapters.length > 0 ? chapters[chapters.length - 1].number + 1 : 1;
+    startGeneration(num);
+    bufferRef.current = "";
     userScrolledRef.current = false;
+    setViewingDuringGen(false);
+    flushTimerRef.current = window.setTimeout(flushBuffer, 80);
 
-    // 启动 buffer 刷新
-    genState.flushTimer = window.setTimeout(flushBuffer, 80);
-
-    // 订阅事件（持久化，不随组件卸载清理）
-    genState.unlisten = await onChapterProgress((e) => {
-      if (e.chunk) {
-        genState.buffer += e.chunk;
-      }
+    const unlisten = await onChapterProgress((e) => {
+      if (e.chunk) bufferRef.current += e.chunk;
     });
 
     try {
       await generateChapter();
-      clearTimeout(genState.flushTimer);
+      clearTimeout(flushTimerRef.current);
       flushBuffer();
-
-      genState.active = false;
-      genState.completed = true;
-
-      if (mountedRef.current) {
-        setGenerating(false);
-        setGeneratingChapter(null);
-        setViewingDuringGen(false);
-        setStreamingText("");
-        message.success(`第 ${num} 章已生成`);
-        refreshChapters();
-      }
+      finishGeneration();
+      toast.success(`第 ${num} 章已生成`);
+      refreshChapters();
     } catch (e) {
-      clearTimeout(genState.flushTimer);
-      genState.active = false;
-      genState.error = String(e);
-
-      if (mountedRef.current) {
-        setGenerating(false);
-        setGeneratingChapter(null);
-        setViewingDuringGen(false);
-        setStreamingText("");
-        message.error({ content: `生成失败: ${e}`, duration: 5 });
-      }
+      clearTimeout(flushTimerRef.current);
+      setError(String(e));
+      toast.error(`生成失败: ${e}`);
     } finally {
-      if (genState.unlisten) {
-        genState.unlisten();
-        genState.unlisten = null;
-      }
+      unlisten();
     }
   };
 
-  if (chapters.length === 0 && !generating) {
+  if (chapters.length === 0 && !isGenerating) {
     return (
       <div className="fade-in">
         <h1 className="page-title">章节管理</h1>
         <Card>
-          <Empty description="暂无章节，请先在「大纲管理」页面生成大纲">
-            <LoadingButton
-              type="primary"
-              icon={<FileText size={14} />}
-              onClick={handleGenerate}
-            >
+          <CardContent className="flex flex-col items-center gap-4 p-12">
+            <p className="text-muted-foreground">
+              暂无章节，请先在「大纲管理」页面生成大纲
+            </p>
+            <Button onClick={handleGenerate}>
+              <FileText className="mr-1.5 h-4 w-4" />
               写第一章
-            </LoadingButton>
-          </Empty>
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
   const displayText = filterThinkTags(streamingText);
+  const generatingMeta = isGenerating
+    ? { filename: "", number: generatingChapter ?? chapters.length + 1, title: "创作中...", wordCount: 0, createdAt: "" }
+    : null;
 
-  const generatingCard = generating ? {
-    chapter: generatingChapter ?? (chapters.length + 1),
-    title: "创作中...",
-    words: 0,
-    created: "",
-  } : null;
+  return (
+    <div className="fade-in flex h-full flex-col">
+      <div className="mb-4 flex shrink-0 items-center justify-between">
+        <h1 className="page-title mb-0 pb-0">章节管理</h1>
+        <Button onClick={handleGenerate} loading={isGenerating}>
+          <FileText className="mr-1.5 h-4 w-4" />
+          写下一章
+        </Button>
+      </div>
 
-  const rightContent = generating && !viewingDuringGen ? (
-    displayText ? (
-      <div ref={streamRef} className="chapter-scroll">
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* Chapter list */}
+        <Card className="w-[220px] shrink-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="space-y-0.5 p-2">
+              {chapters.map((ch) => (
+                <ChapterCard
+                  key={ch.filename}
+                  chapter={ch}
+                  selected={!isGenerating && selected?.meta.number === ch.number}
+                  onClick={() => handleSelect(ch.filename, ch.number)}
+                />
+              ))}
+              {generatingMeta && (
+                <ChapterCard
+                  chapter={generatingMeta}
+                  selected={!viewingDuringGen}
+                  generating
+                  onClick={() => {
+                    setViewingDuringGen(false);
+                    clearSelection();
+                  }}
+                />
+              )}
+            </div>
+          </ScrollArea>
+        </Card>
+
+        {/* Reading / streaming view */}
+        <Card className="min-w-0 flex-1 overflow-hidden">
+          <ReadingView
+            isGenerating={isGenerating}
+            viewingDuringGen={viewingDuringGen}
+            loadingChapter={loadingChapter}
+            displayText={displayText}
+            streamRef={streamRef}
+            selected={selected}
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function ReadingView({
+  isGenerating,
+  viewingDuringGen,
+  loadingChapter,
+  displayText,
+  streamRef,
+  selected,
+}: {
+  isGenerating: boolean;
+  viewingDuringGen: boolean;
+  loadingChapter: boolean;
+  displayText: string;
+  streamRef: React.RefObject<HTMLDivElement | null>;
+  selected: ReturnType<typeof useNovelStore.getState>["selectedChapter"];
+}) {
+  if (isGenerating && !viewingDuringGen) {
+    return displayText ? (
+      <div ref={streamRef} className="h-full overflow-y-auto p-5">
         <div className="md-body">
           <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
           <span className="cursor-blink">|</span>
         </div>
       </div>
     ) : (
-      <div style={{ textAlign: "center", padding: 24 }}>
-        <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
+      <div className="flex h-full items-center justify-center p-6">
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          正在连接模型...
+        </span>
       </div>
-    )
-  ) : loadingChapter ? (
-    <div style={{ textAlign: "center", padding: 24 }}>
-      <Text style={{ color: "var(--text-muted)" }}>加载中...</Text>
-    </div>
-  ) : selected ? (
-    <div className="chapter-scroll">
-      <div
-        style={{
-          fontFamily: '"KaiTi", "楷体", serif',
-          fontSize: 20,
-          color: "var(--text-primary)",
-          marginBottom: 4,
-        }}
-      >
-        第{selected.meta.chapter}章 {selected.meta.title}
-      </div>
-      <Text style={{ color: "var(--text-muted)", fontSize: 13 }}>
-        {selected.meta.words} 字 | {selected.meta.created}
-      </Text>
-      <div
-        style={{
-          marginTop: 20,
-          borderTop: "1px solid var(--border)",
-          paddingTop: 20,
-        }}
-      >
-        <div className="chapter-body"><Markdown remarkPlugins={[remarkGfm]}>{selected.body}</Markdown></div>
-      </div>
-    </div>
-  ) : (
-    <Empty description="选择左侧章节查看内容" />
-  );
+    );
+  }
 
-  const isSelected = (ch: ChapterMeta) => {
-    if (generating && !viewingDuringGen) return false;
-    return selected?.meta.chapter === ch.chapter;
-  };
+  if (loadingChapter) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          加载中...
+        </span>
+      </div>
+    );
+  }
+
+  if (selected) {
+    return (
+      <div className="h-full overflow-y-auto p-5">
+        <div className="font-serif text-xl text-foreground">
+          第{selected.meta.number}章 {selected.meta.title}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {selected.meta.wordCount.toLocaleString()} 字 | {selected.meta.createdAt}
+        </div>
+        <div className="mt-5 border-t border-border pt-5">
+          <div className="chapter-content">
+            <Markdown remarkPlugins={[remarkGfm]}>
+              {filterThinkTags(selected.body)}
+            </Markdown>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fade-in" style={{ height: "calc(100vh - 144px)", display: "flex", flexDirection: "column" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-          flexShrink: 0,
-        }}
-      >
-        <h1 className="page-title" style={{ marginBottom: 0, paddingBottom: 0 }}>
-          章节管理
-        </h1>
-        <LoadingButton
-          type="primary"
-          icon={<FileText size={14} />}
-          onClick={handleGenerate}
-          loading={generating}
-        >
-          写下一章
-        </LoadingButton>
-      </div>
-
-      <div style={{ display: "flex", flex: 1, minHeight: 0, gap: 16 }}>
-        <Card
-          style={{ width: 220, flexShrink: 0, overflowY: "auto", padding: 0 }}
-          styles={{ body: { padding: "8px 0" } }}
-        >
-          <List
-            dataSource={chapters}
-            renderItem={(ch) => (
-              <List.Item style={{ padding: "2px 0", border: "none" }}>
-                <ChapterCard
-                  chapter={ch}
-                  selected={isSelected(ch)}
-                  onClick={() => handleSelect(ch)}
-                />
-              </List.Item>
-            )}
-          />
-          {generatingCard && (
-            <List.Item style={{ padding: "2px 0", border: "none" }}>
-              <ChapterCard
-                chapter={generatingCard}
-                selected={!viewingDuringGen}
-                generating
-                onClick={() => {
-                  setViewingDuringGen(false);
-                  setSelected(null);
-                }}
-              />
-            </List.Item>
-          )}
-        </Card>
-        <Card
-          style={{ flex: 1, minWidth: 0, overflow: "hidden" }}
-          styles={{ body: { padding: 0, height: "100%", overflow: "hidden" } }}
-        >
-          {rightContent}
-        </Card>
-      </div>
+    <div className="flex h-full items-center justify-center p-6 text-muted-foreground">
+      选择左侧章节查看内容
     </div>
   );
 }

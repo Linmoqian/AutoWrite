@@ -1,11 +1,11 @@
-use std::path::PathBuf;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use autowrite_lib::domain::config::{AppConfig, Provider, Prompts, fill_template};
+use autowrite_lib::domain::config::{fill_template, AppConfig, Prompts, Provider};
+use autowrite_lib::domain::novel;
 use autowrite_lib::domain::types::ChapterMeta;
 use autowrite_lib::services::files;
-use autowrite_lib::domain::novel;
 
 fn setup_test_env() -> (PathBuf, AppConfig) {
     let api_key =
@@ -280,14 +280,18 @@ async fn ai_streaming_test() {
         ..AppConfig::default()
     };
 
-    let chunks = AtomicU32::new(0);
-    let result =
-        autowrite_lib::services::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
-            chunks.fetch_add(1, Ordering::Relaxed);
+    let chunks = std::sync::Arc::new(AtomicU32::new(0));
+    let chunks_for_closure = chunks.clone();
+    let result = autowrite_lib::services::ai::generate_streaming(
+        &config,
+        "用一句话描述春天",
+        move |_chunk| {
+            chunks_for_closure.fetch_add(1, Ordering::Relaxed);
             Ok(())
-        })
-        .await
-        .expect("流式调用失败");
+        },
+    )
+    .await
+    .expect("流式调用失败");
 
     let total_chunks = chunks.load(Ordering::Relaxed);
     assert!(!result.is_empty(), "流式结果为空");

@@ -51,8 +51,7 @@ pub struct NarrativeIntent {
     pub reader_should_care: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContextData {
     pub current_chapter: u32,
     #[serde(default)]
@@ -72,7 +71,6 @@ pub struct ContextData {
     #[serde(default)]
     pub current_intent: Option<NarrativeIntent>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChapterMeta {

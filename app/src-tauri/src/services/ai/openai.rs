@@ -1,10 +1,21 @@
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::config::AppConfig;
 use crate::error::{AppError, Result};
-use super::{build_client, Message, retry_delay, retries_exhausted};
+
+use super::{build_client, retries_exhausted, retry_delay, AiProvider, Message};
 
 const MAX_RETRIES: u32 = 3;
+
+#[derive(Default)]
+pub struct OpenAIProvider;
+
+impl OpenAIProvider {
+    pub fn new() -> Self {
+        OpenAIProvider
+    }
+}
 
 #[derive(Serialize)]
 struct OpenAIRequest {
@@ -43,127 +54,136 @@ struct OpenAIStreamChunk {
     choices: Vec<OpenAIStreamChoice>,
 }
 
-pub async fn generate(config: &AppConfig, prompt: &str) -> Result<String> {
-    let client = build_client(config.timeout)?;
-    let url = format!("{}/v1/chat/completions", config.api_base_url);
+#[async_trait]
+impl AiProvider for OpenAIProvider {
+    async fn generate(&self, config: &AppConfig, prompt: &str) -> Result<String> {
+        let client = build_client(config.timeout)?;
+        let url = format!("{}/v1/chat/completions", config.api_base_url);
 
-    for attempt in 0..MAX_RETRIES {
-        let request = OpenAIRequest {
-            model: config.active_model().to_string(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }],
-            stream: false,
-        };
+        for attempt in 0..MAX_RETRIES {
+            let request = OpenAIRequest {
+                model: config.active_model().to_string(),
+                messages: vec![Message {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                }],
+                stream: false,
+            };
 
-        let resp = match client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", config.api_key))
-            .json(&request)
-            .send()
-            .await
-        {
-            Ok(r) => r,
-            Err(_) if attempt < MAX_RETRIES - 1 => {
-                tokio::time::sleep(retry_delay(attempt)).await;
-                continue;
+            let resp = match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", config.api_key))
+                .json(&request)
+                .send()
+                .await
+            {
+                Ok(r) => r,
+                Err(_) if attempt < MAX_RETRIES - 1 => {
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                    continue;
+                }
+                Err(e) => return Err(AppError::AiFailed(e.to_string())),
+            };
+
+            let status = resp.status();
+            if !status.is_success() {
+                let body = resp.text().await.unwrap_or_default();
+                if attempt < MAX_RETRIES - 1 && status.is_server_error() {
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                    continue;
+                }
+                return Err(AppError::AiFailed(format!(
+                    "API 返回错误 {}: {}",
+                    status, body
+                )));
             }
-            Err(e) => return Err(AppError::AiFailed(e.to_string())),
-        };
 
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            if attempt < MAX_RETRIES - 1 && status.is_server_error() {
-                tokio::time::sleep(retry_delay(attempt)).await;
-                continue;
-            }
-            return Err(AppError::AiFailed(format!(
-                "API 返回错误 {}: {}",
-                status, body
-            )));
+            let body: OpenAIResponse = resp.json().await?;
+            return body
+                .choices
+                .into_iter()
+                .next()
+                .map(|c| c.message.content)
+                .ok_or_else(|| AppError::AiFailed("API 返回空响应".to_string()));
         }
-
-        let body: OpenAIResponse = resp.json().await?;
-        return body
-            .choices
-            .into_iter()
-            .next()
-            .map(|c| c.message.content)
-            .ok_or_else(|| AppError::AiFailed("API 返回空响应".to_string()));
+        Err(retries_exhausted())
     }
-    Err(retries_exhausted())
-}
 
-pub async fn generate_streaming<F>(config: &AppConfig, prompt: &str, on_chunk: F) -> Result<String>
-where
-    F: Fn(&str) -> Result<()>,
-{
-    let client = build_client(config.timeout * 2)?;
-    let url = format!("{}/v1/chat/completions", config.api_base_url);
+    async fn generate_streaming<F>(
+        &self,
+        config: &AppConfig,
+        prompt: &str,
+        on_chunk: F,
+    ) -> Result<String>
+    where
+        F: Fn(&str) -> Result<()> + Send + Sync + 'static,
+        Self: Sized,
+    {
+        let client = build_client(config.timeout * 2)?;
+        let url = format!("{}/v1/chat/completions", config.api_base_url);
 
-    for attempt in 0..MAX_RETRIES {
-        let request = OpenAIRequest {
-            model: config.active_model().to_string(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }],
-            stream: true,
-        };
+        for attempt in 0..MAX_RETRIES {
+            let request = OpenAIRequest {
+                model: config.active_model().to_string(),
+                messages: vec![Message {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                }],
+                stream: true,
+            };
 
-        let resp = match client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", config.api_key))
-            .json(&request)
-            .send()
-            .await
-        {
-            Ok(r) => r,
-            Err(_) if attempt < MAX_RETRIES - 1 => {
-                tokio::time::sleep(retry_delay(attempt)).await;
-                continue;
+            let resp = match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", config.api_key))
+                .json(&request)
+                .send()
+                .await
+            {
+                Ok(r) => r,
+                Err(_) if attempt < MAX_RETRIES - 1 => {
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                    continue;
+                }
+                Err(e) => return Err(AppError::AiFailed(e.to_string())),
+            };
+
+            let status = resp.status();
+            if !status.is_success() {
+                let body = resp.text().await.unwrap_or_default();
+                if attempt < MAX_RETRIES - 1 && status.is_server_error() {
+                    on_chunk(&format!(
+                        "\n\n[服务端错误，正在重试 ({}/{})...]\n\n",
+                        attempt + 2,
+                        MAX_RETRIES
+                    ))?;
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                    continue;
+                }
+                return Err(AppError::AiFailed(format!(
+                    "API 返回错误 {}: {}",
+                    status, body
+                )));
             }
-            Err(e) => return Err(AppError::AiFailed(e.to_string())),
-        };
 
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            if attempt < MAX_RETRIES - 1 && status.is_server_error() {
-                on_chunk(&format!(
-                    "\n\n[服务端错误，正在重试 ({}/{})...]\n\n",
-                    attempt + 2,
-                    MAX_RETRIES
-                ))?;
-                tokio::time::sleep(retry_delay(attempt)).await;
-                continue;
+            let mut full_text = String::new();
+            let mut buffer = String::new();
+
+            match stream_response(resp, &mut buffer, &mut full_text, &on_chunk).await {
+                Ok(()) => return Ok(full_text),
+                Err(_) if attempt < MAX_RETRIES - 1 => {
+                    on_chunk(&format!(
+                        "\n\n[连接中断，正在重试 ({}/{})...]\n\n",
+                        attempt + 2,
+                        MAX_RETRIES
+                    ))?;
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                    continue;
+                }
+                Err(e) => return Err(e),
             }
-            return Err(AppError::AiFailed(format!(
-                "API 返回错误 {}: {}",
-                status, body
-            )));
         }
-
-        let mut full_text = String::new();
-        let mut buffer = String::new();
-
-        match stream_response(resp, &mut buffer, &mut full_text, &on_chunk).await {
-            Ok(()) => return Ok(full_text),
-            Err(_) if attempt < MAX_RETRIES - 1 => {
-                on_chunk(&format!(
-                    "\n\n[连接中断，正在重试 ({}/{})...]\n\n",
-                    attempt + 2,
-                    MAX_RETRIES
-                ))?;
-                tokio::time::sleep(retry_delay(attempt)).await;
-                continue;
-            }
-            Err(e) => return Err(e),
-        }
+        Err(retries_exhausted())
     }
-    Err(retries_exhausted())
 }
 
 async fn stream_response<F>(

@@ -1,10 +1,10 @@
-import type { ExportData } from "../types";
+import type { ExportData } from "@/types";
 
 export function renderPrintView(data: ExportData): void {
   const container = document.createElement("div");
   container.id = "print-container";
 
-  const totalWords = data.chapters.reduce((sum, c) => sum + c.words, 0);
+  const totalWords = data.chapters.reduce((sum, c) => sum + c.wordCount, 0);
 
   let html = `
     <style>
@@ -78,7 +78,7 @@ export function renderPrintView(data: ExportData): void {
       <div class="meta">
         <p>${escHtml(data.novel.genre)} | ${escHtml(data.novel.theme)}</p>
         <p>${data.chapters.length} 章 | ${totalWords.toLocaleString()} 字</p>
-        <p>创建日期：${escHtml(data.novel.created)}</p>
+        <p>创建日期：${escHtml(data.novel.createdAt)}</p>
       </div>
     </div>
   `;
@@ -87,18 +87,18 @@ export function renderPrintView(data: ExportData): void {
   if (data.outline.length > 0) {
     html += `<div class="toc"><h1>目录</h1><ul>`;
     for (const volume of data.outline) {
-      html += `<li class="volume">${escHtml(volume.volume)}</li>`;
+      html += `<li class="volume">${escHtml(volume.title)}</li>`;
       for (const ch of volume.chapters) {
-        html += `<li>${String(ch.num).padStart(3, "0")}. ${escHtml(ch.title)}</li>`;
+        html += `<li>${String(ch.number).padStart(3, "0")}. ${escHtml(ch.title)}</li>`;
       }
     }
     html += `</ul></div>`;
   }
 
   // 世界观
-  if (data.novel.world) {
+  if (data.novel.worldView) {
     html += `<h1>世界观</h1>`;
-    html += renderMdBody(data.novel.world);
+    html += renderMdBody(data.novel.worldView);
   }
 
   // 角色
@@ -109,7 +109,7 @@ export function renderPrintView(data: ExportData): void {
 
   // 章节
   for (const chapter of data.chapters) {
-    html += `<h1>第${chapter.num}章 ${escHtml(chapter.title)}</h1>`;
+    html += `<h1>第${chapter.number}章 ${escHtml(chapter.title)}</h1>`;
     html += renderMdBody(chapter.body);
   }
 

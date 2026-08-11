@@ -1,37 +1,77 @@
+// ═══════════════════════════════════════════
+// AutoWrite TypeScript 类型定义
+// 对应 Rust DTO（serde rename_all = "camelCase"）
+// 按 SPEC 6.3 节定义
+// ═══════════════════════════════════════════
+
+// ── 小说元数据 ──
 export interface NovelData {
   title: string;
   genre: string;
   theme: string;
-  target_chapters: number;
-  words_per_chapter: number;
-  model: string;
-  created: string;
-  world?: string;
-  characters?: string;
+  targetChapters: number;
+  worldView: string;
+  characters: string;
+  createdAt: string;
 }
 
+// ── 大纲 ──
 export interface Volume {
-  volume: string;
+  title: string;
   chapters: ChapterEntry[];
 }
 
 export interface ChapterEntry {
-  num: number;
+  number: number;
   title: string;
+  summary: string;
 }
 
+// ── 三层叙事记忆 ──
 export interface ContextData {
-  current_chapter: number;
-  recent_summaries: string[];
-  character_states: string[];
-  pending_plots: string[];
+  characterStates: CharacterState[];
+  plotEvents: PlotEvent[];
+  unresolvedThreads: TensionItem[];
+  emotionalArc: EmotionalTag[];
+  currentIntent: NarrativeIntent;
 }
 
-export interface ChapterMeta {
+export interface CharacterState {
+  name: string;
+  location: string;
+  powerLevel: string;
+  status: string;
+}
+
+export interface PlotEvent {
   chapter: number;
+  event: string;
+}
+
+export interface TensionItem {
+  item: string;
+  status: "open" | "resolved";
+}
+
+export interface EmotionalTag {
+  chapter: number;
+  tag: string;
+  intensity: number;
+}
+
+export interface NarrativeIntent {
+  characterWants: string;
+  obstacle: string;
+  readerShouldCare: string;
+}
+
+// ── 章节元数据 ──
+export interface ChapterMeta {
+  filename: string;
+  number: number;
   title: string;
-  words: number;
-  created: string;
+  wordCount: number;
+  createdAt: string;
 }
 
 export interface ChapterContent {
@@ -39,45 +79,65 @@ export interface ChapterContent {
   body: string;
 }
 
+// ── 小说状态 ──
 export interface NovelStatus {
   novel: NovelData;
   context: ContextData;
   outline: Volume[];
-  total_chapters: number;
-  written_chapters: number;
+  totalChapters: number;
+  writtenChapters: number;
 }
 
-export interface Prompts {
-  world: string;
-  character: string;
-  outline: string;
-  chapter: string;
+// ── 应用配置 ──
+export interface AppConfig {
+  provider: Provider;
+  openai: OpenAiConfig;
+  ollama: OllamaConfig;
+  prompts: Prompts;
+  image: ImageConfig;
 }
 
 export type Provider = "openai" | "ollama";
 
-export interface AppConfig {
-  novel_dir?: string;
-  provider: Provider;
+export interface OpenAiConfig {
+  apiKey: string;
+  apiUrl: string;
   model: string;
-  ollama_model: string;
   timeout: number;
-  ollama_url: string;
-  num_ctx: number;
-  api_base_url: string;
-  api_key: string;
-  prompts: Prompts;
-  image_provider: ImageProvider;
-  image_model: string;
-  image_api_base_url: string;
-  image_api_key: string;
-  image_size: string;
-  image_prompts: ImagePrompts;
-  image_loras: LoraConfig;
 }
 
+export interface OllamaConfig {
+  apiUrl: string;
+  model: string;
+  timeout: number;
+  numCtx: number;
+}
+
+export interface Prompts {
+  worldView: string;
+  characters: string;
+  outline: string;
+  chapter: string;
+}
+
+export interface ImageConfig {
+  model: string;
+  apiUrl: string;
+  apiToken: string;
+  loras: LoraConfig[];
+  size: string;
+}
+
+export interface LoraConfig {
+  name: string;
+  weight: number;
+}
+
+// ── 大纲生成 ──
+export type OutlineStep = "worldView" | "characters" | "outline";
+
 export interface OutlineProgressEvent {
-  step: "world" | "characters" | "outline";
+  step: OutlineStep;
   chunk: string;
   done: boolean;
 }
@@ -85,16 +145,25 @@ export interface OutlineProgressEvent {
 export interface OutlineGenerationStatus {
   running: boolean;
   completed: boolean;
-  currentStep?: "world" | "characters" | "outline";
-  streamingText: Partial<Record<"world" | "characters" | "outline", string>>;
+  currentStep?: OutlineStep;
+  streamingText: Partial<Record<OutlineStep, string>>;
   error?: string;
 }
 
+// ── 章节流式 ──
 export interface ChapterProgressEvent {
   chunk: string;
   done: boolean;
 }
 
+// ── 连接测试 ──
+export interface ConnectionTestResult {
+  connected: boolean;
+  latencyMs: number;
+  error?: string;
+}
+
+// ── Ollama ──
 export interface OllamaModel {
   name: string;
   size: string;
@@ -103,16 +172,17 @@ export interface OllamaModel {
 
 export interface OllamaTestResult {
   connected: boolean;
-  latency_ms: number;
+  latencyMs: number;
   error?: string;
 }
 
+// ── 导出 ──
 export type ExportFormat = "md" | "txt" | "docx" | "pdf";
 
 export interface ExportChapter {
-  num: number;
+  number: number;
   title: string;
-  words: number;
+  wordCount: number;
   body: string;
 }
 
@@ -122,33 +192,26 @@ export interface ExportData {
   chapters: ExportChapter[];
 }
 
-// ===== 图片生成相关类型 =====
-
+// ── 图片 ──
 export type ImageKind = "cover" | "character" | "scene";
-
-export type ImageProvider = "modelscope";
-
-export interface LoraEntry {
-  name: string;
-  weight?: number;
-}
-
-export interface LoraConfig {
-  entries: LoraEntry[];
-}
 
 export interface ImageResult {
   id: string;
   kind: ImageKind;
   prompt: string;
-  localPath: string;
-  fileSize: number;
-  created: string;
-  refId?: string;
+  filename: string;
+  refText: string;
+  createdAt: string;
 }
 
 export interface ImageProgressEvent {
-  stage: "preparing" | "submitting" | "polling" | "downloading" | "saving" | "done";
+  stage:
+    | "preparing"
+    | "submitting"
+    | "polling"
+    | "downloading"
+    | "saving"
+    | "done";
   message: string;
   imageId?: string;
 }
@@ -156,12 +219,4 @@ export interface ImageProgressEvent {
 export interface SceneDescription {
   sceneDesc: string;
   mood: string;
-}
-
-export interface ImagePrompts {
-  stylePrefix: string;
-  cover: string;
-  characterImage: string;
-  scene: string;
-  extractScene: string;
 }

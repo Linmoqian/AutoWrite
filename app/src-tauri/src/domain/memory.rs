@@ -75,8 +75,11 @@ async fn extract_emotion(config: &AppConfig, content: &str) -> Result<Vec<Emotio
 }
 
 fn parse_json_response(text: &str) -> Result<Value> {
-    let re = Regex::new(r"(?s)```(?:json)?\s*
-?(.*?)```").unwrap();
+    let re = Regex::new(
+        r"(?s)```(?:json)?\s*
+?(.*?)```",
+    )
+    .unwrap();
     let candidate = match re.captures(text) {
         Some(caps) => caps[1].trim().to_string(),
         None => text.trim().to_string(),

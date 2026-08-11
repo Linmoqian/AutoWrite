@@ -64,8 +64,7 @@ pub(crate) fn parse_yaml_front_matter(content: &str) -> (serde_yaml::Value, Stri
     if parts.len() < 3 {
         return (serde_yaml::Value::Null, content.to_string());
     }
-    let meta: serde_yaml::Value =
-        serde_yaml::from_str(parts[1]).unwrap_or(serde_yaml::Value::Null);
+    let meta: serde_yaml::Value = serde_yaml::from_str(parts[1]).unwrap_or(serde_yaml::Value::Null);
     (meta, parts[2].trim().to_string())
 }
 
@@ -81,10 +80,7 @@ pub(crate) fn next_h1_offset(text: &str) -> usize {
     let bytes = text.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'\n'
-            && i + 2 < bytes.len()
-            && bytes[i + 1] == b'#'
-            && bytes[i + 2] == b' '
+        if bytes[i] == b'\n' && i + 2 < bytes.len() && bytes[i + 1] == b'#' && bytes[i + 2] == b' '
         {
             return i;
         }

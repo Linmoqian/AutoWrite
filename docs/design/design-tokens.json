@@ -1,0 +1,170 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "AutoWrite Design Tokens v1 - 设计师颜好看 - 2026-08-11",
+  "color": {
+    "background": {
+      "light": { "value": "hsl(40 20% 97%)", "type": "color", "description": "暖纸白 #FAF7F2" },
+      "dark": { "value": "hsl(24 6% 7%)", "type": "color", "description": "暖炭黑 #110F0D" }
+    },
+    "foreground": {
+      "light": { "value": "hsl(24 10% 12%)", "type": "color", "description": "暖深棕 #231F1A" },
+      "dark": { "value": "hsl(36 8% 88%)", "type": "color", "description": "暖灰白 #E5DFD6" }
+    },
+    "card": {
+      "light": { "value": "hsl(0 0% 100%)", "type": "color", "description": "纯白 #FFFFFF" },
+      "dark": { "value": "hsl(24 5% 10%)", "type": "color", "description": "暖深灰 #181612" }
+    },
+    "popover": {
+      "light": { "value": "hsl(0 0% 100%)", "type": "color", "description": "纯白" },
+      "dark": { "value": "hsl(24 5% 12%)", "type": "color", "description": "#1E1B16" }
+    },
+    "primary": {
+      "light": { "value": "hsl(32 65% 48%)", "type": "color", "description": "深琥珀 #B8732E" },
+      "dark": { "value": "hsl(34 72% 56%)", "type": "color", "description": "温暖琥珀 #D89757" }
+    },
+    "primary-foreground": {
+      "light": { "value": "hsl(40 20% 97%)", "type": "color", "description": "暖白" },
+      "dark": { "value": "hsl(24 6% 7%)", "type": "color", "description": "暖炭黑" }
+    },
+    "secondary": {
+      "light": { "value": "hsl(40 15% 92%)", "type": "color", "description": "暖灰背景 #EFE9DF" },
+      "dark": { "value": "hsl(24 5% 14%)", "type": "color", "description": "#252220" }
+    },
+    "secondary-foreground": {
+      "light": { "value": "hsl(24 8% 25%)", "type": "color", "description": "#3D3830" },
+      "dark": { "value": "hsl(36 6% 78%)", "type": "color", "description": "#C4BEB4" }
+    },
+    "muted": {
+      "light": { "value": "hsl(40 12% 93%)", "type": "color", "description": "#F0EBE2" },
+      "dark": { "value": "hsl(24 4% 14%)", "type": "color", "description": "#232120" }
+    },
+    "muted-foreground": {
+      "light": { "value": "hsl(24 5% 42%)", "type": "color", "description": "次要文字 #6B6660" },
+      "dark": { "value": "hsl(30 3% 52%)", "type": "color", "description": "次要文字 #89857F" }
+    },
+    "accent": {
+      "light": { "value": "hsl(32 65% 48%)", "type": "color", "description": "同 primary" },
+      "dark": { "value": "hsl(34 72% 56%)", "type": "color", "description": "同 primary" }
+    },
+    "accent-foreground": {
+      "light": { "value": "hsl(40 20% 97%)", "type": "color" },
+      "dark": { "value": "hsl(24 6% 7%)", "type": "color" }
+    },
+    "destructive": {
+      "light": { "value": "hsl(0 72% 48%)", "type": "color", "description": "#D12121" },
+      "dark": { "value": "hsl(0 63% 50%)", "type": "color", "description": "#D23A3A 降饱和红" }
+    },
+    "destructive-foreground": {
+      "light": { "value": "hsl(0 0% 100%)", "type": "color" },
+      "dark": { "value": "hsl(36 8% 95%)", "type": "color" }
+    },
+    "border": {
+      "light": { "value": "hsl(35 12% 88%)", "type": "color", "description": "暖灰边框 #DDD7CD" },
+      "dark": { "value": "hsl(24 4% 17%)", "type": "color", "description": "#2B2825" }
+    },
+    "input": {
+      "light": { "value": "hsl(35 12% 88%)", "type": "color" },
+      "dark": { "value": "hsl(24 4% 17%)", "type": "color" }
+    },
+    "ring": {
+      "light": { "value": "hsl(32 65% 48%)", "type": "color", "description": "焦点环 = primary" },
+      "dark": { "value": "hsl(34 72% 56%)", "type": "color", "description": "焦点环 = primary" }
+    },
+    "success": {
+      "light": { "value": "hsl(142 52% 38%)", "type": "color", "description": "#2E8A4A" },
+      "dark": { "value": "hsl(142 52% 45%)", "type": "color", "description": "#3A9B5A 提亮" }
+    },
+    "warning": {
+      "light": { "value": "hsl(38 82% 45%)", "type": "color", "description": "#C99121" },
+      "dark": { "value": "hsl(38 82% 55%)", "type": "color", "description": "#E0A82E 提亮" }
+    },
+    "info": {
+      "light": { "value": "hsl(200 70% 48%)", "type": "color", "description": "#1E7FCC" },
+      "dark": { "value": "hsl(200 70% 55%)", "type": "color", "description": "#2E9BE0 提亮" }
+    }
+  },
+  "font": {
+    "ui": {
+      "value": "Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      "type": "fontFamily",
+      "description": "UI 界面字体"
+    },
+    "literary": {
+      "value": "'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif",
+      "type": "fontFamily",
+      "description": "文学内容字体（章节/大纲）"
+    },
+    "mono": {
+      "value": "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+      "type": "fontFamily",
+      "description": "等宽字体（配置/代码）"
+    }
+  },
+  "fontSize": {
+    "xs": { "value": "0.75rem", "type": "dimension", "description": "12px 标签" },
+    "sm": { "value": "0.875rem", "type": "dimension", "description": "14px 次要正文" },
+    "base": { "value": "1rem", "type": "dimension", "description": "16px 正文" },
+    "lg": { "value": "1.125rem", "type": "dimension", "description": "18px 小标题" },
+    "xl": { "value": "1.25rem", "type": "dimension", "description": "20px 二级标题" },
+    "2xl": { "value": "1.5rem", "type": "dimension", "description": "24px 主标题" },
+    "3xl": { "value": "2rem", "type": "dimension", "description": "32px 章节标题" },
+    "literary": { "value": "1.0625rem", "type": "dimension", "description": "17px 文学内容正文" }
+  },
+  "fontWeight": {
+    "regular": { "value": "400", "type": "fontWeight", "description": "正文" },
+    "medium": { "value": "500", "type": "fontWeight", "description": "按钮/小标题" },
+    "semibold": { "value": "600", "type": "fontWeight", "description": "页面标题" }
+  },
+  "radius": {
+    "sm": { "value": "4px", "type": "dimension", "description": "Badge/Tag" },
+    "md": { "value": "6px", "type": "dimension", "description": "按钮/输入框" },
+    "lg": { "value": "8px", "type": "dimension", "description": "卡片" },
+    "xl": { "value": "12px", "type": "dimension", "description": "弹窗" }
+  },
+  "spacing": {
+    "1": { "value": "4px", "type": "dimension" },
+    "2": { "value": "8px", "type": "dimension" },
+    "3": { "value": "12px", "type": "dimension" },
+    "4": { "value": "16px", "type": "dimension" },
+    "5": { "value": "20px", "type": "dimension" },
+    "6": { "value": "24px", "type": "dimension" },
+    "8": { "value": "32px", "type": "dimension" },
+    "10": { "value": "40px", "type": "dimension" },
+    "12": { "value": "48px", "type": "dimension" }
+  },
+  "shadow": {
+    "sm": {
+      "light": { "value": "0 1px 2px rgba(0,0,0,0.05)", "type": "boxShadow" },
+      "dark": { "value": "none", "type": "boxShadow", "description": "深色模式不用阴影" }
+    },
+    "md": {
+      "light": { "value": "0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)", "type": "boxShadow" },
+      "dark": { "value": "0 0 0 1px rgba(255,255,255,0.04)", "type": "boxShadow" }
+    },
+    "lg": {
+      "light": { "value": "0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.03)", "type": "boxShadow" },
+      "dark": { "value": "0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.3)", "type": "boxShadow" }
+    }
+  },
+  "motion": {
+    "fast": { "value": "150ms", "type": "duration", "description": "hover/focus" },
+    "base": { "value": "200ms", "type": "duration", "description": "卡片/面板" },
+    "ease": { "value": "cubic-bezier(0.2, 0, 0, 1)", "type": "cubicBezier" }
+  },
+  "layout": {
+    "containerMax": { "value": "1280px", "type": "dimension" },
+    "containerGutter": { "value": "32px", "type": "dimension" },
+    "contentMax": { "value": "720px", "type": "dimension", "description": "阅读区最佳宽度" },
+    "sidebarWidth": { "value": "220px", "type": "dimension" },
+    "headerHeight": { "value": "48px", "type": "dimension" }
+  },
+  "icon": {
+    "library": { "value": "lucide-react", "type": "string", "description": "SVG 图标库" },
+    "sizes": {
+      "inline": { "value": "16px", "type": "dimension" },
+      "button": { "value": "20px", "type": "dimension" },
+      "standalone": { "value": "24px", "type": "dimension" }
+    },
+    "strokeWidth": { "value": "2px", "type": "dimension" }
+  }
+}

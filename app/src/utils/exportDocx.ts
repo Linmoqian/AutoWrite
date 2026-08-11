@@ -7,7 +7,7 @@ import {
   AlignmentType,
   PageBreak,
 } from "docx";
-import type { ExportData } from "../types";
+import type { ExportData } from "@/types";
 
 const FONT_CN = "SimSun";
 
@@ -49,7 +49,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
       spacing: { after: 200 },
       children: [
         new TextRun({
-          text: `创建日期：${data.novel.created}`,
+          text: `创建日期：${data.novel.createdAt}`,
           size: 22,
           font: FONT_CN,
           color: "999999",
@@ -59,7 +59,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
   );
 
   // 世界观
-  if (data.novel.world) {
+  if (data.novel.worldView) {
     children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(
       new Paragraph({
@@ -67,7 +67,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
         children: [new TextRun({ text: "世界观", font: FONT_CN })],
       }),
     );
-    pushBodyParagraphs(children, data.novel.world);
+    pushBodyParagraphs(children, data.novel.worldView);
   }
 
   // 角色
@@ -94,7 +94,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: [new TextRun({ text: volume.volume, font: FONT_CN })],
+          children: [new TextRun({ text: volume.title, font: FONT_CN })],
         }),
       );
       for (const ch of volume.chapters) {
@@ -103,7 +103,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
             indent: { left: 360 },
             children: [
               new TextRun({
-                text: `${String(ch.num).padStart(3, "0")}. ${ch.title}`,
+                text: `${String(ch.number).padStart(3, "0")}. ${ch.title}`,
                 font: FONT_CN,
                 size: 21,
               }),
@@ -122,7 +122,7 @@ export async function generateDocx(data: ExportData): Promise<Uint8Array> {
         heading: HeadingLevel.HEADING_1,
         children: [
           new TextRun({
-            text: `第${chapter.num}章 ${chapter.title}`,
+            text: `第${chapter.number}章 ${chapter.title}`,
             font: FONT_CN,
           }),
         ],

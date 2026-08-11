@@ -1,13 +1,14 @@
 use std::path::Path;
 
+use super::{context_file, read_file_content, write_file_atomic};
 use crate::domain::types::*;
 use crate::error::Result;
-use super::{context_file, read_file_content, write_file_atomic};
 
 pub fn write_context(dir: &Path, ctx: &ContextData) -> Result<()> {
-    let mut lines = vec![
-        format!("# 上下文摘要\n\n## 当前进度\n- 已完成：{}章\n", ctx.current_chapter),
-    ];
+    let mut lines = vec![format!(
+        "# 上下文摘要\n\n## 当前进度\n- 已完成：{}章\n",
+        ctx.current_chapter
+    )];
     if let Some(ref intent) = ctx.current_intent {
         lines.push("## 叙事意图".to_string());
         lines.push(format!("- 角色想要：{}", intent.character_wants));
@@ -21,7 +22,10 @@ pub fn write_context(dir: &Path, ctx: &ContextData) -> Result<()> {
             if let Some(name) = s.get("name").and_then(|v| v.as_str()) {
                 let location = s.get("location").and_then(|v| v.as_str()).unwrap_or("?");
                 let power = s.get("power_level").and_then(|v| v.as_str()).unwrap_or("?");
-                let action = s.get("recent_action").and_then(|v| v.as_str()).unwrap_or("?");
+                let action = s
+                    .get("recent_action")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("?");
                 lines.push(format!("- {}：{}，{}，{}", name, location, power, action));
             }
         }

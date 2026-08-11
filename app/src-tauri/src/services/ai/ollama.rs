@@ -1,10 +1,21 @@
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::config::AppConfig;
 use crate::error::{AppError, Result};
-use super::{build_client, Message, retry_delay, retries_exhausted};
+
+use super::{build_client, retries_exhausted, retry_delay, AiProvider, Message};
 
 const MAX_RETRIES: u32 = 3;
+
+#[derive(Default)]
+pub struct OllamaProvider;
+
+impl OllamaProvider {
+    pub fn new() -> Self {
+        OllamaProvider
+    }
+}
 
 #[derive(Serialize)]
 struct OllamaRequest {
@@ -42,85 +53,94 @@ struct OllamaStreamMessage {
     content: String,
 }
 
-pub async fn generate(config: &AppConfig, prompt: &str) -> Result<String> {
-    let client = build_client(config.timeout)?;
-    let url = format!("{}/api/chat", config.ollama_url);
+#[async_trait]
+impl AiProvider for OllamaProvider {
+    async fn generate(&self, config: &AppConfig, prompt: &str) -> Result<String> {
+        let client = build_client(config.timeout)?;
+        let url = format!("{}/api/chat", config.ollama_url);
 
-    for attempt in 0..MAX_RETRIES {
-        let request = OllamaRequest {
-            model: config.active_model().to_string(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }],
-            stream: false,
-            options: OllamaOptions {
-                num_ctx: config.num_ctx,
-                num_predict: 4096,
-            },
-        };
+        for attempt in 0..MAX_RETRIES {
+            let request = OllamaRequest {
+                model: config.active_model().to_string(),
+                messages: vec![Message {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                }],
+                stream: false,
+                options: OllamaOptions {
+                    num_ctx: config.num_ctx,
+                    num_predict: 4096,
+                },
+            };
 
-        match client.post(&url).json(&request).send().await {
-            Ok(resp) => {
-                let body: OllamaResponse = resp.json().await?;
-                return Ok(body.message.content);
-            }
-            Err(_) if attempt < MAX_RETRIES - 1 => {
-                tokio::time::sleep(retry_delay(attempt)).await;
-            }
-            Err(e) => return Err(AppError::AiFailed(e.to_string())),
-        }
-    }
-    Err(retries_exhausted())
-}
-
-pub async fn generate_streaming<F>(config: &AppConfig, prompt: &str, on_chunk: F) -> Result<String>
-where
-    F: Fn(&str) -> Result<()>,
-{
-    let client = build_client(config.timeout * 2)?;
-    let url = format!("{}/api/chat", config.ollama_url);
-
-    for attempt in 0..MAX_RETRIES {
-        let request = OllamaRequest {
-            model: config.active_model().to_string(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }],
-            stream: true,
-            options: OllamaOptions {
-                num_ctx: config.num_ctx,
-                num_predict: 4096,
-            },
-        };
-
-        match client.post(&url).json(&request).send().await {
-            Ok(resp) => {
-                let mut full_text = String::new();
-                let mut buffer = String::new();
-
-                match stream_response(resp, &mut buffer, &mut full_text, &on_chunk).await {
-                    Ok(()) => return Ok(full_text),
-                    Err(_) if attempt < MAX_RETRIES - 1 => {
-                        on_chunk(&format!(
-                            "\n\n[连接中断，正在重试 ({}/{})...]\n\n",
-                            attempt + 2,
-                            MAX_RETRIES
-                        ))?;
-                        tokio::time::sleep(retry_delay(attempt)).await;
-                        continue;
-                    }
-                    Err(e) => return Err(e),
+            match client.post(&url).json(&request).send().await {
+                Ok(resp) => {
+                    let body: OllamaResponse = resp.json().await?;
+                    return Ok(body.message.content);
                 }
+                Err(_) if attempt < MAX_RETRIES - 1 => {
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                }
+                Err(e) => return Err(AppError::AiFailed(e.to_string())),
             }
-            Err(_) if attempt < MAX_RETRIES - 1 => {
-                tokio::time::sleep(retry_delay(attempt)).await;
-            }
-            Err(e) => return Err(AppError::AiFailed(e.to_string())),
         }
+        Err(retries_exhausted())
     }
-    Err(retries_exhausted())
+
+    async fn generate_streaming<F>(
+        &self,
+        config: &AppConfig,
+        prompt: &str,
+        on_chunk: F,
+    ) -> Result<String>
+    where
+        F: Fn(&str) -> Result<()> + Send + Sync + 'static,
+        Self: Sized,
+    {
+        let client = build_client(config.timeout * 2)?;
+        let url = format!("{}/api/chat", config.ollama_url);
+
+        for attempt in 0..MAX_RETRIES {
+            let request = OllamaRequest {
+                model: config.active_model().to_string(),
+                messages: vec![Message {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                }],
+                stream: true,
+                options: OllamaOptions {
+                    num_ctx: config.num_ctx,
+                    num_predict: 4096,
+                },
+            };
+
+            match client.post(&url).json(&request).send().await {
+                Ok(resp) => {
+                    let mut full_text = String::new();
+                    let mut buffer = String::new();
+
+                    match stream_response(resp, &mut buffer, &mut full_text, &on_chunk).await {
+                        Ok(()) => return Ok(full_text),
+                        Err(_) if attempt < MAX_RETRIES - 1 => {
+                            on_chunk(&format!(
+                                "\n\n[连接中断，正在重试 ({}/{})...]\n\n",
+                                attempt + 2,
+                                MAX_RETRIES
+                            ))?;
+                            tokio::time::sleep(retry_delay(attempt)).await;
+                            continue;
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
+                Err(_) if attempt < MAX_RETRIES - 1 => {
+                    tokio::time::sleep(retry_delay(attempt)).await;
+                }
+                Err(e) => return Err(AppError::AiFailed(e.to_string())),
+            }
+        }
+        Err(retries_exhausted())
+    }
 }
 
 async fn stream_response<F>(

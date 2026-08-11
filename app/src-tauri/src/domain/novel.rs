@@ -121,9 +121,14 @@ where
     // Step 2: characters
     let characters = if need_characters {
         let prompt = fill_template(&config.prompts.character, &[("world", &world)]);
-        let result =
-            streaming_step(config, &prompt, app.clone(), "characters", on_progress.clone())
-                .await?;
+        let result = streaming_step(
+            config,
+            &prompt,
+            app.clone(),
+            "characters",
+            on_progress.clone(),
+        )
+        .await?;
         let mut n = files::read_novel(dir)?;
         n.characters = Some(result.clone());
         files::write_novel(dir, &n)?;

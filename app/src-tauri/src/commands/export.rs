@@ -1,13 +1,14 @@
 use tauri::State;
 
+use super::dir_from_state;
+use crate::dto::ExportDataDto;
 use crate::error::Result;
 use crate::state::AppState;
-use super::dir_from_state;
 
 #[tauri::command]
-pub fn get_export_data(state: State<'_, AppState>) -> Result<crate::services::export::ExportData> {
+pub fn get_export_data(state: State<'_, AppState>) -> Result<ExportDataDto> {
     let dir = dir_from_state(&state)?;
-    crate::services::export::collect_export_data(&dir)
+    Ok(crate::services::export::collect_export_data(&dir)?.into())
 }
 
 #[tauri::command]

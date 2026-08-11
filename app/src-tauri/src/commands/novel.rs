@@ -2,17 +2,11 @@ use std::collections::HashMap;
 
 use tauri::{Emitter, Manager, State};
 
-use crate::domain::types::ChapterMeta;
+use super::{config_from_state, dir_from_state};
 use crate::domain::novel;
+use crate::dto::{ChapterContentDto, ChapterMetaDto, NovelStatusDto, OutlineGenerationStatusDto};
 use crate::error::Result;
 use crate::state::{AppState, OutlineGenerationStatus};
-use super::{config_from_state, dir_from_state};
-
-#[derive(serde::Serialize)]
-pub struct ChapterContent {
-    pub meta: ChapterMeta,
-    pub body: String,
-}
 
 #[tauri::command]
 pub async fn create_novel(
@@ -41,10 +35,7 @@ pub async fn create_novel(
 }
 
 #[tauri::command]
-pub async fn generate_outline(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<String> {
+pub async fn generate_outline(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
     novel::generate_outline_streaming(&dir, &config, &app).await
@@ -123,39 +114,43 @@ pub async fn start_outline_generation(
 #[tauri::command]
 pub fn get_outline_generation_status(
     state: State<'_, AppState>,
-) -> Result<OutlineGenerationStatus> {
+) -> Result<OutlineGenerationStatusDto> {
     Ok(state
         .outline_generation
         .lock()
         .unwrap_or_else(|e| e.into_inner())
-        .clone())
+        .clone()
+        .into())
 }
 
 #[tauri::command]
-pub async fn generate_chapter(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<u32> {
+pub async fn generate_chapter(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<u32> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
     crate::domain::chapter::generate_chapter_streaming(&dir, &config, &app).await
 }
 
 #[tauri::command]
-pub fn get_status(state: State<'_, AppState>) -> Result<novel::NovelStatus> {
+pub fn get_status(state: State<'_, AppState>) -> Result<NovelStatusDto> {
     let dir = dir_from_state(&state)?;
-    novel::get_status(&dir)
+    Ok(novel::get_status(&dir)?.into())
 }
 
 #[tauri::command]
-pub fn list_chapters(state: State<'_, AppState>) -> Result<Vec<ChapterMeta>> {
+pub fn list_chapters(state: State<'_, AppState>) -> Result<Vec<ChapterMetaDto>> {
     let dir = dir_from_state(&state)?;
-    crate::services::files::list_chapters(&dir)
+    Ok(crate::services::files::list_chapters(&dir)?
+        .into_iter()
+        .map(Into::into)
+        .collect())
 }
 
 #[tauri::command]
-pub fn read_chapter(state: State<'_, AppState>, filename: String) -> Result<ChapterContent> {
+pub fn read_chapter(state: State<'_, AppState>, filename: String) -> Result<ChapterContentDto> {
     let dir = dir_from_state(&state)?;
     let (meta, body) = crate::services::files::read_chapter(&dir, &filename)?;
-    Ok(ChapterContent { meta, body })
+    Ok(ChapterContentDto {
+        meta: meta.into(),
+        body,
+    })
 }

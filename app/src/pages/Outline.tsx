@@ -1,75 +1,64 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { List, Typography, Empty, Steps, Collapse, Card, message } from "antd";
-import { Zap } from "lucide-react";
-import { checkConnection } from "../hooks/useConnectionCheck";
+import { Zap, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useAppStore } from "@/stores/app-store";
+import { useConnectionCheck } from "@/hooks/use-connection-check";
 import {
   getOutlineGenerationStatus,
-  onOutlineProgress,
   startOutlineGeneration,
-} from "../services/tauri";
-import type { OutlineProgressEvent } from "../types";
-import LoadingButton from "../components/LoadingButton";
+} from "@/services/tauri";
+import { onOutlineProgress, onOutlineGenerationStatus } from "@/services/tauri";
+import { OUTLINE_STEPS, OUTLINE_STEP_LABELS } from "@/lib/constants";
+import { filterThinkTags } from "@/lib/filter-think-tags";
+import type { OutlineStep, OutlineProgressEvent } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useAppSelector, useAppDispatch } from "../store";
-import { refreshStatus as refreshStatusThunk } from "../store/appSlice";
 
-const { Text } = Typography;
-
-const STEP_KEYS = ["world", "characters", "outline"] as const;
-const STEP_LABELS: Record<string, string> = {
-  world: "世界观",
-  characters: "角色",
-  outline: "章节列表",
-};
-
-type OutlineStep = (typeof STEP_KEYS)[number];
 type StreamingText = Partial<Record<OutlineStep, string>>;
 
-function filterThinkTags(text: string): string {
-  return text.replace(/<think[\s\S]*?<\/think>/g, "");
-}
-
 export default function Outline() {
-  const novelStatus = useAppSelector((s) => s.app.novelStatus);
-  const dispatch = useAppDispatch();
-  const refreshStatus = () => dispatch(refreshStatusThunk());
+  const novelStatus = useAppStore((s) => s.novelStatus);
+  const refreshStatus = useAppStore((s) => s.refreshStatus);
+  const { checkConnection } = useConnectionCheck();
+
   const volumes = novelStatus?.outline ?? [];
-  const world = novelStatus?.novel.world;
+  const world = novelStatus?.novel.worldView;
   const characters = novelStatus?.novel.characters;
+
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<OutlineStep | null>(null);
   const [streamingText, setStreamingText] = useState<StreamingText>({});
-  const [viewTab, setViewTab] = useState<OutlineStep>("world");
+  const [viewTab, setViewTab] = useState<OutlineStep>("worldView");
   const streamRef = useRef<HTMLDivElement>(null);
-  const wasRunningRef = useRef(false);
   const userScrolledRef = useRef(false);
+  const wasRunningRef = useRef(false);
 
-  const syncGenerationStatus = useCallback(async () => {
+  const syncStatus = useCallback(async () => {
     try {
-      const status = await getOutlineGenerationStatus();
-      setLoading(status.running);
-      setCurrentStep(status.currentStep ?? null);
-      setStreamingText(status.streamingText ?? {});
-
-      if (wasRunningRef.current && !status.running) {
-        if (status.completed) {
-          message.success("大纲生成完成");
+      const st = await getOutlineGenerationStatus();
+      setLoading(st.running);
+      setCurrentStep(st.currentStep ?? null);
+      setStreamingText(st.streamingText ?? {});
+      if (wasRunningRef.current && !st.running) {
+        if (st.completed) {
+          toast.success("大纲生成完成");
           refreshStatus();
-        } else if (status.error) {
-          message.error(`生成失败: ${status.error}`);
+        } else if (st.error) {
+          toast.error(`生成失败: ${st.error}`);
         }
       }
-      wasRunningRef.current = status.running;
+      wasRunningRef.current = st.running;
     } catch (e) {
-      message.error(String(e));
+      toast.error(String(e));
     }
-  }, []);
+  }, [refreshStatus]);
 
   useEffect(() => {
     refreshStatus();
-    syncGenerationStatus();
-  }, [syncGenerationStatus]);
+    syncStatus();
+  }, [refreshStatus, syncStatus]);
 
   useEffect(() => {
     const unlistenPromise = onOutlineProgress((e: OutlineProgressEvent) => {
@@ -82,21 +71,34 @@ export default function Outline() {
         }));
       }
     });
-
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
 
   useEffect(() => {
-    if (!loading) return undefined;
-    const timer = window.setInterval(syncGenerationStatus, 1000);
-    return () => window.clearInterval(timer);
-  }, [loading, syncGenerationStatus]);
+    const unlistenPromise = onOutlineGenerationStatus((st) => {
+      setLoading(st.running);
+      setCurrentStep(st.currentStep ?? null);
+      setStreamingText(st.streamingText ?? {});
+      if (wasRunningRef.current && !st.running) {
+        if (st.completed) {
+          toast.success("大纲生成完成");
+          refreshStatus();
+        } else if (st.error) {
+          toast.error(`生成失败: ${st.error}`);
+        }
+      }
+      wasRunningRef.current = st.running;
+    });
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [refreshStatus]);
 
   useEffect(() => {
     const el = streamRef.current;
-    if (!el) return undefined;
+    if (!el) return;
     const onScroll = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
       userScrolledRef.current = !atBottom;
@@ -111,183 +113,241 @@ export default function Outline() {
     }
   }, [streamingText]);
 
-  const availableSteps = STEP_KEYS.filter((key) => {
-    if (key === "world") return !!world;
+  const availableSteps = OUTLINE_STEPS.filter((key) => {
+    if (key === "worldView") return !!world;
     if (key === "characters") return !!characters;
     return volumes.length > 0;
   });
 
-  const activeTab = availableSteps.includes(viewTab) ? viewTab : (availableSteps[0] || "world");
+  const activeTab = availableSteps.includes(viewTab)
+    ? viewTab
+    : (availableSteps[0] || "worldView");
 
   const handleGenerate = async () => {
     if (!(await checkConnection())) return;
     setStreamingText({});
-    const initialStep: OutlineStep = activeTab;
-    setCurrentStep(initialStep);
+    setCurrentStep(activeTab);
     setLoading(true);
     userScrolledRef.current = false;
-
     try {
-      await startOutlineGeneration(initialStep);
-      await syncGenerationStatus();
+      await startOutlineGeneration(activeTab);
+      await syncStatus();
     } catch (e) {
       setLoading(false);
-      message.error(`生成失败: ${e}`);
+      toast.error(`生成失败: ${e}`);
     }
   };
 
   if (loading) {
-    const stepIndex = currentStep ? STEP_KEYS.indexOf(currentStep) : 0;
-    const displayText = currentStep
-      ? filterThinkTags(streamingText[currentStep] || "")
-      : "";
-
     return (
-      <div className="fade-in">
-        <Card style={{ marginBottom: 16 }}>
-          <Steps
-            current={stepIndex}
-            items={STEP_KEYS.map((key) => ({
-              title: STEP_LABELS[key],
-              description:
-                currentStep === key
-                  ? "生成中..."
-                  : STEP_KEYS.indexOf(key) < stepIndex
-                    ? "已完成"
-                    : "",
-            }))}
-          />
-        </Card>
-        {displayText ? (
-          <div ref={streamRef} className="streaming-area md-body">
-            <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
-            <span className="cursor-blink">|</span>
-          </div>
-        ) : (
-          <Card>
-            <Text style={{ color: "var(--text-muted)" }}>正在连接模型...</Text>
-          </Card>
-        )}
-      </div>
+      <LoadingView
+        currentStep={currentStep}
+        streamingText={streamingText}
+        streamRef={streamRef}
+      />
     );
   }
 
-  const hasWorldOrCharacters = !!world || !!characters;
-  const hasNothing = volumes.length === 0 && !hasWorldOrCharacters;
+  const hasWorldOrChars = !!world || !!characters;
+  const hasNothing = volumes.length === 0 && !hasWorldOrChars;
 
   if (hasNothing) {
     return (
       <div className="fade-in">
         <h1 className="page-title">大纲管理</h1>
         <Card>
-          <Empty description="暂无大纲，请先生成">
-            <LoadingButton
-              type="primary"
-              icon={<Zap size={14} />}
-              onClick={handleGenerate}
-            >
+          <CardContent className="flex flex-col items-center gap-4 p-12">
+            <p className="text-muted-foreground">暂无大纲，请先生成</p>
+            <Button onClick={handleGenerate}>
+              <Zap className="mr-1.5 h-4 w-4" />
               生成大纲
-            </LoadingButton>
-          </Empty>
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
-  const renderContent = () => {
-    if (activeTab === "world" && world) {
-      return (
-        <div className="md-body">
-          <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(world)}</Markdown>
-        </div>
-      );
-    }
-    if (activeTab === "characters" && characters) {
-      return (
-        <div className="md-body">
-          <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(characters)}</Markdown>
-        </div>
-      );
-    }
-    if (activeTab === "outline") {
-      return (
-        <Collapse
-          defaultActiveKey={["vol-0"]}
-          items={volumes.map((vol, idx) => ({
-            key: `vol-${idx}`,
-            label: <Text strong>{vol.volume}</Text>,
-            children: (
-              <List
-                size="small"
-                dataSource={vol.chapters}
-                renderItem={(ch) => (
-                  <List.Item>
-                    <Text>
-                      {String(ch.num).padStart(3, "0")}. {ch.title}
-                    </Text>
-                  </List.Item>
-                )}
-              />
-            ),
-          }))}
-        />
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="fade-in">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
-        <h1 className="page-title" style={{ marginBottom: 0, paddingBottom: 0 }}>
-          大纲管理
-        </h1>
-        <LoadingButton
-          type="primary"
-          icon={<Zap size={14} />}
-          onClick={handleGenerate}
-        >
-          {hasNothing
-            ? "生成大纲"
-            : `重新生成${STEP_LABELS[activeTab] || ""}`}
-        </LoadingButton>
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="page-title mb-0 pb-0">大纲管理</h1>
+        <Button onClick={handleGenerate}>
+          <Zap className="mr-1.5 h-4 w-4" />
+          {hasNothing ? "生成大纲" : `重新生成${OUTLINE_STEP_LABELS[activeTab]}`}
+        </Button>
       </div>
-      <Card style={{ marginBottom: 16 }}>
-        <Steps
-          current={STEP_KEYS.indexOf(activeTab)}
-          items={STEP_KEYS.map((key) => {
-            const available = availableSteps.includes(key);
-            const completed =
-              key === "world"
-                ? !!world
-                : key === "characters"
-                  ? !!characters
-                  : volumes.length > 0;
-            return {
-              title: STEP_LABELS[key],
-              status: activeTab === key ? "process" : completed ? "finish" : "wait",
-              disabled: !available,
-            };
-          })}
-          onChange={(idx) => {
-            const step = STEP_KEYS[idx];
-            if (availableSteps.includes(step)) setViewTab(step);
-          }}
-          style={{ cursor: "pointer" }}
-        />
-      </Card>
-      <Card>
-        <div className="outline-content-area md-body" style={{ minHeight: 200 }}>
-          {renderContent()}
-        </div>
+
+      <StepIndicator activeTab={activeTab} availableSteps={availableSteps} onTabChange={setViewTab} />
+
+      <Card className="mt-4">
+        <CardContent className="min-h-[200px] p-5">
+          <OutlineContent
+            activeTab={activeTab}
+            world={world}
+            characters={characters}
+            volumes={volumes}
+          />
+        </CardContent>
       </Card>
     </div>
   );
+}
+
+function LoadingView({
+  currentStep,
+  streamingText,
+  streamRef,
+}: {
+  currentStep: OutlineStep | null;
+  streamingText: StreamingText;
+  streamRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const stepIndex = currentStep ? OUTLINE_STEPS.indexOf(currentStep) : 0;
+  const displayText = currentStep
+    ? filterThinkTags(streamingText[currentStep] || "")
+    : "";
+
+  return (
+    <div className="fade-in">
+      <Card className="mb-4">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-4">
+            {OUTLINE_STEPS.map((key, i) => (
+              <div key={key} className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  {i < stepIndex ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : i === stepIndex ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border border-border" />
+                  )}
+                  <span
+                    className={
+                      i === stepIndex
+                        ? "text-sm font-medium text-foreground"
+                        : "text-sm text-muted-foreground"
+                    }
+                  >
+                    {OUTLINE_STEP_LABELS[key]}
+                  </span>
+                </div>
+                {i < OUTLINE_STEPS.length - 1 && (
+                  <div className="h-px w-8 bg-border" />
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      {displayText ? (
+        <div ref={streamRef} className="max-h-[60vh] overflow-y-auto">
+          <div className="md-body">
+            <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
+            <span className="cursor-blink">|</span>
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            正在连接模型...
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function StepIndicator({
+  activeTab,
+  availableSteps,
+  onTabChange,
+}: {
+  activeTab: OutlineStep;
+  availableSteps: readonly OutlineStep[];
+  onTabChange: (step: OutlineStep) => void;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          {OUTLINE_STEPS.map((key, i) => {
+            const available = availableSteps.includes(key);
+            const active = activeTab === key;
+            return (
+              <div key={key} className="flex items-center gap-2">
+                <button
+                  disabled={!available}
+                  onClick={() => onTabChange(key)}
+                  className={
+                    active
+                      ? "text-sm font-medium text-primary"
+                      : available
+                        ? "text-sm text-muted-foreground hover:text-foreground"
+                        : "cursor-not-allowed text-sm text-muted-foreground/40"
+                  }
+                >
+                  <span className="mr-1.5">{i + 1}.</span>
+                  {OUTLINE_STEP_LABELS[key]}
+                </button>
+                {i < OUTLINE_STEPS.length - 1 && (
+                  <div className="h-px w-8 bg-border" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OutlineContent({
+  activeTab,
+  world,
+  characters,
+  volumes,
+}: {
+  activeTab: OutlineStep;
+  world?: string;
+  characters?: string;
+  volumes: Array<{ title: string; chapters: Array<{ number: number; title: string; summary: string }> }>;
+}) {
+  if (activeTab === "worldView" && world) {
+    return (
+      <div className="md-body">
+        <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(world)}</Markdown>
+      </div>
+    );
+  }
+  if (activeTab === "characters" && characters) {
+    return (
+      <div className="md-body">
+        <Markdown remarkPlugins={[remarkGfm]}>{filterThinkTags(characters)}</Markdown>
+      </div>
+    );
+  }
+  if (activeTab === "outline" && volumes.length > 0) {
+    return (
+      <div className="space-y-3">
+        {volumes.map((vol, idx) => (
+          <div key={idx}>
+            <div className="mb-1.5 font-medium text-foreground">{vol.title}</div>
+            <div className="space-y-1 pl-4">
+              {vol.chapters.map((ch) => (
+                <div key={ch.number} className="text-sm text-muted-foreground">
+                  <span className="font-mono text-xs text-muted-foreground/70">
+                    {String(ch.number).padStart(3, "0")}.
+                  </span>{" "}
+                  {ch.title}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <p className="text-muted-foreground">暂无内容</p>;
 }

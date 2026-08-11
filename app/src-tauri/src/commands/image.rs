@@ -1,19 +1,12 @@
 use tauri::{Emitter, State};
 
+use super::{config_from_state, dir_from_state};
 use crate::domain::config::ImagePrompts;
 use crate::domain::types::NovelData;
+use crate::dto::{ImageProgressEvent, ImageResultDto, SceneDescriptionDto};
 use crate::error::Result;
 use crate::services::image;
 use crate::state::AppState;
-use super::{config_from_state, dir_from_state};
-
-#[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ImageProgressEvent {
-    pub stage: String,
-    pub message: String,
-    pub image_id: Option<String>,
-}
 
 async fn generate_image_common<F>(
     app: &tauri::AppHandle,
@@ -105,11 +98,11 @@ where
 pub async fn generate_cover(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
-) -> Result<image::ImageResult> {
+) -> Result<ImageResultDto> {
     let novel = crate::services::files::read_novel(&dir_from_state(&state)?)?;
     let title = novel.title.clone();
 
-    generate_image_common(
+    let result = generate_image_common(
         &app,
         &state,
         image::ImageKind::Cover,
@@ -120,7 +113,8 @@ pub async fn generate_cover(
         format!("正在为《{}》生成封面...", title),
         "封面生成完成".to_string(),
     )
-    .await
+    .await?;
+    Ok(result.into())
 }
 
 #[tauri::command]
@@ -129,22 +123,21 @@ pub async fn generate_character_image(
     state: State<'_, AppState>,
     character_name: String,
     character_desc: String,
-) -> Result<image::ImageResult> {
+) -> Result<ImageResultDto> {
     let name = character_name.clone();
     let desc = character_desc.clone();
 
-    generate_image_common(
+    let result = generate_image_common(
         &app,
         &state,
         image::ImageKind::Character,
         Some(character_name.clone()),
-        move |novel, prompts| {
-            image::build_character_prompt(prompts, &novel.title, &name, &desc)
-        },
+        move |novel, prompts| image::build_character_prompt(prompts, &novel.title, &name, &desc),
         format!("正在为角色「{}」生成立绘...", character_name),
         format!("角色「{}」立绘生成完成", character_name),
     )
-    .await
+    .await?;
+    Ok(result.into())
 }
 
 #[tauri::command]
@@ -154,7 +147,7 @@ pub async fn generate_scene_image(
     chapter_num: u32,
     scene_desc: String,
     mood: String,
-) -> Result<image::ImageResult> {
+) -> Result<ImageResultDto> {
     let dir = dir_from_state(&state)?;
     let chapter_title = crate::services::files::get_chapter_outline(&dir, chapter_num)?
         .unwrap_or_else(|| format!("第{}章", chapter_num));
@@ -163,32 +156,29 @@ pub async fn generate_scene_image(
     let sd = scene_desc.clone();
     let md = mood.clone();
 
-    generate_image_common(
+    let result = generate_image_common(
         &app,
         &state,
         image::ImageKind::Scene,
         Some(format!("ch{:03}", chapter_num)),
         |novel, prompts| {
-            image::build_scene_prompt(
-                prompts,
-                &novel.title,
-                chapter_num,
-                &chapter_title,
-                &sd,
-                &md,
-            )
+            image::build_scene_prompt(prompts, &novel.title, chapter_num, &chapter_title, &sd, &md)
         },
-        format!("正在为第{}章「{}」生成场景插图...", chapter_num, title_for_msg),
+        format!(
+            "正在为第{}章「{}」生成场景插图...",
+            chapter_num, title_for_msg
+        ),
         format!("第{}章场景插图生成完成", chapter_num),
     )
-    .await
+    .await?;
+    Ok(result.into())
 }
 
 #[tauri::command]
 pub async fn extract_scene_description(
     state: State<'_, AppState>,
     chapter_num: u32,
-) -> Result<image::SceneDescription> {
+) -> Result<SceneDescriptionDto> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
 
@@ -201,13 +191,17 @@ pub async fn extract_scene_description(
     let filename = format!("{:03}-{}.md", chapter_num, chapter.title);
     let (_, body) = crate::services::files::read_chapter(&dir, &filename)?;
 
-    image::extract_scene(&config, &body).await
+    let desc = image::extract_scene(&config, &body).await?;
+    Ok(desc.into())
 }
 
 #[tauri::command]
-pub fn list_images(state: State<'_, AppState>) -> Result<Vec<image::ImageResult>> {
+pub fn list_images(state: State<'_, AppState>) -> Result<Vec<ImageResultDto>> {
     let dir = dir_from_state(&state)?;
-    image::list_images(&dir)
+    Ok(image::list_images(&dir)?
+        .into_iter()
+        .map(Into::into)
+        .collect())
 }
 
 #[tauri::command]

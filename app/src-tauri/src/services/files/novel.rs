@@ -1,8 +1,11 @@
 use std::path::Path;
 
+use super::{
+    build_yaml_front_matter, next_h1_offset, novel_file, parse_yaml_front_matter,
+    read_file_content, write_file_atomic,
+};
 use crate::domain::types::NovelData;
 use crate::error::Result;
-use super::{build_yaml_front_matter, next_h1_offset, novel_file, parse_yaml_front_matter, read_file_content, write_file_atomic};
 
 pub fn write_novel(dir: &Path, data: &NovelData) -> Result<()> {
     let meta = serde_yaml::to_value(data)?;

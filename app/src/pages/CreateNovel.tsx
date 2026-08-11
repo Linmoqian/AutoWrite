@@ -1,59 +1,84 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { PenLine, AlertTriangle } from "lucide-react";
+import { createNovel } from "@/services/tauri";
+import { useAppStore } from "@/stores/app-store";
+import { useConfigStore } from "@/stores/config-store";
+import { GENRE_OPTIONS } from "@/lib/constants";
+import type { Prompts } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Form,
-  Input,
-  InputNumber,
   Select,
-  Button,
-  Card,
-  Modal,
-  message,
-  Tag,
-  Progress,
-  Collapse,
-} from "antd";
-import { createNovel } from "../services/tauri";
-import { useAppSelector, useAppDispatch } from "../store";
-import { refreshAll as refreshAllThunk } from "../store/appSlice";
-import type { Prompts } from "../types";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const genreOptions = [
-  { value: "xuanhuan", label: "玄幻" },
-  { value: "qihuan", label: "奇幻" },
-  { value: "wuxia", label: "武侠" },
-  { value: "xianxia", label: "仙侠" },
-  { value: "dushi", label: "都市" },
-  { value: "kehuan", label: "科幻" },
-  { value: "lishi", label: "历史" },
-  { value: "youxi", label: "游戏" },
-];
+const schema = z.object({
+  title: z.string().min(1, "请输入标题"),
+  genre: z.string().min(1, "请选择类型"),
+  theme: z.string().min(1, "请输入主题"),
+  chapters: z.number().min(10, "最少 10 章").max(1000, "最多 1000 章"),
+});
+
+type FormData = z.infer<typeof schema>;
 
 export default function CreateNovel() {
   const navigate = useNavigate();
-  const existingNovel = useAppSelector((s) => s.app.novelStatus);
-  const config = useAppSelector((s) => s.app.config);
-  const dispatch = useAppDispatch();
-  const refreshAll = () => dispatch(refreshAllThunk());
-
+  const existingNovel = useAppStore((s) => s.novelStatus);
+  const refreshStatus = useAppStore((s) => s.refreshStatus);
+  const config = useConfigStore((s) => s.config);
   const [loading, setLoading] = useState(false);
-  const [pendingValues, setPendingValues] = useState<{
-    title: string;
-    genre: string;
-    theme: string;
-    chapters: number;
-  } | null>(null);
+  const [pendingValues, setPendingValues] = useState<FormData | null>(null);
   const [prompts, setPrompts] = useState<Prompts | null>(null);
-  const [promptsExpanded, setPromptsExpanded] = useState(false);
+  const [promptsOpen, setPromptsOpen] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: "",
+      genre: "玄幻",
+      theme: "修仙",
+      chapters: 100,
+    },
+  });
+
+  const genreValue = watch("genre");
 
   useEffect(() => {
     if (config?.prompts) setPrompts(config.prompts);
   }, [config]);
 
-  const doCreate = async (
-    values: { title: string; genre: string; theme: string; chapters: number },
-    overwrite: boolean,
-  ) => {
+  const doCreate = async (values: FormData, overwrite: boolean) => {
     setLoading(true);
     try {
       await createNovel(
@@ -62,172 +87,215 @@ export default function CreateNovel() {
         values.theme,
         values.chapters,
         overwrite,
-        promptsExpanded ? prompts ?? undefined : undefined,
+        promptsOpen ? prompts ?? undefined : undefined,
       );
-      message.success("小说创建成功");
-      await refreshAll();
+      toast.success("小说创建成功");
+      await refreshStatus();
       navigate("/");
     } catch (e: unknown) {
       const msg = String(e);
       if (msg.includes("已有小说")) {
         setPendingValues(values);
       } else {
-        message.error(`创建失败: ${e}`);
+        toast.error(`创建失败: ${e}`);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const onFinish = async (values: {
-    title: string;
-    genre: string;
-    theme: string;
-    chapters: number;
-  }) => {
-    doCreate(values, false);
-  };
+  const onSubmit = (values: FormData) => doCreate(values, false);
 
-  const handleOverwrite = async () => {
+  const handleOverwrite = () => {
     if (!pendingValues) return;
     setPendingValues(null);
     doCreate(pendingValues, true);
   };
 
+  const progressPercent = existingNovel
+    ? existingNovel.totalChapters > 0
+      ? Math.round((existingNovel.writtenChapters / existingNovel.totalChapters) * 100)
+      : 0
+    : 0;
+
   return (
-    <div className="fade-in" style={{ maxWidth: 720, margin: "0 auto" }}>
+    <div className="fade-in mx-auto max-w-[720px]">
       <h1 className="page-title">创建新小说</h1>
+
       {existingNovel && (
         <Card
-          hoverable
-          style={{ marginBottom: 16, cursor: "pointer" }}
+          className="mb-4 cursor-pointer transition-colors hover:border-primary/30"
           onClick={() => navigate("/")}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <span style={{ fontWeight: 600, fontSize: 16 }}>
-                {existingNovel.novel.title}
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">
+                  {existingNovel.novel.title}
+                </span>
+                <Badge variant="secondary">{existingNovel.novel.genre}</Badge>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {existingNovel.novel.theme}
               </span>
-              <Tag color="gold" style={{ marginLeft: 8 }}>
-                {existingNovel.novel.genre}
-              </Tag>
             </div>
-            <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
-              {existingNovel.novel.theme}
-            </span>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <Progress
-              percent={Math.round(
-                existingNovel.total_chapters > 0
-                  ? (existingNovel.written_chapters / existingNovel.total_chapters) * 100
-                  : 0,
-              )}
-              size="small"
-              format={() =>
-                `${existingNovel.written_chapters} / ${existingNovel.total_chapters} 章`
-              }
-            />
-          </div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-muted)" }}>
-            点击查看详情
-          </div>
+            <div className="mt-3">
+              <Progress value={progressPercent} className="h-1.5" />
+              <div className="mt-1 text-right text-xs text-muted-foreground">
+                {existingNovel.writtenChapters} / {existingNovel.totalChapters} 章
+              </div>
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">点击查看详情</div>
+          </CardContent>
         </Card>
       )}
+
       <Card>
-        <Form
-          layout="vertical"
-          initialValues={{ genre: "xuanhuan", theme: "修仙", chapters: 100 }}
-          onFinish={onFinish}
-          requiredMark={false}
-        >
-          <Form.Item
-            name="title"
-            label="小说标题"
-            rules={[{ required: true, message: "请输入标题" }]}
-          >
-            <Input placeholder="如：逆天剑尊" />
-          </Form.Item>
-          <Form.Item name="genre" label="类型" rules={[{ required: true }]}>
-            <Select options={genreOptions} />
-          </Form.Item>
-          <Form.Item name="theme" label="主题" rules={[{ required: true }]}>
-            <Input placeholder="如：逆天改命、修仙" />
-          </Form.Item>
-          <Form.Item
-            name="chapters"
-            label="目标章节数"
-            rules={[{ required: true }]}
-          >
-            <InputNumber min={10} max={1000} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
+        <CardContent className="p-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">小说标题</Label>
+              <Input id="title" placeholder="如：逆天剑尊" {...register("title")} />
+              {errors.title && (
+                <p className="text-xs text-destructive">{errors.title.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>类型</Label>
+              <Select
+                value={genreValue}
+                onValueChange={(v: string) => setValue("genre", v, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENRE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.genre && (
+                <p className="text-xs text-destructive">{errors.genre.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="theme">主题</Label>
+              <Input id="theme" placeholder="如：逆天改命、修仙" {...register("theme")} />
+              {errors.theme && (
+                <p className="text-xs text-destructive">{errors.theme.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="chapters">目标章节数</Label>
+              <Input
+                id="chapters"
+                type="number"
+                min={10}
+                max={1000}
+                {...register("chapters", { valueAsNumber: true })}
+              />
+              {errors.chapters && (
+                <p className="text-xs text-destructive">{errors.chapters.message}</p>
+              )}
+            </div>
+
+            <Button type="submit" loading={loading} className="w-full">
+              <PenLine className="mr-1.5 h-4 w-4" />
               开始创作
             </Button>
-          </Form.Item>
-        </Form>
+          </form>
+        </CardContent>
       </Card>
 
       {prompts && (
-        <Card style={{ marginTop: 16 }}>
-          <Collapse
-            activeKey={promptsExpanded ? ["prompts"] : []}
-            onChange={(keys) => setPromptsExpanded(keys.includes("prompts"))}
-            items={[
-              {
-                key: "prompts",
-                label: "提示词模板（高级，可选自定义）",
-                children: (
-                  <>
-                    <Form.Item label="世界观提示词">
-                      <Input.TextArea
-                        rows={4}
-                        value={prompts.world}
-                        onChange={(e) => setPrompts({ ...prompts, world: e.target.value })}
-                      />
-                    </Form.Item>
-                    <Form.Item label="角色提示词">
-                      <Input.TextArea
-                        rows={4}
-                        value={prompts.character}
-                        onChange={(e) => setPrompts({ ...prompts, character: e.target.value })}
-                      />
-                    </Form.Item>
-                    <Form.Item label="大纲提示词">
-                      <Input.TextArea
-                        rows={4}
-                        value={prompts.outline}
-                        onChange={(e) => setPrompts({ ...prompts, outline: e.target.value })}
-                      />
-                    </Form.Item>
-                    <Form.Item label="章节提示词">
-                      <Input.TextArea
-                        rows={4}
-                        value={prompts.chapter}
-                        onChange={(e) => setPrompts({ ...prompts, chapter: e.target.value })}
-                      />
-                    </Form.Item>
-                  </>
-                ),
-              },
-            ]}
-          />
+        <Card className="mt-4">
+          <Collapsible open={promptsOpen} onOpenChange={setPromptsOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center justify-between p-4 text-left">
+                <span className="text-sm font-medium text-foreground">
+                  提示词模板（高级，可选自定义）
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {promptsOpen ? "收起" : "展开"}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <Separator />
+            <CollapsibleContent>
+              <div className="space-y-4 p-4">
+                <PromptField
+                  label="世界观提示词"
+                  value={prompts.worldView}
+                  onChange={(v) => setPrompts({ ...prompts, worldView: v })}
+                />
+                <PromptField
+                  label="角色提示词"
+                  value={prompts.characters}
+                  onChange={(v) => setPrompts({ ...prompts, characters: v })}
+                />
+                <PromptField
+                  label="大纲提示词"
+                  value={prompts.outline}
+                  onChange={(v) => setPrompts({ ...prompts, outline: v })}
+                />
+                <PromptField
+                  label="章节提示词"
+                  value={prompts.chapter}
+                  onChange={(v) => setPrompts({ ...prompts, chapter: v })}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       )}
 
-      <Modal
-        open={!!pendingValues}
-        title="目录下已有小说"
-        okText="覆盖并创建"
-        cancelText="取消"
-        okButtonProps={{ danger: true }}
-        onOk={handleOverwrite}
-        onCancel={() => setPendingValues(null)}
-      >
-        <p>当前目录下已经存在小说，覆盖后将丢失所有已有内容（大纲、章节、记忆等）。</p>
-        <p>建议先在设置中选择一个新目录，再创建新小说。</p>
-      </Modal>
+      <AlertDialog open={!!pendingValues} onOpenChange={(o: boolean) => !o && setPendingValues(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              目录下已有小说
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              当前目录下已经存在小说，覆盖后将丢失所有已有内容（大纲、章节、记忆等）。
+              <br />
+              建议先在设置中选择一个新目录，再创建新小说。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleOverwrite}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              覆盖并创建
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function PromptField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Textarea rows={4} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }

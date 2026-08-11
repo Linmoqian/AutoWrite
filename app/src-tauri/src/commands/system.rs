@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use tauri::{Manager, State};
 
+use super::config_from_state;
 use crate::domain::config::Provider;
 use crate::error::Result;
 use crate::state::AppState;
-use super::config_from_state;
 
 pub fn allow_image_assets(app: &tauri::AppHandle, dir: &std::path::Path) -> Result<()> {
     app.asset_protocol_scope()
@@ -14,10 +14,7 @@ pub fn allow_image_assets(app: &tauri::AppHandle, dir: &std::path::Path) -> Resu
 }
 
 #[tauri::command]
-pub async fn select_novel_dir(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<String> {
+pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
     use tauri_plugin_dialog::DialogExt;
     let file_path = app
         .dialog()
@@ -30,10 +27,7 @@ pub async fn select_novel_dir(
         .to_path_buf();
     let dir_str = dir.to_string_lossy().to_string();
     allow_image_assets(&app, &dir)?;
-    *state
-        .novel_dir
-        .lock()
-        .unwrap_or_else(|e| e.into_inner()) = Some(dir);
+    *state.novel_dir.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
     let config_path = state
         .config_path
         .lock()

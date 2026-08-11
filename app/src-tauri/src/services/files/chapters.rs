@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use super::{chapters_dir, parse_yaml_front_matter, read_file_content};
 use crate::domain::types::ChapterMeta;
 use crate::error::Result;
-use super::{chapters_dir, parse_yaml_front_matter, read_file_content};
 
 pub fn list_chapters(dir: &Path) -> Result<Vec<ChapterMeta>> {
     let ch_dir = chapters_dir(dir);
