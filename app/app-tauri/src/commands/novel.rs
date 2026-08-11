@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use autowrite_core::domain::util::map_step;
+use autowrite_core::progress::{OutlineStep, ProgressEvent};
 use tauri::{Emitter, Manager, State};
 
 use super::{config_from_state, dir_from_state};
@@ -7,6 +9,34 @@ use crate::domain::novel;
 use crate::dto::{ChapterContentDto, ChapterMetaDto, NovelStatusDto, OutlineGenerationStatusDto};
 use crate::error::Result;
 use crate::state::{AppState, OutlineGenerationStatus};
+
+/// IPC 事件载荷：大纲生成流式进度（ADR-009 §3.1.4，留在 app 侧）。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OutlineProgressEvent {
+    step: String,
+    chunk: String,
+    done: bool,
+}
+
+/// IPC 事件载荷：章节生成流式进度（ADR-009 §3.1.4，留在 app 侧）。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChapterProgressEvent {
+    chunk: String,
+    done: bool,
+}
+
+/// 把 core 的 OutlineStep 映射回后端内部步骤名（与提示词模板、AppState key 对齐）。
+/// AppState 的 streaming_text 用内部名（world/characters/outline）做 key，
+/// emit 事件再经 map_step 映射成前端契约值（worldView/characters/outline）。
+fn outline_step_internal(step: OutlineStep) -> &'static str {
+    match step {
+        OutlineStep::World => "world",
+        OutlineStep::Characters => "characters",
+        OutlineStep::Outline => "outline",
+    }
+}
 
 #[tauri::command]
 pub async fn create_novel(
@@ -35,10 +65,10 @@ pub async fn create_novel(
 }
 
 #[tauri::command]
-pub async fn generate_outline(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String> {
+pub async fn generate_outline(state: State<'_, AppState>) -> Result<String> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    novel::generate_outline_streaming(&dir, &config, &app).await
+    novel::generate_outline_streaming(&dir, &config).await
 }
 
 #[tauri::command]
@@ -71,24 +101,41 @@ pub async fn start_outline_generation(
     let app_for_task = app.clone();
     tauri::async_runtime::spawn(async move {
         let app_for_progress = app_for_task.clone();
+        // 注入闭包（ADR-009 §3.1.4）：core 产出中性的 ProgressEvent，
+        // 闭包内更新 AppState 并还原原 emit 语义。
         let result = novel::generate_outline_streaming_with_progress(
             &dir,
             &config,
-            &app_for_task,
             &target_step,
-            move |step, chunk, _done| {
-                let state = app_for_progress.state::<AppState>();
-                let mut status = state
-                    .outline_generation
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner());
-                status.current_step = Some(step.to_string());
-                if !chunk.is_empty() {
-                    status
-                        .streaming_text
-                        .entry(step.to_string())
-                        .or_default()
-                        .push_str(chunk);
+            move |ev: ProgressEvent| {
+                if let ProgressEvent::OutlineStep { step, chunk, done } = ev {
+                    let internal = outline_step_internal(step);
+                    let contract = map_step(internal);
+
+                    // 1. 更新 AppState（用内部步骤名做 streaming_text 的 key）
+                    let state = app_for_progress.state::<AppState>();
+                    let mut status = state
+                        .outline_generation
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    status.current_step = Some(internal.to_string());
+                    if !chunk.is_empty() {
+                        status
+                            .streaming_text
+                            .entry(internal.to_string())
+                            .or_default()
+                            .push_str(&chunk);
+                    }
+
+                    // 2. 还原原 emit（OutlineProgressEvent 用前端契约步骤名）
+                    let _ = app_for_progress.emit(
+                        "outline-progress",
+                        OutlineProgressEvent {
+                            step: contract.to_string(),
+                            chunk,
+                            done,
+                        },
+                    );
                 }
             },
         )
@@ -129,7 +176,16 @@ pub fn get_outline_generation_status(
 pub async fn generate_chapter(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<u32> {
     let dir = dir_from_state(&state)?;
     let config = config_from_state(&state)?;
-    crate::domain::chapter::generate_chapter_streaming(&dir, &config, &app).await
+    let app_for_emit = app.clone();
+    crate::domain::chapter::generate_chapter_streaming(&dir, &config, move |ev: ProgressEvent| {
+        if let ProgressEvent::ChapterChunk { chunk, done } = ev {
+            let _ = app_for_emit.emit(
+                "chapter-progress",
+                ChapterProgressEvent { chunk, done },
+            );
+        }
+    })
+    .await
 }
 
 #[tauri::command]

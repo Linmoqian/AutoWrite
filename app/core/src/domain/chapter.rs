@@ -1,47 +1,41 @@
 use chrono::Local;
-use tauri::Emitter;
 
 use crate::domain::config::{fill_template, AppConfig};
 use crate::domain::types::*;
 use crate::error::{AppError, Result};
-use crate::services::{ai, files};
+use crate::progress::ProgressEvent;
+use crate::services::ai;
+use crate::storage;
 
-#[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ChapterProgressEvent {
-    chunk: String,
-    done: bool,
-}
-
-pub async fn generate_chapter_streaming(
+pub async fn generate_chapter_streaming<F>(
     dir: &std::path::Path,
     config: &AppConfig,
-    app: &tauri::AppHandle,
-) -> Result<u32> {
-    let ctx = files::read_context(dir)?;
+    on_progress: F,
+) -> Result<u32>
+where
+    F: Fn(ProgressEvent) + Clone + Send + Sync + 'static,
+{
+    let ctx = storage::read_context(dir)?;
     let chapter_num = ctx.current_chapter + 1;
 
-    let novel = files::read_novel(dir)?;
-    let chapter_title = files::get_chapter_outline(dir, chapter_num)?
+    let novel = storage::read_novel(dir)?;
+    let chapter_title = storage::get_chapter_outline(dir, chapter_num)?
         .ok_or(AppError::OutlineMissing(chapter_num))?;
 
     let prompt = build_chapter_prompt(&ctx, chapter_num, &chapter_title, &novel, config);
 
-    let app_clone = app.clone();
+    let on_chunk = on_progress.clone();
     let content = ai::generate_streaming(config, &prompt, move |chunk| {
-        let _ = app_clone.emit(
-            "chapter-progress",
-            ChapterProgressEvent {
-                chunk: chunk.to_string(),
-                done: false,
-            },
-        );
+        on_chunk(ProgressEvent::ChapterChunk {
+            chunk: chunk.to_string(),
+            done: false,
+        });
         Ok(())
     })
     .await?;
 
     // Write chapter file
-    let ch_dir = files::chapters_dir(dir);
+    let ch_dir = storage::chapters_dir(dir);
     std::fs::create_dir_all(&ch_dir)?;
 
     let safe_title: String = chapter_title.chars().take(10).collect();
@@ -57,25 +51,19 @@ pub async fn generate_chapter_streaming(
         "---\n{}---\n\n# 第{}章 {}\n\n{}",
         meta_yaml, chapter_num, chapter_title, content
     );
-    files::write_file_atomic(&ch_dir.join(&filename), &file_content)?;
+    storage::write_file_atomic(&ch_dir.join(&filename), &file_content)?;
 
-    let _ = app.emit(
-        "chapter-progress",
-        ChapterProgressEvent {
-            chunk: "\n\n[正在提取叙事记忆...]".to_string(),
-            done: false,
-        },
-    );
+    on_progress(ProgressEvent::ChapterChunk {
+        chunk: "\n\n[正在提取叙事记忆...]".to_string(),
+        done: false,
+    });
 
     crate::domain::memory::update_memory(dir, config, chapter_num, &content).await?;
 
-    let _ = app.emit(
-        "chapter-progress",
-        ChapterProgressEvent {
-            chunk: String::new(),
-            done: true,
-        },
-    );
+    on_progress(ProgressEvent::ChapterChunk {
+        chunk: String::new(),
+        done: true,
+    });
 
     Ok(chapter_num)
 }

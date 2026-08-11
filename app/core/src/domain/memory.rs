@@ -5,7 +5,8 @@ use std::path::Path;
 use crate::domain::config::{fill_template, AppConfig};
 use crate::domain::types::*;
 use crate::error::Result;
-use crate::services::{ai, files};
+use crate::services::ai;
+use crate::storage;
 
 pub async fn update_memory(
     dir: &Path,
@@ -13,7 +14,7 @@ pub async fn update_memory(
     chapter_num: u32,
     content: &str,
 ) -> Result<()> {
-    let mut ctx = files::read_context(dir)?;
+    let mut ctx = storage::read_context(dir)?;
     let truncated = &content[..content.len().min(3000)];
 
     if let Ok(facts) = extract_facts(config, truncated).await {
@@ -33,7 +34,7 @@ pub async fn update_memory(
     update_tension(&mut ctx);
 
     ctx.current_chapter = chapter_num;
-    files::write_context(dir, &ctx)?;
+    storage::write_context(dir, &ctx)?;
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use autowrite_lib::domain::config::{fill_template, AppConfig, Prompts, Provider};
+use autowrite_core::domain::config::{fill_template, AppConfig, Prompts, Provider};
 use autowrite_lib::services::config::{load_config, save_config};
 
 fn temp_config_path() -> PathBuf {

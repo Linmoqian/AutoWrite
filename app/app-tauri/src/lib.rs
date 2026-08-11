@@ -1,9 +1,14 @@
 pub mod commands;
-pub mod domain;
 pub mod dto;
-pub mod error;
 pub mod services;
 pub mod state;
+
+// domain / error 已下沉至 autowrite-core（ADR-009）。这里以同名 re-export
+// 暴露，使 app 内既有的 `crate::domain::*` / `crate::error::*` 路径仍有效，
+// 最小化改动面。新增代码应直接 `use autowrite_core::...`。
+pub use autowrite_core::{domain, error};
+// core 顶层 re-export（types / config / novel / storage 等直接可用）
+pub use autowrite_core::*;
 
 use std::path::PathBuf;
 

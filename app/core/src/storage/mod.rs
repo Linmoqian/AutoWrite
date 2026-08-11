@@ -56,7 +56,7 @@ pub fn write_file_atomic(path: &Path, content: &str) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn parse_yaml_front_matter(content: &str) -> (serde_yaml::Value, String) {
+pub fn parse_yaml_front_matter(content: &str) -> (serde_yaml::Value, String) {
     if !content.starts_with("---\n") {
         return (serde_yaml::Value::Null, content.to_string());
     }

@@ -67,7 +67,7 @@ where
 }
 
 #[derive(Serialize)]
-pub(crate) struct Message {
+pub struct Message {
     pub role: String,
     pub content: String,
 }
