@@ -25,7 +25,7 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/app-tauri/**"],
     },
   },
 }));
