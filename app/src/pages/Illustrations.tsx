@@ -14,7 +14,8 @@ import {
   onImageProgress,
   saveConfig,
 } from "../services/tauri";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { refreshImages as refreshImagesThunk } from "../store/appSlice";
 import LoadingButton from "../components/LoadingButton";
 
 const { TextArea } = Input;
@@ -136,7 +137,11 @@ function ImageGallery({
 // ===== Main component =====
 
 export default function Illustrations() {
-  const { images, chapters, config, refreshImages } = useApp();
+  const images = useAppSelector((s) => s.app.images);
+  const chapters = useAppSelector((s) => s.app.chapters);
+  const config = useAppSelector((s) => s.app.config);
+  const dispatch = useAppDispatch();
+  const refreshImages = () => dispatch(refreshImagesThunk());
 
   // Cover
   const [coverLoading, setCoverLoading] = useState(false);

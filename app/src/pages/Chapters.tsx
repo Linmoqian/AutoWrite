@@ -12,7 +12,8 @@ import ChapterCard from "../components/ChapterCard";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { refreshChapters as refreshChaptersThunk } from "../store/appSlice";
 
 const { Text } = Typography;
 
@@ -33,7 +34,9 @@ const genState = {
 };
 
 export default function Chapters() {
-  const { chapters, refreshChapters } = useApp();
+  const chapters = useAppSelector((s) => s.app.chapters);
+  const dispatch = useAppDispatch();
+  const refreshChapters = () => dispatch(refreshChaptersThunk());
   const [selected, setSelected] = useState<ChapterContent | null>(null);
   const [generating, setGenerating] = useState(genState.active);
   const [generatingChapter, setGeneratingChapter] = useState<number | null>(

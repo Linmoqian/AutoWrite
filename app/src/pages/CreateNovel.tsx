@@ -14,7 +14,8 @@ import {
   Collapse,
 } from "antd";
 import { createNovel } from "../services/tauri";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { refreshAll as refreshAllThunk } from "../store/appSlice";
 import type { Prompts } from "../types";
 
 const genreOptions = [
@@ -30,7 +31,10 @@ const genreOptions = [
 
 export default function CreateNovel() {
   const navigate = useNavigate();
-  const { novelStatus: existingNovel, config, refreshAll } = useApp();
+  const existingNovel = useAppSelector((s) => s.app.novelStatus);
+  const config = useAppSelector((s) => s.app.config);
+  const dispatch = useAppDispatch();
+  const refreshAll = () => dispatch(refreshAllThunk());
 
   const [loading, setLoading] = useState(false);
   const [pendingValues, setPendingValues] = useState<{

@@ -11,7 +11,8 @@ import type { OutlineProgressEvent } from "../types";
 import LoadingButton from "../components/LoadingButton";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { refreshStatus as refreshStatusThunk } from "../store/appSlice";
 
 const { Text } = Typography;
 
@@ -30,7 +31,9 @@ function filterThinkTags(text: string): string {
 }
 
 export default function Outline() {
-  const { novelStatus, refreshStatus } = useApp();
+  const novelStatus = useAppSelector((s) => s.app.novelStatus);
+  const dispatch = useAppDispatch();
+  const refreshStatus = () => dispatch(refreshStatusThunk());
   const volumes = novelStatus?.outline ?? [];
   const world = novelStatus?.novel.world;
   const characters = novelStatus?.novel.characters;

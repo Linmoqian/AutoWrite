@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 
 import { saveConfig } from "../services/tauri";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { refreshConfig as refreshConfigThunk } from "../store/appSlice";
 
 import type { AppConfig, Provider } from "../types";
 import LoadingButton from "../components/LoadingButton";
@@ -27,7 +28,9 @@ const PROVIDER_PRESETS: Record<string, { label: string; model: string; url: stri
 };
 
 export default function Settings() {
-  const { config: contextConfig, refreshConfig } = useApp();
+  const contextConfig = useAppSelector((s) => s.app.config);
+  const dispatch = useAppDispatch();
+  const refreshConfig = () => dispatch(refreshConfigThunk());
   const [form] = Form.useForm<AppConfig>();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);

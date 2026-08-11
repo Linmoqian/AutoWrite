@@ -17,6 +17,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2",
     "antd": "^5.24.0",
@@ -25,6 +26,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "react-redux": "^9.3.0",
     "react-router-dom": "^7.1.0",
     "remark-gfm": "^4.0.1"
   },

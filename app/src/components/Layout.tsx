@@ -12,7 +12,8 @@ import {
   Download,
   Image as ImageIcon,
 } from "lucide-react";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector, useAppDispatch } from "../store";
+import { selectDir as selectDirThunk } from "../store/appSlice";
 
 const { Sider, Content, Header } = AntLayout;
 
@@ -33,7 +34,9 @@ const FULL_WIDTH_ROUTES = ["/chapters"];
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { novelDir: dir, selectDir } = useApp();
+  const dir = useAppSelector((s) => s.app.novelDir);
+  const dispatch = useAppDispatch();
+  const selectDir = () => dispatch(selectDirThunk());
 
   const [tourOpen, setTourOpen] = useState(false);
 

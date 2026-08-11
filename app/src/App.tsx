@@ -1,7 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider, theme } from "antd";
 import zhCN from "antd/locale/zh_CN";
-import { AppProvider } from "./contexts/AppContext";
+import { useEffect } from "react";
+import { Provider } from "react-redux";
+import { store, useAppDispatch } from "./store";
+import { refreshAll } from "./store/appSlice";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import CreateNovel from "./pages/CreateNovel";
@@ -11,9 +14,13 @@ import Illustrations from "./pages/Illustrations";
 import Export from "./pages/Export";
 import Settings from "./pages/Settings";
 
-export default function App() {
+function AppInner() {
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    dispatch(refreshAll());
+  }, [dispatch]);
+
   return (
-    <AppProvider>
     <ConfigProvider
       locale={zhCN}
       theme={{
@@ -63,6 +70,13 @@ export default function App() {
         </Layout>
       </BrowserRouter>
     </ConfigProvider>
-    </AppProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <Provider store={store}>
+      <AppInner />
+    </Provider>
   );
 }

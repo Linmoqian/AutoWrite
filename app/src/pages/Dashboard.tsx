@@ -10,7 +10,7 @@ import {
   Collapse,
 } from "antd";
 import { Book, FileText } from "lucide-react";
-import { useApp } from "../contexts/AppContext";
+import { useAppSelector } from "../store";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -18,7 +18,7 @@ const { Paragraph, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { novelStatus: status } = useApp();
+  const status = useAppSelector((s) => s.app.novelStatus);
 
   if (!status) {
     return <Empty description="请先选择小说目录并创建小说" />;
