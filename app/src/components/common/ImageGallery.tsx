@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2, Eye } from "lucide-react";
 import type { ImageResult } from "@/types";
-import { IMAGE_KIND_LABEL } from "@/services/tauri";
+import { IMAGE_KIND_LABEL, toDisplayImageUrl } from "@/services/tauri";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -69,7 +68,7 @@ function ImageCard({
   onDelete: (id: string) => void;
   onPreview: (src: string) => void;
 }) {
-  const src = convertFileSrc(image.filename);
+  const src = toDisplayImageUrl(image.filename);
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-border bg-muted">

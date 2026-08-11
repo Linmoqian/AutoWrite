@@ -3,7 +3,7 @@ use tauri::Emitter;
 
 use crate::domain::config::{fill_template, AppConfig};
 use crate::domain::types::*;
-use crate::dto::novel::map_step;
+use crate::domain::util::map_step;
 use crate::error::{AppError, Result};
 use crate::services::{ai, files};
 

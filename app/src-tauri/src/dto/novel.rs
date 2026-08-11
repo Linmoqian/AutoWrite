@@ -12,18 +12,8 @@ use crate::domain::novel::NovelStatus;
 use crate::domain::types::{
     ChapterEntry, ChapterMeta, ContextData, NovelData, Volume,
 };
+use crate::domain::util::map_step;
 use crate::state::OutlineGenerationStatus;
-
-/// 将后端内部大纲步骤名映射为前端 `OutlineStep` 契约值。
-///
-/// 前端 `OutlineStep = "worldView" | "characters" | "outline"`，
-/// 后端流式生成内部用 `"world"`。其余步骤（characters/outline）两端一致。
-pub fn map_step(s: &str) -> &str {
-    match s {
-        "world" => "worldView",
-        other => other,
-    }
-}
 
 /// IPC 视图：小说元数据。独立结构（不嵌入领域 `NovelData`），
 /// 做字段重命名与 `Option` 解包。

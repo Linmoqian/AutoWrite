@@ -20,13 +20,12 @@ pub fn save_config(state: State<'_, AppState>, config: AppConfigDto) -> Result<(
         .unwrap_or_else(|e| e.into_inner())
         .clone();
 
-    // 前端不感知 novel_dir（IPC 契约无该字段），保存时保留磁盘现有值，避免丢失。
-    let mut domain: AppConfig = config.into();
-    if domain.novel_dir.is_none() {
-        if let Ok(existing) = crate::services::config::load_config(&config_path) {
-            domain.novel_dir = existing.novel_dir;
-        }
-    }
+    // 先读取磁盘现有配置作为基底，再用 DTO 覆盖其暴露的字段子集。
+    // 这样 DTO 未涉及的字段（novel_dir / image_provider / image_prompts /
+    // prompts.extract_* 等）原样保留，避免用户手改的高级字段被重置为默认值。
+    let mut domain: AppConfig = crate::services::config::load_config(&config_path)
+        .unwrap_or_default();
+    config.apply_to(&mut domain);
 
     crate::services::config::save_config(&config_path, &domain)
 }

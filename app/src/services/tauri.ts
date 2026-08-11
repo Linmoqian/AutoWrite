@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppConfig,
@@ -233,3 +233,10 @@ export const IMAGE_KIND_LABEL: Record<ImageKind, string> = {
   character: "角色",
   scene: "场景",
 };
+
+// ── 图片显示 URL 转换（IPC 单一入口约束）──
+// 将本地磁盘路径转为 Tauri 可在 <img src> 中加载的 asset URL。
+// 组件不应直接调用 @tauri-apps/api/core 的 convertFileSrc，统一走此封装。
+export function toDisplayImageUrl(localPath: string): string {
+  return convertFileSrc(localPath);
+}

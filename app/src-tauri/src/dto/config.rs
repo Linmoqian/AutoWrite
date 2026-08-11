@@ -117,20 +117,37 @@ impl From<AppConfig> for AppConfigDto {
     }
 }
 
-impl From<AppConfigDto> for AppConfig {
-    /// 反向映射。注意：novel_dir / image_prompts / image_provider 不在此覆盖，
-    /// 命令层在反序列化后注入 novel_dir，其余保持 `AppConfig::default()` 的值。
-    fn from(d: AppConfigDto) -> Self {
-        let prompts = crate::domain::config::Prompts {
-            world: d.prompts.world_view,
-            character: d.prompts.characters,
-            outline: d.prompts.outline,
-            chapter: d.prompts.chapter,
-            ..crate::domain::config::Prompts::default()
-        };
+impl AppConfigDto {
+    /// 将 DTO 暴露的字段子集合并覆盖到现有领域配置上。
+    ///
+    /// 用于 `save_config`：以磁盘现有配置为基底，仅覆盖前端可编辑的字段，
+    /// DTO 未涉及的字段（`novel_dir` / `image_provider` / `image_prompts` /
+    /// `prompts.extract_*` 等）原样保留，避免用户手改的高级字段被重置。
+    ///
+    /// 注意：这取代了原先 `From<AppConfigDto> for AppConfig` 的"全量反向映射"
+    /// 语义——后者会把未暴露字段清空，存在静默丢字段风险，故移除。
+    pub fn apply_to(self, domain: &mut crate::domain::config::AppConfig) {
+        domain.provider = self.provider;
+        domain.model = self.openai.model;
+        domain.ollama_model = self.ollama.model;
+        domain.timeout = self.openai.timeout;
+        domain.ollama_url = self.ollama.api_url;
+        domain.num_ctx = self.ollama.num_ctx;
+        domain.api_base_url = self.openai.api_url;
+        domain.api_key = self.openai.api_key;
 
-        let loras = LoraConfig {
-            entries: d
+        // 仅覆盖前端编辑的 4 个提示词，保留 extract_* 等高级字段。
+        domain.prompts.world = self.prompts.world_view;
+        domain.prompts.character = self.prompts.characters;
+        domain.prompts.outline = self.prompts.outline;
+        domain.prompts.chapter = self.prompts.chapter;
+
+        domain.image_model = self.image.model;
+        domain.image_api_base_url = self.image.api_url;
+        domain.image_api_key = self.image.api_token;
+        domain.image_size = self.image.size;
+        domain.image_loras = LoraConfig {
+            entries: self
                 .image
                 .loras
                 .into_iter()
@@ -140,27 +157,6 @@ impl From<AppConfigDto> for AppConfig {
                 })
                 .collect(),
         };
-
-        Self {
-            // novel_dir 不覆盖：调用方负责注入。
-            novel_dir: None,
-            provider: d.provider,
-            model: d.openai.model,
-            ollama_model: d.ollama.model,
-            timeout: d.openai.timeout,
-            ollama_url: d.ollama.api_url,
-            num_ctx: d.ollama.num_ctx,
-            api_base_url: d.openai.api_url,
-            api_key: d.openai.api_key,
-            prompts,
-            // image_provider / image_prompts 保持默认。
-            image_provider: crate::domain::config::ImageProvider::ModelScope,
-            image_model: d.image.model,
-            image_api_base_url: d.image.api_url,
-            image_api_key: d.image.api_token,
-            image_size: d.image.size,
-            image_prompts: crate::domain::config::ImagePrompts::default(),
-            image_loras: loras,
-        }
+        // novel_dir / image_provider / image_prompts 保持基底原值，不动。
     }
 }
