@@ -3,12 +3,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use crate::ai;
-use crate::config::{AppConfig, ImagePrompts};
+use crate::domain::config::{AppConfig, ImagePrompts, LoraConfig};
 use crate::error::{AppError, Result};
-use crate::files;
-
-// ===== 公开数据结构 =====
+use crate::services::{ai, files};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -37,8 +34,6 @@ pub struct SceneDescription {
     pub scene_desc: String,
     pub mood: String,
 }
-
-// ===== ModelScope Z-Image API 类型 =====
 
 #[derive(Serialize)]
 struct ModelScopeImageRequest {
@@ -69,7 +64,7 @@ fn normalize_base_url(base_url: &str) -> String {
     base_url.trim().trim_end_matches('/').to_string()
 }
 
-fn serialize_loras(config: &crate::config::LoraConfig) -> Result<Option<serde_json::Value>> {
+fn serialize_loras(config: &LoraConfig) -> Result<Option<serde_json::Value>> {
     if config.entries.is_empty() {
         return Ok(None);
     }
@@ -100,10 +95,8 @@ fn serialize_loras(config: &crate::config::LoraConfig) -> Result<Option<serde_js
     Ok(Some(serde_json::Value::Object(map)))
 }
 
-// ===== Prompt 构建 =====
-
 pub fn build_cover_prompt(prompts: &ImagePrompts, title: &str, genre: &str, theme: &str) -> String {
-    crate::config::fill_template(
+    crate::domain::config::fill_template(
         &prompts.cover,
         &[
             ("title", title),
@@ -120,7 +113,7 @@ pub fn build_character_prompt(
     name: &str,
     desc: &str,
 ) -> String {
-    crate::config::fill_template(
+    crate::domain::config::fill_template(
         &prompts.character_image,
         &[
             ("title", title),
@@ -139,7 +132,7 @@ pub fn build_scene_prompt(
     scene_desc: &str,
     mood: &str,
 ) -> String {
-    crate::config::fill_template(
+    crate::domain::config::fill_template(
         &prompts.scene,
         &[
             ("title", title),
@@ -151,8 +144,6 @@ pub fn build_scene_prompt(
         ],
     )
 }
-
-// ===== 图片生成 =====
 
 pub async fn generate_image<F>(
     config: &AppConfig,
@@ -182,7 +173,7 @@ where
         loras,
     };
 
-    // Phase 1: 提交异步任务
+    // Phase 1: submit async task
     on_status("正在提交图片生成任务...");
     let url = format!("{}/v1/images/generations", base_url);
 
@@ -229,7 +220,7 @@ where
 
     on_status(&format!("任务已提交，等待生成 (ID: {})", task_id));
 
-    // Phase 2: 轮询任务状态
+    // Phase 2: poll task status
     let poll_url = format!("{}/v1/tasks/{}", base_url, task_id);
     let poll_interval = Duration::from_secs(3);
     let max_poll_duration = Duration::from_secs(config.timeout);
@@ -265,10 +256,9 @@ where
                 let urls = task_resp
                     .output_images
                     .ok_or_else(|| AppError::Image("任务成功但未返回图片".to_string()))?;
-                break urls
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| AppError::Image("任务成功但图片列表为空".to_string()))?;
+                break urls.into_iter().next().ok_or_else(|| {
+                    AppError::Image("任务成功但图片列表为空".to_string())
+                })?;
             }
             "FAILED" => {
                 let reason = task_resp
@@ -284,60 +274,11 @@ where
         }
     };
 
-    // Phase 3: 下载图片
+    // Phase 3: download
     on_status("图片已生成，正在下载...");
     let bytes = download_image(&client, &image_url).await?;
 
     Ok(GeneratedImageData { bytes })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::{LoraConfig, LoraEntry};
-
-    #[test]
-    fn normalize_base_url_removes_trailing_slash() {
-        assert_eq!(
-            normalize_base_url("https://api-inference.modelscope.cn/"),
-            "https://api-inference.modelscope.cn"
-        );
-    }
-
-    #[test]
-    fn serialize_single_lora_without_weight_as_string() {
-        let value = serialize_loras(&LoraConfig {
-            entries: vec![LoraEntry {
-                name: "user/lora".to_string(),
-                weight: None,
-            }],
-        })
-        .unwrap();
-
-        assert_eq!(
-            value,
-            Some(serde_json::Value::String("user/lora".to_string()))
-        );
-    }
-
-    #[test]
-    fn serialize_multiple_loras_requires_weight_sum_one() {
-        let err = serialize_loras(&LoraConfig {
-            entries: vec![
-                LoraEntry {
-                    name: "user/a".to_string(),
-                    weight: Some(0.7),
-                },
-                LoraEntry {
-                    name: "user/b".to_string(),
-                    weight: Some(0.4),
-                },
-            ],
-        })
-        .unwrap_err();
-
-        assert!(err.to_string().contains("权重总和必须为 1.0"));
-    }
 }
 
 async fn download_image(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
@@ -352,11 +293,9 @@ async fn download_image(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> 
     Ok(bytes.to_vec())
 }
 
-// ===== 场景描述提取 =====
-
 pub async fn extract_scene(config: &AppConfig, chapter_text: &str) -> Result<SceneDescription> {
     let truncated = &chapter_text[..chapter_text.len().min(3000)];
-    let prompt = crate::config::fill_template(
+    let prompt = crate::domain::config::fill_template(
         &config.image_prompts.extract_scene,
         &[("content", truncated)],
     );
@@ -375,8 +314,6 @@ pub async fn extract_scene(config: &AppConfig, chapter_text: &str) -> Result<Sce
 
     Ok(desc)
 }
-
-// ===== 图片存储 =====
 
 pub fn images_dir(dir: &Path) -> PathBuf {
     dir.join("images")
@@ -445,7 +382,56 @@ pub fn delete_image(dir: &Path, image_id: &str) -> Result<()> {
 pub fn generate_id() -> String {
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
     format!("{:x}", ts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::config::{LoraConfig, LoraEntry};
+
+    #[test]
+    fn normalize_base_url_removes_trailing_slash() {
+        assert_eq!(
+            normalize_base_url("https://api-inference.modelscope.cn/"),
+            "https://api-inference.modelscope.cn"
+        );
+    }
+
+    #[test]
+    fn serialize_single_lora_without_weight_as_string() {
+        let value = serialize_loras(&LoraConfig {
+            entries: vec![LoraEntry {
+                name: "user/lora".to_string(),
+                weight: None,
+            }],
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            Some(serde_json::Value::String("user/lora".to_string()))
+        );
+    }
+
+    #[test]
+    fn serialize_multiple_loras_requires_weight_sum_one() {
+        let err = serialize_loras(&LoraConfig {
+            entries: vec![
+                LoraEntry {
+                    name: "user/a".to_string(),
+                    weight: Some(0.7),
+                },
+                LoraEntry {
+                    name: "user/b".to_string(),
+                    weight: Some(0.4),
+                },
+            ],
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("权重总和必须为 1.0"));
+    }
 }

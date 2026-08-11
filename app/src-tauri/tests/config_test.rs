@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use autowrite_lib::config::{self, AppConfig, Provider};
+use autowrite_lib::domain::config::{AppConfig, Provider, Prompts, fill_template};
+use autowrite_lib::services::config::{load_config, save_config};
 
 fn temp_config_path() -> PathBuf {
     let dir = std::env::temp_dir().join("autowrite-test-config");
@@ -30,12 +31,12 @@ fn save_and_load_roundtrip() {
         ollama_url: "http://localhost:11434".to_string(),
         api_base_url: "https://api.openai.com".to_string(),
         api_key: "sk-test-key-12345".to_string(),
-        prompts: config::Prompts::default(),
+        prompts: Prompts::default(),
         ..AppConfig::default()
     };
 
-    config::save_config(&path, &original).unwrap();
-    let loaded = config::load_config(&path).unwrap();
+    save_config(&path, &original).unwrap();
+    let loaded = load_config(&path).unwrap();
 
     assert_eq!(loaded.novel_dir, original.novel_dir);
     assert_eq!(loaded.provider, original.provider);
@@ -52,7 +53,7 @@ fn load_missing_file_returns_default() {
     let path = std::env::temp_dir()
         .join("autowrite-test-nonexistent")
         .join("missing.yaml");
-    let config = config::load_config(&path).unwrap();
+    let config = load_config(&path).unwrap();
     assert_eq!(config.provider, Provider::OpenAI);
 }
 
@@ -74,7 +75,7 @@ timeout: 120
 
 #[test]
 fn fill_template_replaces_variables() {
-    let result = config::fill_template(
+    let result = fill_template(
         "Hello {name}, welcome to {place}!",
         &[("name", "World"), ("place", "Rust")],
     );

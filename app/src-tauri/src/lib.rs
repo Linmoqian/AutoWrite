@@ -1,16 +1,12 @@
-pub mod ai;
 pub mod commands;
-pub mod config;
+pub mod domain;
 pub mod error;
-pub mod export;
-pub mod files;
-pub mod image;
-pub mod novel;
+pub mod services;
+pub mod state;
 
 use std::path::PathBuf;
-use std::sync::Mutex;
 
-use commands::AppState;
+use state::AppState;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -20,7 +16,7 @@ use tauri::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let config_path = dirs_config_path();
-    let saved_dir = config::load_config(&config_path)
+    let saved_dir = services::config::load_config(&config_path)
         .ok()
         .and_then(|c| c.novel_dir)
         .map(PathBuf::from);
@@ -29,40 +25,40 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
-            novel_dir: Mutex::new(saved_dir),
-            config_path: Mutex::new(config_path),
-            outline_generation: Mutex::new(Default::default()),
+            novel_dir: std::sync::Mutex::new(saved_dir),
+            config_path: std::sync::Mutex::new(config_path),
+            outline_generation: std::sync::Mutex::new(Default::default()),
         })
         .invoke_handler(tauri::generate_handler![
-            commands::select_novel_dir,
-            commands::get_novel_dir,
-            commands::create_novel,
-            commands::generate_outline,
-            commands::start_outline_generation,
-            commands::get_outline_generation_status,
-            commands::generate_chapter,
-            commands::get_status,
-            commands::list_chapters,
-            commands::read_chapter,
-            commands::load_config,
-            commands::save_config,
-            commands::test_ai_connection,
-            commands::ollama_list_models,
-            commands::ollama_test_connection,
-            commands::get_export_data,
-            commands::export_novel,
-            commands::save_export_file,
-            commands::generate_cover,
-            commands::generate_character_image,
-            commands::generate_scene_image,
-            commands::extract_scene_description,
-            commands::list_images,
-            commands::delete_image,
-            commands::get_image_path,
+            commands::system::select_novel_dir,
+            commands::system::get_novel_dir,
+            commands::novel::create_novel,
+            commands::novel::generate_outline,
+            commands::novel::start_outline_generation,
+            commands::novel::get_outline_generation_status,
+            commands::novel::generate_chapter,
+            commands::novel::get_status,
+            commands::novel::list_chapters,
+            commands::novel::read_chapter,
+            commands::config::load_config,
+            commands::config::save_config,
+            commands::system::test_ai_connection,
+            commands::config::ollama_list_models,
+            commands::config::ollama_test_connection,
+            commands::export::get_export_data,
+            commands::export::export_novel,
+            commands::export::save_export_file,
+            commands::image::generate_cover,
+            commands::image::generate_character_image,
+            commands::image::generate_scene_image,
+            commands::image::extract_scene_description,
+            commands::image::list_images,
+            commands::image::delete_image,
+            commands::image::get_image_path,
         ])
         .setup(move |app| {
             if let Some(dir) = saved_dir_for_setup.as_ref() {
-                commands::allow_image_assets(app.handle(), dir)?;
+                commands::system::allow_image_assets(app.handle(), dir)?;
             }
 
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;

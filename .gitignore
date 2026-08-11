@@ -6,7 +6,8 @@ CLAUDE.md
 
 # 依赖
 node_modules/
-
+# 测试小说
+test-novel/
 # 构建产物
 dist/
 
@@ -16,6 +17,12 @@ dist/
 *.swp
 *.swo
 *~
+
+# ZCode 代理本地文件
+.zcode/
+
+# Tauri 自动生成的 schema
+app/src-tauri/gen/
 
 # 敏感数据
 data/novels/

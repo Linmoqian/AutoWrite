@@ -1,7 +1,8 @@
 use std::path::Path;
 
+use crate::domain::types::{NovelData, Volume};
 use crate::error::Result;
-use crate::files::{self, NovelData, Volume};
+use crate::services::files;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,7 +46,6 @@ pub fn collect_export_data(dir: &Path) -> Result<ExportData> {
 pub fn render_markdown(data: &ExportData) -> String {
     let mut parts = Vec::new();
 
-    // 标题页
     parts.push(format!("# {}\n", data.novel.title));
     parts.push(format!(
         "> {} | {} | {}章\n",
@@ -65,7 +65,6 @@ pub fn render_markdown(data: &ExportData) -> String {
         parts.push(characters.clone());
     }
 
-    // 目录
     if !data.outline.is_empty() {
         parts.push(String::new());
         parts.push("---\n".to_string());
@@ -79,7 +78,6 @@ pub fn render_markdown(data: &ExportData) -> String {
         }
     }
 
-    // 章节正文
     for chapter in &data.chapters {
         parts.push(String::new());
         parts.push("---\n".to_string());
@@ -119,7 +117,6 @@ fn strip_markdown(text: &str) -> String {
         result.push_str(&processed);
         result.push('\n');
     }
-    // 压缩连续空行
     while result.contains("\n\n\n") {
         result = result.replace("\n\n\n", "\n\n");
     }
@@ -128,35 +125,32 @@ fn strip_markdown(text: &str) -> String {
 
 fn strip_formatting(text: &str) -> String {
     let s = text.to_string();
-    // 去除粗体 **text**
-    let s = regex_simple_bold(&s);
-    // 去除斜体 *text*
-    let s = regex_simple_italic(&s);
-    // 去除行内代码 `text`
-    let s = regex_simple_code(&s);
-    s
+    let s = strip_pairs(&s, "**");
+    let s = strip_pairs(&s, "`");
+    strip_single_asterisk(&s)
 }
 
-fn regex_simple_bold(text: &str) -> String {
+fn strip_pairs(text: &str, delim: &str) -> String {
     let mut result = String::new();
     let chars: Vec<char> = text.chars().collect();
+    let delim_chars: Vec<char> = delim.chars().collect();
+    let dlen = delim_chars.len();
     let mut i = 0;
     while i < chars.len() {
-        if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
-            // 找结束 **
-            let start = i + 2;
+        if i + dlen <= chars.len() && chars[i..i + dlen] == delim_chars[..] {
+            let start = i + dlen;
             let mut end = start;
-            while end + 1 < chars.len() {
-                if chars[end] == '*' && chars[end + 1] == '*' {
+            while end + dlen <= chars.len() {
+                if chars[end..end + dlen] == delim_chars[..] {
                     break;
                 }
                 end += 1;
             }
-            if end + 1 < chars.len() {
+            if end + dlen <= chars.len() {
                 for &c in &chars[start..end] {
                     result.push(c);
                 }
-                i = end + 2;
+                i = end + dlen;
             } else {
                 result.push(chars[i]);
                 i += 1;
@@ -169,7 +163,7 @@ fn regex_simple_bold(text: &str) -> String {
     result
 }
 
-fn regex_simple_italic(text: &str) -> String {
+fn strip_single_asterisk(text: &str) -> String {
     let mut result = String::new();
     let chars: Vec<char> = text.chars().collect();
     let mut i = 0;
@@ -181,34 +175,6 @@ fn regex_simple_italic(text: &str) -> String {
                 if chars[end] == '*' && (end + 1 >= chars.len() || chars[end + 1] != '*') {
                     break;
                 }
-                end += 1;
-            }
-            if end < chars.len() {
-                for &c in &chars[start..end] {
-                    result.push(c);
-                }
-                i = end + 1;
-            } else {
-                result.push(chars[i]);
-                i += 1;
-            }
-        } else {
-            result.push(chars[i]);
-            i += 1;
-        }
-    }
-    result
-}
-
-fn regex_simple_code(text: &str) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let mut i = 0;
-    while i < chars.len() {
-        if chars[i] == '`' {
-            let start = i + 1;
-            let mut end = start;
-            while end < chars.len() && chars[end] != '`' {
                 end += 1;
             }
             if end < chars.len() {

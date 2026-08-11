@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use autowrite_lib::config::{self, AppConfig, Provider};
-use autowrite_lib::files;
-use autowrite_lib::novel;
+use autowrite_lib::domain::config::{AppConfig, Provider, Prompts, fill_template};
+use autowrite_lib::domain::types::ChapterMeta;
+use autowrite_lib::services::files;
+use autowrite_lib::domain::novel;
 
 fn setup_test_env() -> (PathBuf, AppConfig) {
     let api_key =
@@ -21,7 +22,7 @@ fn setup_test_env() -> (PathBuf, AppConfig) {
         ollama_url: "http://localhost:11434".to_string(),
         api_base_url: "https://api.deepseek.com".to_string(),
         api_key,
-        prompts: config::Prompts::default(),
+        prompts: Prompts::default(),
         ..AppConfig::default()
     };
 
@@ -84,11 +85,11 @@ async fn full_flow_create_outline_and_chapter() {
 
     // ─── Step 2: 生成世界观 ───
     step("调用 AI 生成世界观...", "run");
-    let world_prompt = config::fill_template(
+    let world_prompt = fill_template(
         &config.prompts.world,
         &[("genre", "xuanhuan"), ("theme", "逆天改命")],
     );
-    let world = autowrite_lib::ai::generate(&config, &world_prompt)
+    let world = autowrite_lib::services::ai::generate(&config, &world_prompt)
         .await
         .expect("生成世界观失败，请检查 API Key 和网络");
     assert!(!world.is_empty(), "世界观内容为空");
@@ -100,8 +101,8 @@ async fn full_flow_create_outline_and_chapter() {
 
     // ─── Step 3: 生成角色 ───
     step("调用 AI 生成角色...", "run");
-    let char_prompt = config::fill_template(&config.prompts.character, &[("world", &world)]);
-    let characters = autowrite_lib::ai::generate(&config, &char_prompt)
+    let char_prompt = fill_template(&config.prompts.character, &[("world", world.as_str())]);
+    let characters = autowrite_lib::services::ai::generate(&config, &char_prompt)
         .await
         .expect("生成角色失败");
     assert!(!characters.is_empty(), "角色内容为空");
@@ -113,15 +114,15 @@ async fn full_flow_create_outline_and_chapter() {
 
     // ─── Step 4: 生成大纲 ───
     step("调用 AI 生成大纲...", "run");
-    let outline_prompt = config::fill_template(
+    let outline_prompt = fill_template(
         &config.prompts.outline,
         &[
-            ("world", &world),
-            ("characters", &characters),
+            ("world", world.as_str()),
+            ("characters", characters.as_str()),
             ("total_chapters", "5"),
         ],
     );
-    let outline_text = autowrite_lib::ai::generate(&config, &outline_prompt)
+    let outline_text = autowrite_lib::services::ai::generate(&config, &outline_prompt)
         .await
         .expect("生成大纲失败");
     assert!(!outline_text.is_empty(), "大纲内容为空");
@@ -154,7 +155,7 @@ async fn full_flow_create_outline_and_chapter() {
         .expect("第 1 章大纲缺失");
     step(&format!("章节标题: {}", chapter_title), "ok");
 
-    let chapter_prompt = config::fill_template(
+    let chapter_prompt = fill_template(
         &config.prompts.chapter,
         &[
             ("genre", "xuanhuan"),
@@ -173,7 +174,7 @@ async fn full_flow_create_outline_and_chapter() {
         ],
     );
 
-    let content = autowrite_lib::ai::generate(&config, &chapter_prompt)
+    let content = autowrite_lib::services::ai::generate(&config, &chapter_prompt)
         .await
         .expect("生成章节失败");
     assert!(content.len() > 200, "章节内容过短");
@@ -186,7 +187,7 @@ async fn full_flow_create_outline_and_chapter() {
     let filename = format!("001-{}.md", safe_title);
 
     use chrono::Local;
-    let meta = files::ChapterMeta {
+    let meta = ChapterMeta {
         chapter: 1,
         title: chapter_title.clone(),
         words: content.len() as u32,
@@ -255,7 +256,7 @@ async fn ai_generate_smoke_test() {
         ..AppConfig::default()
     };
 
-    let result = autowrite_lib::ai::generate(&config, "请用一句话回答：1+1等于几？")
+    let result = autowrite_lib::services::ai::generate(&config, "请用一句话回答：1+1等于几？")
         .await
         .expect("AI 调用失败");
 
@@ -280,7 +281,7 @@ async fn ai_streaming_test() {
 
     let chunks = AtomicU32::new(0);
     let result =
-        autowrite_lib::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
+        autowrite_lib::services::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
             chunks.fetch_add(1, Ordering::Relaxed);
             Ok(())
         })
