@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: novel-app/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -44,14 +44,14 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
-        working-directory: novel-app
+        working-directory: app
 
       - name: Build and publish Tauri bundles
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: novel-app
+          projectPath: app
           tagName: ${{ github.ref_name }}
           releaseName: AutoWrite ${{ github.ref_name }}
           releaseBody: V1.0 正式版发布，包含桌面端安装包（Windows/macOS）。

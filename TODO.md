@@ -16,3 +16,9 @@
 
 [x] 接入工程规范（docs/development/ + skills/，源：lin-workflow）
 [x] 回切 Rust 后端，移除 Node.js server 层
+
+[x] 阶段 1：根目录 novel-app/ 重命名为 app/，Rust lib 改名 autowrite_lib
+[ ] 阶段 2：Rust 后端结构化拆分
+[ ] 阶段 3：前端工程化基础设施
+[ ] 阶段 4：前端架构迁移
+[ ] 阶段 5：CI workflow + 文档更新 + 收尾

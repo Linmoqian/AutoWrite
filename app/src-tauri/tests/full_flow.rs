@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use novel_app_lib::config::{self, AppConfig, Provider};
-use novel_app_lib::files;
-use novel_app_lib::novel;
+use autowrite_lib::config::{self, AppConfig, Provider};
+use autowrite_lib::files;
+use autowrite_lib::novel;
 
 fn setup_test_env() -> (PathBuf, AppConfig) {
     let api_key =
         std::env::var("NOVEL_API_KEY").expect("请设置环境变量 NOVEL_API_KEY（DeepSeek API Key）");
 
-    let dir = std::env::temp_dir().join("novel-app-test-full-flow");
+    let dir = std::env::temp_dir().join("autowrite-test-full-flow");
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
 
@@ -88,7 +88,7 @@ async fn full_flow_create_outline_and_chapter() {
         &config.prompts.world,
         &[("genre", "xuanhuan"), ("theme", "逆天改命")],
     );
-    let world = novel_app_lib::ai::generate(&config, &world_prompt)
+    let world = autowrite_lib::ai::generate(&config, &world_prompt)
         .await
         .expect("生成世界观失败，请检查 API Key 和网络");
     assert!(!world.is_empty(), "世界观内容为空");
@@ -101,7 +101,7 @@ async fn full_flow_create_outline_and_chapter() {
     // ─── Step 3: 生成角色 ───
     step("调用 AI 生成角色...", "run");
     let char_prompt = config::fill_template(&config.prompts.character, &[("world", &world)]);
-    let characters = novel_app_lib::ai::generate(&config, &char_prompt)
+    let characters = autowrite_lib::ai::generate(&config, &char_prompt)
         .await
         .expect("生成角色失败");
     assert!(!characters.is_empty(), "角色内容为空");
@@ -121,7 +121,7 @@ async fn full_flow_create_outline_and_chapter() {
             ("total_chapters", "5"),
         ],
     );
-    let outline_text = novel_app_lib::ai::generate(&config, &outline_prompt)
+    let outline_text = autowrite_lib::ai::generate(&config, &outline_prompt)
         .await
         .expect("生成大纲失败");
     assert!(!outline_text.is_empty(), "大纲内容为空");
@@ -173,7 +173,7 @@ async fn full_flow_create_outline_and_chapter() {
         ],
     );
 
-    let content = novel_app_lib::ai::generate(&config, &chapter_prompt)
+    let content = autowrite_lib::ai::generate(&config, &chapter_prompt)
         .await
         .expect("生成章节失败");
     assert!(content.len() > 200, "章节内容过短");
@@ -255,7 +255,7 @@ async fn ai_generate_smoke_test() {
         ..AppConfig::default()
     };
 
-    let result = novel_app_lib::ai::generate(&config, "请用一句话回答：1+1等于几？")
+    let result = autowrite_lib::ai::generate(&config, "请用一句话回答：1+1等于几？")
         .await
         .expect("AI 调用失败");
 
@@ -280,7 +280,7 @@ async fn ai_streaming_test() {
 
     let chunks = AtomicU32::new(0);
     let result =
-        novel_app_lib::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
+        autowrite_lib::ai::generate_streaming(&config, "用一句话描述春天", |_chunk| {
             chunks.fetch_add(1, Ordering::Relaxed);
             Ok(())
         })

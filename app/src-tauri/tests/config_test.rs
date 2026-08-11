@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use novel_app_lib::config::{self, AppConfig, Provider};
+use autowrite_lib::config::{self, AppConfig, Provider};
 
 fn temp_config_path() -> PathBuf {
-    let dir = std::env::temp_dir().join("novel-app-test-config");
+    let dir = std::env::temp_dir().join("autowrite-test-config");
     let _ = std::fs::create_dir_all(&dir);
     dir.join("config.yaml")
 }
@@ -50,7 +50,7 @@ fn save_and_load_roundtrip() {
 #[test]
 fn load_missing_file_returns_default() {
     let path = std::env::temp_dir()
-        .join("novel-app-test-nonexistent")
+        .join("autowrite-test-nonexistent")
         .join("missing.yaml");
     let config = config::load_config(&path).unwrap();
     assert_eq!(config.provider, Provider::OpenAI);
