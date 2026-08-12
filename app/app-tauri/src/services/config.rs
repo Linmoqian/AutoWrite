@@ -14,6 +14,7 @@ pub fn load_config(path: &Path) -> Result<AppConfig> {
 
 pub fn save_config(path: &Path, config: &AppConfig) -> Result<()> {
     let content = serde_yaml::to_string(config)?;
-    std::fs::write(path, content)?;
-    Ok(())
+    // 原子写入（P0-4）：先写 .tmp 再 rename，带 .bak 备份。
+    // 与 core::storage::write_file_atomic 一致，避免写入中途崩溃损坏配置。
+    crate::storage::write_file_atomic(path, &content)
 }

@@ -237,6 +237,9 @@ pub fn list_chapters(state: State<'_, AppState>) -> Result<Vec<ChapterMetaDto>> 
 #[tauri::command]
 pub fn read_chapter(state: State<'_, AppState>, filename: String) -> Result<ChapterContentDto> {
     let dir = dir_from_state(&state)?;
+    // 路径穿越校验（P0-3）：确保 filename 不含 .. 或绝对路径，且 join 后在 dir 内
+    let chapters_base = crate::services::files::chapters_dir(&dir);
+    super::safe_join(&chapters_base, &filename)?;
     let (meta, body) = crate::services::files::read_chapter(&dir, &filename)?;
     Ok(ChapterContentDto::from_parts(meta, filename, body))
 }

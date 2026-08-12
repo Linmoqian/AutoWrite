@@ -15,17 +15,19 @@ pub async fn update_memory(
     content: &str,
 ) -> Result<()> {
     let mut ctx = storage::read_context(dir)?;
-    let truncated = &content[..content.len().min(3000)];
+    // 按字符截断而非字节，避免 UTF-8 多字节边界 panic（P0-2）。
+    // 与 services/image/generate.rs:191 的正确写法对齐。
+    let truncated: String = content.chars().take(3000).collect();
 
-    if let Ok(facts) = extract_facts(config, truncated).await {
+    if let Ok(facts) = extract_facts(config, &truncated).await {
         merge_facts(&mut ctx, &facts);
     }
 
-    if let Ok(intent) = extract_intent(config, truncated).await {
+    if let Ok(intent) = extract_intent(config, &truncated).await {
         ctx.current_intent = Some(intent);
     }
 
-    if let Ok(tags) = extract_emotion(config, truncated).await {
+    if let Ok(tags) = extract_emotion(config, &truncated).await {
         ctx.emotional_arc.extend(tags);
         let keep = ctx.emotional_arc.len().saturating_sub(15);
         ctx.emotional_arc = ctx.emotional_arc.split_off(keep);
@@ -153,4 +155,32 @@ fn update_tension(ctx: &mut ContextData) {
     }
     let keep = ctx.tension_checklist.len().saturating_sub(15);
     ctx.tension_checklist = ctx.tension_checklist.split_off(keep);
+}
+
+#[cfg(test)]
+mod tests {
+    /// P0-2 回归测试：中文章节正文按字节截断会在多字节边界 panic。
+    /// 验证新的 chars().take(3000) 写法对所有 UTF-8 内容安全。
+    #[test]
+    fn truncate_chinese_content_does_not_panic() {
+        // 构造一段远超 3000 字节的中文字符（每字 3 字节，1001 字 = 3003 字节）
+        let chinese_1001_chars: String = "中".repeat(1001);
+        assert!(chinese_1001_chars.len() > 3000); // 字节数确实 >3000
+
+        // 旧写法会 panic：&content[..content.len().min(3000)]
+        // 新写法：按字符截断
+        let truncated: String = chinese_1001_chars.chars().take(3000).collect();
+        assert_eq!(truncated.chars().count(), 1001); // 全部 1001 字（< 3000 字符上限）
+        assert!(truncated.len() <= 3000 * 3); // 字节数 <= 9000
+
+        // 边界：恰好 3000 个中文字
+        let chinese_3000: String = "中".repeat(3000);
+        let t2: String = chinese_3000.chars().take(3000).collect();
+        assert_eq!(t2.chars().count(), 3000);
+
+        // 边界：混合中英文
+        let mixed = format!("{}{}", "a".repeat(2000), "中".repeat(500));
+        let t3: String = mixed.chars().take(3000).collect();
+        assert_eq!(t3.chars().count(), 2500); // 2000 英文 + 500 中文
+    }
 }

@@ -218,7 +218,9 @@ pub fn get_image_path(
 ) -> Result<String> {
     let dir = dir_from_state(&state)?;
     super::system::allow_image_assets(&app, &dir)?;
-    let path = image::images_dir(&dir).join(&filename);
+    // 路径穿越校验（P0-3）：确保 filename 不含 .. 或绝对路径，且 join 后在 images_dir 内
+    let images_base = image::images_dir(&dir);
+    let path = super::safe_join(&images_base, &filename)?;
     if !path.exists() {
         return Err(crate::error::AppError::Image(format!(
             "图片文件不存在: {}",
