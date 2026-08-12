@@ -28,6 +28,12 @@ pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>)
     let dir_str = dir.to_string_lossy().to_string();
     allow_image_assets(&app, &dir)?;
     *state.novel_dir.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
+    // 切换小说目录时清空副驾驶聊天历史（方案 A：内存态按目录隔离）。
+    state
+        .chat_history
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clear();
     let config_path = state
         .config_path
         .lock()
@@ -61,14 +67,19 @@ pub async fn test_ai_connection(state: State<'_, AppState>) -> Result<Connection
     let config = config_from_state(&state)?;
 
     match config.provider {
-        Provider::OpenAI => test_openai_connection(&config).await,
+        Provider::OpenAI | Provider::LlamaCpp => test_openai_connection(&config).await,
         Provider::Ollama => test_ollama_connection(&config).await,
+        Provider::Claude => test_claude_connection(&config).await,
+        Provider::Gemini => test_gemini_connection(&config).await,
     }
 }
 
 async fn test_openai_connection(
     config: &crate::domain::config::AppConfig,
 ) -> Result<ConnectionTestResult> {
+    // OpenAI / llama.cpp 共用：走 OpenAI 兼容的 /v1/models 探测。
+    // base_url 经 ai_base_url() 解析：llama.cpp 在 api_base_url 为空时回退 localhost:8080。
+    let base = config.ai_base_url();
     if config.api_key.is_empty() {
         return Ok(ConnectionTestResult {
             connected: false,
@@ -76,7 +87,7 @@ async fn test_openai_connection(
             error: Some("未配置 API Key，请在「模型配置」页面填写".to_string()),
         });
     }
-    if config.api_base_url.is_empty() {
+    if base.is_empty() {
         return Ok(ConnectionTestResult {
             connected: false,
             latency_ms: 0,
@@ -84,7 +95,7 @@ async fn test_openai_connection(
         });
     }
 
-    let url = format!("{}/v1/models", config.api_base_url);
+    let url = format!("{base}/v1/models");
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()?;
@@ -159,6 +170,109 @@ async fn test_ollama_connection(
             connected: false,
             latency_ms,
             error: Some(format!("Ollama 连接失败: {}。请确认 Ollama 已启动", e)),
+        }),
+    }
+}
+
+/// Claude 连接探测：调用 Anthropic 的 `/v1/models` 端点（需 x-api-key 头）。
+async fn test_claude_connection(
+    config: &crate::domain::config::AppConfig,
+) -> Result<ConnectionTestResult> {
+    let base = config.ai_base_url();
+    if config.api_key.is_empty() {
+        return Ok(ConnectionTestResult {
+            connected: false,
+            latency_ms: 0,
+            error: Some("未配置 API Key，请在「模型配置」页面填写".to_string()),
+        });
+    }
+
+    let url = format!("{base}/v1/models");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()?;
+
+    let start = std::time::Instant::now();
+    let result = client
+        .get(&url)
+        .header("x-api-key", &config.api_key)
+        .header("anthropic-version", "2023-06-01")
+        .send()
+        .await;
+    let latency_ms = start.elapsed().as_millis() as u64;
+
+    match result {
+        Ok(resp) if resp.status().is_success() => Ok(ConnectionTestResult {
+            connected: true,
+            latency_ms,
+            error: None,
+        }),
+        Ok(resp) => {
+            let status = resp.status();
+            let hint = if status.as_u16() == 401 {
+                "API Key 无效或已过期，请检查「模型配置」".to_string()
+            } else {
+                format!("API 返回错误 HTTP {}", status)
+            };
+            Ok(ConnectionTestResult {
+                connected: false,
+                latency_ms,
+                error: Some(hint),
+            })
+        }
+        Err(e) => Ok(ConnectionTestResult {
+            connected: false,
+            latency_ms,
+            error: Some(format!("连接失败: {e}")),
+        }),
+    }
+}
+
+/// Gemini 连接探测：调用 listModels 端点（API key 经 query 传递）。
+async fn test_gemini_connection(
+    config: &crate::domain::config::AppConfig,
+) -> Result<ConnectionTestResult> {
+    let base = config.ai_base_url();
+    if config.api_key.is_empty() {
+        return Ok(ConnectionTestResult {
+            connected: false,
+            latency_ms: 0,
+            error: Some("未配置 API Key，请在「模型配置」页面填写".to_string()),
+        });
+    }
+
+    let url = format!("{base}/v1beta/models?key={}", config.api_key);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()?;
+
+    let start = std::time::Instant::now();
+    let result = client.get(&url).send().await;
+    let latency_ms = start.elapsed().as_millis() as u64;
+
+    match result {
+        Ok(resp) if resp.status().is_success() => Ok(ConnectionTestResult {
+            connected: true,
+            latency_ms,
+            error: None,
+        }),
+        Ok(resp) => {
+            let status = resp.status();
+            let hint = if status.as_u16() == 400 || status.as_u16() == 403 {
+                "API Key 无效或无权限，请检查「模型配置」".to_string()
+            } else {
+                format!("API 返回错误 HTTP {}", status)
+            };
+            Ok(ConnectionTestResult {
+                connected: false,
+                latency_ms,
+                error: Some(hint),
+            })
+        }
+        Err(e) => Ok(ConnectionTestResult {
+            connected: false,
+            latency_ms,
+            error: Some(format!("连接失败: {e}")),
         }),
     }
 }

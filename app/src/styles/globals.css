@@ -280,6 +280,55 @@
   .md-body tbody tr:hover {
     background: hsl(var(--muted));
   }
+
+  /* 聊天气泡内的 Markdown（比正文 md-body 更紧凑） */
+  .md-body-chat {
+    font-size: 13px;
+    line-height: 1.7;
+    color: inherit;
+    word-break: break-word;
+  }
+
+  .md-body-chat :where(p) {
+    margin: 0.35em 0;
+  }
+
+  .md-body-chat :where(p:first-child) {
+    margin-top: 0;
+  }
+
+  .md-body-chat :where(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .md-body-chat :where(ul, ol) {
+    padding-left: 1.25em;
+    margin: 0.35em 0;
+  }
+
+  .md-body-chat :where(li) {
+    margin: 0.15em 0;
+  }
+
+  .md-body-chat :where(h1, h2, h3, h4) {
+    font-weight: 600;
+    margin: 0.5em 0 0.3em;
+  }
+
+  .md-body-chat :where(code) {
+    background: hsl(var(--background) / 0.3);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.88em;
+    font-family: var(--font-mono);
+  }
+
+  .md-body-chat :where(blockquote) {
+    border-left: 2px solid hsl(var(--border));
+    padding-left: 0.75em;
+    margin: 0.4em 0;
+    opacity: 0.85;
+  }
 }
 
 /* ═══════════════════════════════════════════ */

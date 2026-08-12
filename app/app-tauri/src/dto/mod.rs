@@ -1,3 +1,4 @@
+pub mod chat;
 pub mod config;
 pub mod export;
 pub mod image;
@@ -14,3 +15,4 @@ pub use novel::{
     ChapterContentDto, ChapterEntryDto, ChapterMetaDto, ContextDataDto, NovelDataDto,
     NovelStatusDto, OutlineGenerationStatusDto, VolumeDto,
 };
+pub use chat::{ChatMessageDto, ChatRole};

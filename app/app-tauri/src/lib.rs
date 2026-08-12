@@ -34,6 +34,8 @@ pub fn run() {
             novel_dir: std::sync::Mutex::new(saved_dir),
             config_path: std::sync::Mutex::new(config_path),
             outline_generation: std::sync::Mutex::new(Default::default()),
+            chat_history: std::sync::Mutex::new(Default::default()),
+            chat_running: std::sync::Mutex::new(false),
         })
         .invoke_handler(tauri::generate_handler![
             commands::system::select_novel_dir,
@@ -62,6 +64,10 @@ pub fn run() {
             commands::image::list_images,
             commands::image::delete_image,
             commands::image::get_image_path,
+            commands::chat::chat_send_streaming,
+            commands::chat::chat_send,
+            commands::chat::chat_history,
+            commands::chat::chat_clear,
         ])
         .setup(move |app| {
             if let Some(dir) = saved_dir_for_setup.as_ref() {

@@ -6,6 +6,8 @@ import type {
   ChapterContent,
   ChapterMeta,
   ChapterProgressEvent,
+  ChatChunkEvent,
+  ChatMessage,
   ConnectionTestResult,
   ExportData,
   ExportFormat,
@@ -205,7 +207,31 @@ export async function getImagePath(filename: string): Promise<string> {
 }
 
 // ═══════════════════════════════════════════
-// 事件监听（4 个）
+// Chat 命令（4 个）—— 副驾驶聊天助手
+// ═══════════════════════════════════════════
+
+/// 流式发送一条消息：返回本次 assistant 消息，回复文本通过 `chat-chunk` 事件推送。
+export async function chatSendStreaming(message: string): Promise<ChatMessage> {
+  return invokeSafe<ChatMessage>("chat_send_streaming", { message });
+}
+
+/// 非流式发送（降级路径）：一次性返回完整回复。
+export async function chatSend(message: string): Promise<ChatMessage> {
+  return invokeSafe<ChatMessage>("chat_send", { message });
+}
+
+/// 取当前小说的聊天历史。
+export async function chatHistory(): Promise<ChatMessage[]> {
+  return invokeSafe<ChatMessage[]>("chat_history");
+}
+
+/// 清空当前小说的聊天历史。
+export async function chatClear(): Promise<void> {
+  return invokeSafe("chat_clear");
+}
+
+// ═══════════════════════════════════════════
+// 事件监听（5 个）
 // ═══════════════════════════════════════════
 
 export function onOutlineProgress(
@@ -245,6 +271,13 @@ export function onBatchImageProgress(
   return listen<BatchImageProgress>("batch-image-progress", (e) =>
     handler(e.payload),
   );
+}
+
+/// 副驾驶流式分块事件：AI 回复逐块推送，{chunk,done} 打字机渲染。
+export function onChatChunk(
+  handler: (e: ChatChunkEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<ChatChunkEvent>("chat-chunk", (e) => handler(e.payload));
 }
 
 // ── 图片类型标签（供 UI 使用）──

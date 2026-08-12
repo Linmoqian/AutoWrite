@@ -14,9 +14,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAppStore } from "@/stores/app-store";
+import { useChatStore } from "@/stores/chat-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TOUR_KEY } from "@/lib/constants";
+import { CopilotPanel } from "@/features/chat";
 
 interface NavItem {
   key: string;
@@ -144,6 +146,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const selectDir = useAppStore((s) => s.selectDir);
   const refreshNovelDir = useAppStore((s) => s.refreshNovelDir);
   const refreshStatus = useAppStore((s) => s.refreshStatus);
+  const toggleChat = useChatStore((s) => s.toggle);
   const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
@@ -222,6 +225,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+
+      {/* 副驾驶浮动入口 + 面板（全局，任何页面可用） */}
+      <button
+        onClick={toggleChat}
+        className="fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label="打开副驾驶助手"
+      >
+        <Sparkles className="h-5 w-5" />
+      </button>
+      <CopilotPanel />
 
       {tourOpen && <OnboardingTour onClose={handleCloseTour} />}
     </div>

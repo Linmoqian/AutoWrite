@@ -1,3 +1,4 @@
+use crate::dto::ChatRole;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -7,6 +8,10 @@ pub struct AppState {
     pub novel_dir: Mutex<Option<PathBuf>>,
     pub config_path: Mutex<PathBuf>,
     pub outline_generation: Mutex<OutlineGenerationStatus>,
+    /// 副驾驶聊天历史（按当前 novel_dir 维度，切目录时清空）。MVP 内存态，重启丢失。
+    pub chat_history: Mutex<Vec<ChatMessage>>,
+    /// 副驾驶流式并发守卫：同一时刻只允许一个流式对话，防连点竞态。
+    pub chat_running: Mutex<bool>,
 }
 
 #[derive(Clone, Default, serde::Serialize)]
@@ -17,4 +22,13 @@ pub struct OutlineGenerationStatus {
     pub current_step: Option<String>,
     pub streaming_text: HashMap<String, String>,
     pub error: Option<String>,
+}
+
+/// 内部领域结构：单条聊天消息（state 层用，不序列化到磁盘 MVP）。
+#[derive(Debug, Clone)]
+pub struct ChatMessage {
+    pub id: String,
+    pub role: ChatRole,
+    pub content: String,
+    pub created_at: chrono::DateTime<chrono::Local>,
 }
