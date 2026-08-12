@@ -1,6 +1,8 @@
 pub mod config;
 pub mod export;
 pub mod image;
+pub mod image_batch;
+pub mod image_batch_progress;
 pub mod novel;
 pub mod system;
 

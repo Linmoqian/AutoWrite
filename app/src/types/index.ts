@@ -220,3 +220,21 @@ export interface SceneDescription {
   sceneDesc: string;
   mood: string;
 }
+
+// ── 批量场景插图 ──
+export type BatchChapterStatusKind = "pending" | "running" | "done" | "failed";
+
+export interface BatchChapterStatus {
+  chapter: number;
+  status: BatchChapterStatusKind;
+  message?: string | null;
+}
+
+export interface BatchImageProgress {
+  total: number;
+  completed: number;
+  failed: number;
+  currentChapter?: number | null;
+  currentMessage?: string | null;
+  chapters: BatchChapterStatus[];
+}

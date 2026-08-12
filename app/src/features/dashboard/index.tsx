@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CollapsibleSection } from "./components/collapsible-section";
+import { BatchImagePanel } from "./components/batch-image-panel";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -93,6 +94,9 @@ export default function Dashboard() {
       {novel.characters && (
         <CollapsibleSection title="角色" content={novel.characters} />
       )}
+
+      {/* 批量生成场景插图（真并发演示） */}
+      <BatchImagePanel />
 
       {/* Navigation */}
       <div className="mt-5 flex gap-3">

@@ -2,6 +2,7 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppConfig,
+  BatchImageProgress,
   ChapterContent,
   ChapterMeta,
   ChapterProgressEvent,
@@ -173,6 +174,16 @@ export async function generateSceneImage(
   });
 }
 
+/// 批量生成多章场景插图（真并发，后端 buffer_unordered(3) 限流）。
+/// 单章失败不阻塞其他；返回所有成功结果。整体进度通过 `batch-image-progress` 事件推送。
+export async function generateSceneImagesBatch(
+  chapterNums: number[],
+): Promise<ImageResult[]> {
+  return invokeSafe<ImageResult[]>("generate_scene_images_batch", {
+    chapterNums,
+  });
+}
+
 export async function extractSceneDescription(
   chapterNum: number,
 ): Promise<SceneDescription> {
@@ -225,6 +236,15 @@ export function onImageProgress(
   handler: (e: ImageProgressEvent) => void,
 ): Promise<UnlistenFn> {
   return listen<ImageProgressEvent>("image-progress", (e) => handler(e.payload));
+}
+
+/// 批量场景插图整体进度事件。携带每章状态快照，前端直接渲染。
+export function onBatchImageProgress(
+  handler: (e: BatchImageProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<BatchImageProgress>("batch-image-progress", (e) =>
+    handler(e.payload),
+  );
 }
 
 // ── 图片类型标签（供 UI 使用）──

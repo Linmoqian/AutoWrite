@@ -63,3 +63,33 @@ pub struct ImageProgressEvent {
     pub message: String,
     pub image_id: Option<String>,
 }
+
+/// IPC 事件载荷：批量场景插图整体进度。通过 `batch-image-progress` 事件推送到前端。
+/// 用于批量生成时驱动整体进度条与每章状态卡片。
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchImageProgress {
+    /// 本次批量任务的总章节数。
+    pub total: u32,
+    /// 已成功完成的数量。
+    pub completed: u32,
+    /// 已失败的数量。
+    pub failed: u32,
+    /// 当前正在生成的章节号（同时进行的多章中取其一即可，前端据此标记「生成中」）。
+    pub current_chapter: Option<u32>,
+    /// 当前章节的进度阶段文本。
+    pub current_message: Option<String>,
+    /// 每章的实时状态快照（全量，前端直接渲染，无需推导）。
+    pub chapters: Vec<BatchChapterStatus>,
+}
+
+/// 批量任务中单个章节的状态快照。
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchChapterStatus {
+    pub chapter: u32,
+    /// pending | running | done | failed
+    pub status: String,
+    /// 人类可读的阶段/失败信息。
+    pub message: Option<String>,
+}

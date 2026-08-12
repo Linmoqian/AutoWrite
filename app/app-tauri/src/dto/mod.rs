@@ -7,7 +7,9 @@ pub use config::{
     AppConfigDto, ImageConfigDto, LoraEntryDto, OllamaConfigDto, OpenAiConfigDto, PromptsDto,
 };
 pub use export::{ExportChapterDto, ExportDataDto};
-pub use image::{ImageProgressEvent, ImageResultDto, SceneDescriptionDto};
+pub use image::{
+    BatchChapterStatus, BatchImageProgress, ImageProgressEvent, ImageResultDto, SceneDescriptionDto,
+};
 pub use novel::{
     ChapterContentDto, ChapterEntryDto, ChapterMetaDto, ContextDataDto, NovelDataDto,
     NovelStatusDto, OutlineGenerationStatusDto, VolumeDto,

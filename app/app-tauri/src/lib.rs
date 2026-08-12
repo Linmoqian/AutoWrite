@@ -57,6 +57,7 @@ pub fn run() {
             commands::image::generate_cover,
             commands::image::generate_character_image,
             commands::image::generate_scene_image,
+            commands::image_batch::generate_scene_images_batch,
             commands::image::extract_scene_description,
             commands::image::list_images,
             commands::image::delete_image,
