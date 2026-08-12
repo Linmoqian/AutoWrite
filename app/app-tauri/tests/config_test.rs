@@ -96,3 +96,21 @@ fn provider_serialization_roundtrip() {
     let p: Provider = serde_yaml::from_str("ollama").unwrap();
     assert_eq!(p, Provider::Ollama);
 }
+
+#[test]
+fn new_provider_variants_serialize_lowercase() {
+    // 锁定前端依赖的小写字符串契约（types/index.ts 的 Provider type）。
+    for (yaml_str, expected) in [
+        ("claude", Provider::Claude),
+        ("gemini", Provider::Gemini),
+        ("llamacpp", Provider::LlamaCpp),
+    ] {
+        let serialized = serde_yaml::to_string(&expected).unwrap();
+        assert!(
+            serialized.contains(yaml_str),
+            "{expected:?} 应序列化为包含 {yaml_str}，实际: {serialized}"
+        );
+        let back: Provider = serde_yaml::from_str(yaml_str).unwrap();
+        assert_eq!(back, expected);
+    }
+}

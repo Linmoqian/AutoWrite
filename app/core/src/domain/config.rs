@@ -95,6 +95,12 @@ pub enum Provider {
     #[default]
     OpenAI,
     Ollama,
+    /// Anthropic Claude。复用主 model 字段，base_url 默认 https://api.anthropic.com。
+    Claude,
+    /// Google Gemini。复用主 model 字段，base_url 默认 generativelanguage.googleapis.com。
+    Gemini,
+    /// llama.cpp (llama-server)。OpenAI 兼容协议，base_url 默认 http://localhost:8080。
+    LlamaCpp,
 }
 
 fn default_timeout() -> u64 {
@@ -161,7 +167,10 @@ impl AppConfig {
                     &self.ollama_model
                 }
             }
-            Provider::OpenAI => &self.model,
+            // OpenAI / Claude / Gemini / LlamaCpp 均直接使用主 model 字段
+            Provider::OpenAI | Provider::Claude | Provider::Gemini | Provider::LlamaCpp => {
+                &self.model
+            }
         }
     }
 
@@ -175,6 +184,31 @@ impl AppConfig {
 
     pub fn image_api_key(&self) -> &str {
         &self.image_api_key
+    }
+
+    /// 各 AI provider 的默认 base_url。当用户未显式配置 `api_base_url`（空串）时，
+    /// provider 自身用此默认值，避免改动 DTO 结构。
+    ///
+    /// Ollama 特殊：走 `ollama_url` 字段，不受 `api_base_url` 影响。
+    pub fn ai_base_url(&self) -> &str {
+        // Ollama 特殊：走 ollama_url 字段，不受 api_base_url 影响。
+        if self.provider == Provider::Ollama {
+            return &self.ollama_url;
+        }
+        // api_base_url 非空时用户已显式配置，原样返回（含 OpenAI 兼容默认值）。
+        if !self.api_base_url.is_empty() {
+            return &self.api_base_url;
+        }
+        // api_base_url 为空时按 provider 给默认值，避免改动 DTO 结构。
+        match self.provider {
+            Provider::Claude => "https://api.anthropic.com",
+            Provider::Gemini => "https://generativelanguage.googleapis.com",
+            // llama.cpp llama-server 默认端口 8080
+            Provider::LlamaCpp => "http://localhost:8080",
+            // OpenAI 兼容沿用 DeepSeek 默认值（保持既有行为）
+            Provider::OpenAI => "https://api.deepseek.com",
+            Provider::Ollama => &self.ollama_url,
+        }
     }
 }
 

@@ -151,7 +151,15 @@ fn set_config_field(
             config.provider = match value.to_lowercase().as_str() {
                 "openai" | "deepseek" => Provider::OpenAI,
                 "ollama" => Provider::Ollama,
-                _ => return Err(format!("无效 provider: {value}，可选 openai | ollama").into()),
+                "claude" | "anthropic" => Provider::Claude,
+                "gemini" | "google" => Provider::Gemini,
+                "llamacpp" | "llama" | "llama-cpp" => Provider::LlamaCpp,
+                _ => {
+                    return Err(format!(
+                        "无效 provider: {value}，可选 openai | ollama | claude | gemini | llamacpp"
+                    )
+                    .into())
+                }
             };
         }
         "model" => config.model = value.to_string(),

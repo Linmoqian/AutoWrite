@@ -5,6 +5,9 @@ import {
   CircleHelp,
   Loader2,
   CircleCheck,
+  Sparkles,
+  Gem,
+  Cpu,
 } from "lucide-react";
 import { TOUR_KEY } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,9 @@ import { ProviderCard } from "./components/provider-card";
 import { OpenAiSection } from "./components/openai-section";
 import { OllamaSection } from "./components/ollama-section";
 import { ImageSection } from "./components/image-section";
+
+// 复用 openai 配置段（apiKey/apiUrl/model/timeout）的 provider 集合。
+const API_PROVIDERS: Provider[] = ["openai", "claude", "gemini", "llamacpp"];
 
 export default function Settings() {
   const { config, saving, saved, update, handleSave } = useSettings();
@@ -26,29 +32,52 @@ export default function Settings() {
     );
   }
 
+  const usesOpenAiSection = API_PROVIDERS.includes(config.provider);
+
   return (
     <div className="fade-in mx-auto max-w-[720px]">
       <h1 className="page-title">模型配置</h1>
 
-      {/* Provider selection */}
-      <div className="mb-5 grid grid-cols-2 gap-3">
+      {/* Provider 选择：5 个选项，响应式网格 */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <ProviderCard
           selected={config.provider === "openai"}
           onClick={() => update("provider", "openai" as Provider)}
-          title="OpenAI 兼容 API"
+          title="OpenAI 兼容"
           description="DeepSeek、OpenAI、月之暗面等"
           icon={<Cloud className="h-6 w-6" />}
         />
         <ProviderCard
+          selected={config.provider === "claude"}
+          onClick={() => update("provider", "claude" as Provider)}
+          title="Claude"
+          description="Anthropic 原生 API"
+          icon={<Sparkles className="h-6 w-6" />}
+        />
+        <ProviderCard
+          selected={config.provider === "gemini"}
+          onClick={() => update("provider", "gemini" as Provider)}
+          title="Gemini"
+          description="Google AI API"
+          icon={<Gem className="h-6 w-6" />}
+        />
+        <ProviderCard
+          selected={config.provider === "llamacpp"}
+          onClick={() => update("provider", "llamacpp" as Provider)}
+          title="llama.cpp"
+          description="本地 llama-server"
+          icon={<Cpu className="h-6 w-6" />}
+        />
+        <ProviderCard
           selected={config.provider === "ollama"}
           onClick={() => update("provider", "ollama" as Provider)}
-          title="Ollama 本地模型"
+          title="Ollama"
           description="本地或局域网运行"
           icon={<Laptop className="h-6 w-6" />}
         />
       </div>
 
-      {config.provider === "openai" ? (
+      {usesOpenAiSection ? (
         <OpenAiSection config={config} update={update} />
       ) : (
         <OllamaSection config={config} update={update} />

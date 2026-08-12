@@ -7,9 +7,15 @@ use serde::Serialize;
 use crate::domain::config::{AppConfig, Provider};
 use crate::error::{AppError, Result};
 
+pub mod claude;
+pub mod gemini;
+pub mod llamacpp;
 pub mod ollama;
 pub mod openai;
 
+pub use claude::ClaudeProvider;
+pub use gemini::GeminiProvider;
+pub use llamacpp::LlamaCppProvider;
 pub use ollama::OllamaProvider;
 pub use openai::OpenAIProvider;
 
@@ -38,6 +44,9 @@ pub fn create_provider(config: &AppConfig) -> Box<dyn AiProvider> {
     match config.provider {
         Provider::OpenAI => Box::new(OpenAIProvider::new()),
         Provider::Ollama => Box::new(OllamaProvider::new()),
+        Provider::Claude => Box::new(ClaudeProvider::new()),
+        Provider::Gemini => Box::new(GeminiProvider::new()),
+        Provider::LlamaCpp => Box::new(LlamaCppProvider::new()),
     }
 }
 
@@ -60,6 +69,21 @@ where
         }
         Provider::Ollama => {
             OllamaProvider::new()
+                .generate_streaming(config, prompt, on_chunk)
+                .await
+        }
+        Provider::Claude => {
+            ClaudeProvider::new()
+                .generate_streaming(config, prompt, on_chunk)
+                .await
+        }
+        Provider::Gemini => {
+            GeminiProvider::new()
+                .generate_streaming(config, prompt, on_chunk)
+                .await
+        }
+        Provider::LlamaCpp => {
+            LlamaCppProvider::new()
                 .generate_streaming(config, prompt, on_chunk)
                 .await
         }

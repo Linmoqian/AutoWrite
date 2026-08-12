@@ -97,7 +97,9 @@ export interface AppConfig {
   image: ImageConfig;
 }
 
-export type Provider = "openai" | "ollama";
+// Claude / Gemini / LlamaCpp 复用 openai 段（apiKey/apiUrl/model/timeout），
+// 不新增 DTO 字段，保持配置结构稳定。
+export type Provider = "openai" | "ollama" | "claude" | "gemini" | "llamacpp";
 
 export interface OpenAiConfig {
   apiKey: string;
@@ -219,6 +221,23 @@ export interface ImageProgressEvent {
 export interface SceneDescription {
   sceneDesc: string;
   mood: string;
+}
+
+// ── 副驾驶聊天 ──
+export type ChatRole = "user" | "assistant";
+
+export interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  content: string;
+  createdAt: string; // ISO 8601 (RFC3339)
+}
+
+// 流式分块事件（对齐后端 ChatChunkEvent，camelCase）
+export interface ChatChunkEvent {
+  chunk: string;
+  done: boolean;
+  messageId: string;
 }
 
 // ── 批量场景插图 ──

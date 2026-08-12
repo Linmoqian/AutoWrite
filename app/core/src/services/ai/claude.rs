@@ -1,71 +1,98 @@
+//! Anthropic Claude provider。
+//!
+//! 协议要点（参照 https://docs.anthropic.com/en/api/messages）：
+//! - 端点 `POST {base_url}/v1/messages`（注意不是 /v1/chat/completions）。
+//! - Headers：`x-api-key`、`anthropic-version: 2023-06-01`、`content-type`。
+//! - Body：`{model, max_tokens, messages:[{role,content}], stream}`。
+//! - system 是顶层字段而非 messages 首项；本 provider 的 prompt 为单段字符串，
+//!   直接作为单条 user message，无需 system 字段。
+//! - 非流式：文本在 `content[].text`（content 是 block 数组，每个 text block 含 `.text`）。
+//! - 流式 SSE：`content_block_delta` 的 `delta.text` 为增量；`message_stop` 为结束。
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::config::AppConfig;
 use crate::error::{AppError, Result};
 
-use super::{build_client, retries_exhausted, retry_delay, AiProvider, Message};
+use super::{build_client, retries_exhausted, retry_delay, AiProvider};
 
 const MAX_RETRIES: u32 = 3;
+const ANTHROPIC_VERSION: &str = "2023-06-01";
+const MAX_TOKENS: u32 = 8192;
 
 #[derive(Default)]
-pub struct OpenAIProvider;
+pub struct ClaudeProvider;
 
-impl OpenAIProvider {
+impl ClaudeProvider {
     pub fn new() -> Self {
-        OpenAIProvider
+        ClaudeProvider
     }
 }
 
+// ── 请求 / 响应类型 ──
+
 #[derive(Serialize)]
-struct OpenAIRequest {
+struct ClaudeRequest {
     model: String,
-    messages: Vec<Message>,
+    max_tokens: u32,
+    messages: Vec<ClaudeMessage>,
     stream: bool,
 }
 
-#[derive(Deserialize)]
-struct OpenAIResponse {
-    choices: Vec<OpenAIChoice>,
-}
-
-#[derive(Deserialize)]
-struct OpenAIChoiceMessage {
+#[derive(Serialize)]
+struct ClaudeMessage {
+    role: String,
     content: String,
 }
 
 #[derive(Deserialize)]
-struct OpenAIChoice {
-    message: OpenAIChoiceMessage,
+struct ClaudeResponse {
+    content: Vec<ClaudeContentBlock>,
 }
 
 #[derive(Deserialize)]
-struct OpenAIDeltaContent {
-    content: Option<String>,
+struct ClaudeContentBlock {
+    #[serde(default)]
+    text: Option<String>,
+}
+
+// ── 流式 SSE 事件 ──
+
+#[derive(Deserialize)]
+struct ClaudeStreamEvent {
+    #[serde(default)]
+    r#type: String,
+    #[serde(default)]
+    delta: Option<ClaudeDelta>,
+    #[serde(default)]
+    error: Option<ClaudeErrorBody>,
 }
 
 #[derive(Deserialize)]
-struct OpenAIStreamChoice {
-    delta: OpenAIDeltaContent,
+struct ClaudeDelta {
+    #[serde(rename = "type")]
+    delta_type: Option<String>,
+    #[serde(default)]
+    text: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct OpenAIStreamChunk {
-    choices: Vec<OpenAIStreamChoice>,
+struct ClaudeErrorBody {
+    message: Option<String>,
 }
 
 #[async_trait]
-impl AiProvider for OpenAIProvider {
+impl AiProvider for ClaudeProvider {
     async fn generate(&self, config: &AppConfig, prompt: &str) -> Result<String> {
         let client = build_client(config.timeout)?;
-        // 通过 ai_base_url() 解析 base：OpenAI 保持既有值（非空时返回 api_base_url 本身），
-        // llama.cpp（复用本 provider）在 api_base_url 为空时回退到 localhost:8080 默认。
-        let url = format!("{}/v1/chat/completions", config.ai_base_url());
+        let url = format!("{}/v1/messages", config.ai_base_url());
 
         for attempt in 0..MAX_RETRIES {
-            let request = OpenAIRequest {
+            let request = ClaudeRequest {
                 model: config.active_model().to_string(),
-                messages: vec![Message {
+                max_tokens: MAX_TOKENS,
+                messages: vec![ClaudeMessage {
                     role: "user".to_string(),
                     content: prompt.to_string(),
                 }],
@@ -74,7 +101,9 @@ impl AiProvider for OpenAIProvider {
 
             let resp = match client
                 .post(&url)
-                .header("Authorization", format!("Bearer {}", config.api_key))
+                .header("x-api-key", &config.api_key)
+                .header("anthropic-version", ANTHROPIC_VERSION)
+                .header("content-type", "application/json")
                 .json(&request)
                 .send()
                 .await
@@ -100,13 +129,18 @@ impl AiProvider for OpenAIProvider {
                 )));
             }
 
-            let body: OpenAIResponse = resp.json().await?;
-            return body
-                .choices
+            let body: ClaudeResponse = resp.json().await?;
+            // 拼接所有 text block 的内容（通常只有一个 text block）。
+            let text: String = body
+                .content
                 .into_iter()
-                .next()
-                .map(|c| c.message.content)
-                .ok_or_else(|| AppError::AiFailed("API 返回空响应".to_string()));
+                .filter_map(|b| b.text)
+                .collect::<Vec<_>>()
+                .join("");
+            if text.is_empty() {
+                return Err(AppError::AiFailed("API 返回空响应".to_string()));
+            }
+            return Ok(text);
         }
         Err(retries_exhausted())
     }
@@ -122,12 +156,13 @@ impl AiProvider for OpenAIProvider {
         Self: Sized,
     {
         let client = build_client(config.timeout * 2)?;
-        let url = format!("{}/v1/chat/completions", config.ai_base_url());
+        let url = format!("{}/v1/messages", config.ai_base_url());
 
         for attempt in 0..MAX_RETRIES {
-            let request = OpenAIRequest {
+            let request = ClaudeRequest {
                 model: config.active_model().to_string(),
-                messages: vec![Message {
+                max_tokens: MAX_TOKENS,
+                messages: vec![ClaudeMessage {
                     role: "user".to_string(),
                     content: prompt.to_string(),
                 }],
@@ -136,7 +171,9 @@ impl AiProvider for OpenAIProvider {
 
             let resp = match client
                 .post(&url)
-                .header("Authorization", format!("Bearer {}", config.api_key))
+                .header("x-api-key", &config.api_key)
+                .header("anthropic-version", ANTHROPIC_VERSION)
+                .header("content-type", "application/json")
                 .json(&request)
                 .send()
                 .await
@@ -188,6 +225,11 @@ impl AiProvider for OpenAIProvider {
     }
 }
 
+/// 解析 Claude SSE 流。
+///
+/// 每个事件由 `event: <type>` 行 + `data: <json>` 行组成。我们只关心 data 行的
+/// JSON：`type == "content_block_delta"` 且 `delta.type == "text_delta"` 时取
+/// `delta.text`；`type == "message_stop"` 表示流结束；`type == "error"` 抛错。
 async fn stream_response<F>(
     resp: reqwest::Response,
     buffer: &mut String,
@@ -209,27 +251,46 @@ where
                 continue;
             }
 
-            if line == "data: [DONE]" {
-                return Ok(());
-            }
-
             let data = match line.strip_prefix("data: ") {
                 Some(d) => d,
+                // event:/空行等非 data 行忽略
                 None => continue,
             };
 
-            let parsed: OpenAIStreamChunk = match serde_json::from_str(data) {
+            let parsed: ClaudeStreamEvent = match serde_json::from_str(data) {
                 Ok(v) => v,
                 Err(_) => continue,
             };
 
-            if let Some(choice) = parsed.choices.into_iter().next() {
-                if let Some(content) = choice.delta.content {
-                    if !content.is_empty() {
-                        on_chunk(&content)?;
-                        full_text.push_str(&content);
+            // 优先处理错误事件
+            if let Some(err) = parsed.error {
+                if let Some(msg) = err.message {
+                    return Err(AppError::AiFailed(msg));
+                }
+            }
+
+            match parsed.r#type.as_str() {
+                "content_block_delta" => {
+                    if let Some(delta) = parsed.delta {
+                        // 仅 text_delta 携带正文；input_json_delta/thinking_delta 等忽略
+                        let is_text = delta
+                            .delta_type
+                            .as_deref()
+                            .map(|t| t == "text_delta")
+                            .unwrap_or(true);
+                        if is_text {
+                            if let Some(text) = delta.text {
+                                if !text.is_empty() {
+                                    on_chunk(&text)?;
+                                    full_text.push_str(&text);
+                                }
+                            }
+                        }
                     }
                 }
+                "message_stop" => return Ok(()),
+                // ping / message_start / content_block_start/stop / message_delta 等忽略
+                _ => {}
             }
         }
     }
