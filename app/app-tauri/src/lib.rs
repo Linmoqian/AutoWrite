@@ -27,6 +27,11 @@ pub fn run() {
         .and_then(|c| c.novel_dir)
         .map(PathBuf::from);
     let saved_dir_for_setup = saved_dir.clone();
+    // 启动预加载：若已保存的小说目录存在 .chat.json，则恢复聊天历史（P1 跨会话保留）。
+    let initial_chat = saved_dir
+        .as_ref()
+        .map(|d| commands::chat::load_chat_history(d))
+        .unwrap_or_default();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -34,7 +39,7 @@ pub fn run() {
             novel_dir: std::sync::Mutex::new(saved_dir),
             config_path: std::sync::Mutex::new(config_path),
             outline_generation: std::sync::Mutex::new(Default::default()),
-            chat_history: std::sync::Mutex::new(Default::default()),
+            chat_history: std::sync::Mutex::new(initial_chat),
             chat_running: std::sync::Mutex::new(false),
         })
         .invoke_handler(tauri::generate_handler![

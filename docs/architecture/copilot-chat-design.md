@@ -1,6 +1,6 @@
 # 副驾驶聊天助手 — 架构设计文档
 
-- **状态**：待评审
+- **状态**：已实施（MVP 方案 A + P1 方案 B 落盘均已落地）
 - **日期**：2026-08-12
 - **决策者**：首席架构师（mvp-dev-expert-team-architect-1）
 - **关联**：ADR-008（DTO 契约对齐）、ADR-009（core crate 抽取）、`technical-architecture-v1.md`

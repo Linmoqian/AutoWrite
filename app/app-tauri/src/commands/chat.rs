@@ -4,7 +4,7 @@
 //! - 不扩展 `AiProvider` trait，沿用现有 `generate_streaming(prompt: &str)` 单字符串范式；
 //! - 多轮历史压扁成单个 prompt 字符串（含 system 背景 + 历史 + 当前用户消息）；
 //! - 章节正文按关键词按需加载，默认不读，控制 token；
-//! - 聊天历史 MVP 存内存（`AppState.chat_history`），切目录清空，重启丢失。
+//! - 聊天历史 P1 落盘 `novel_dir/.chat.json`，跨会话保留；切目录按小说隔离加载，清空时删除文件。
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -71,6 +71,8 @@ pub async fn chat_send_streaming(
             .unwrap_or_else(|e| e.into_inner());
         hist.push(user_msg);
     }
+    // 落盘：先保存用户消息，即使后续 AI 调用失败也能保留提问。
+    persist_current(&state, &dir);
 
     let system_prompt = build_chat_context(&dir, &message)?;
     let prompt = build_full_prompt(&system_prompt, &history_snapshot, &message);
@@ -125,6 +127,8 @@ pub async fn chat_send_streaming(
                     .unwrap_or_else(|e| e.into_inner());
                 hist.push(assistant_msg.clone());
             }
+            // 落盘：保存完整对话，跨会话保留。
+            persist_current(&state, &dir);
             // 结束事件：空 chunk + done:true，前端据此定稿。
             let _ = app.emit(
                 "chat-chunk",
@@ -179,6 +183,8 @@ pub async fn chat_send(
             .unwrap_or_else(|e| e.into_inner());
         hist.push(user_msg);
     }
+    // 落盘：先保存用户消息，即使后续 AI 调用失败也能保留提问。
+    persist_current(&state, &dir);
 
     let system_prompt = build_chat_context(&dir, &message)?;
     let prompt = build_full_prompt(&system_prompt, &history_snapshot, &message);
@@ -208,6 +214,8 @@ pub async fn chat_send(
                     .unwrap_or_else(|e| e.into_inner());
                 hist.push(assistant_msg.clone());
             }
+            // 落盘：保存完整对话，跨会话保留。
+            persist_current(&state, &dir);
             Ok(assistant_msg.into())
         }
         Err(e) => Err(e),
@@ -225,7 +233,7 @@ pub fn chat_history(state: State<'_, AppState>) -> Result<Vec<ChatMessageDto>> {
     Ok(hist.into_iter().map(ChatMessageDto::from).collect())
 }
 
-/// 清空当前小说的聊天历史。
+/// 清空当前小说的聊天历史（内存 + 磁盘 `.chat.json`）。
 #[tauri::command]
 pub fn chat_clear(state: State<'_, AppState>) -> Result<()> {
     state
@@ -233,6 +241,15 @@ pub fn chat_clear(state: State<'_, AppState>) -> Result<()> {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clear();
+    // 删除落盘文件（不存在则忽略，不影响清空语义）。
+    if let Some(dir) = state
+        .novel_dir
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+    {
+        let _ = std::fs::remove_file(dir.join(".chat.json"));
+    }
     Ok(())
 }
 
@@ -463,6 +480,95 @@ fn new_message_id() -> String {
     format!("msg-{ts}-{n}")
 }
 
+// ─────────────────────────────────────────────────────────────
+// 落盘：聊天历史持久化到 `novel_dir/.chat.json`（P1 升级）
+// ─────────────────────────────────────────────────────────────
+
+/// 磁盘上的聊天历史文件结构（与内存 `ChatMessage` 解耦，便于格式演进）。
+#[derive(serde::Serialize, serde::Deserialize)]
+struct PersistedChat {
+    version: u32,
+    messages: Vec<PersistedMessage>,
+}
+
+/// 磁盘上的单条消息：`created_at` 用 RFC3339 字符串，避免 chrono 序列化依赖。
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedMessage {
+    id: String,
+    role: ChatRole,
+    content: String,
+    created_at: String,
+}
+
+impl From<&ChatMessage> for PersistedMessage {
+    fn from(m: &ChatMessage) -> Self {
+        Self {
+            id: m.id.clone(),
+            role: m.role.clone(),
+            content: m.content.clone(),
+            created_at: m.created_at.to_rfc3339(),
+        }
+    }
+}
+
+impl From<PersistedMessage> for ChatMessage {
+    fn from(p: PersistedMessage) -> Self {
+        let created_at = chrono::DateTime::parse_from_rfc3339(&p.created_at)
+            .map(|dt| dt.with_timezone(&chrono::Local))
+            .unwrap_or_else(|_| chrono::Local::now());
+        Self {
+            id: p.id,
+            role: p.role,
+            content: p.content,
+            created_at,
+        }
+    }
+}
+
+/// 从 `novel_dir/.chat.json` 加载聊天历史；文件缺失/损坏则返回空（不报错）。
+/// 供 `select_novel_dir` 与启动时预加载调用，实现「按小说隔离、跨会话保留」。
+pub(crate) fn load_chat_history(dir: &Path) -> Vec<ChatMessage> {
+    let path = dir.join(".chat.json");
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+    let parsed: PersistedChat = match serde_json::from_str(&content) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("[chat] 聊天历史解析失败，已忽略: {e}");
+            return Vec::new();
+        }
+    };
+    parsed.messages.into_iter().map(ChatMessage::from).collect()
+}
+
+/// 把当前内存历史原子写入 `novel_dir/.chat.json`（先写 .tmp 再 rename）。
+fn write_chat_json(dir: &Path, history: &[ChatMessage]) -> Result<()> {
+    let persisted = PersistedChat {
+        version: 1,
+        messages: history.iter().map(PersistedMessage::from).collect(),
+    };
+    let json = serde_json::to_string_pretty(&persisted)?;
+    let tmp = dir.join(".chat.json.tmp");
+    std::fs::write(&tmp, json)?;
+    std::fs::rename(&tmp, dir.join(".chat.json"))?;
+    Ok(())
+}
+
+/// 把当前内存聊天历史落盘。落盘失败只记日志、不影响对话流程（非关键数据）。
+fn persist_current(state: &State<'_, AppState>, dir: &Path) {
+    let hist = state
+        .chat_history
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    if let Err(e) = write_chat_json(dir, &hist) {
+        eprintln!("[chat] 聊天历史落盘失败: {e}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -521,5 +627,38 @@ mod tests {
         assert!(!prompt.contains("省略"));
         assert!(prompt.contains("turn 0"));
         assert!(prompt.contains("turn 1"));
+    }
+
+    #[test]
+    fn chat_history_round_trip() {
+        let dir = std::env::temp_dir().join(format!(
+            "autowrite_chat_test_{}",
+            chrono::Utc::now().timestamp_millis()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let history = vec![
+            ChatMessage {
+                id: "a".into(),
+                role: ChatRole::User,
+                content: "你好".into(),
+                created_at: chrono::Local::now(),
+            },
+            ChatMessage {
+                id: "b".into(),
+                role: ChatRole::Assistant,
+                content: "你好！".into(),
+                created_at: chrono::Local::now(),
+            },
+        ];
+        write_chat_json(&dir, &history).unwrap();
+        let loaded = load_chat_history(&dir);
+        assert_eq!(loaded.len(), 2);
+        assert_eq!(loaded[0].id, "a");
+        assert_eq!(loaded[0].role, ChatRole::User);
+        assert_eq!(loaded[0].content, "你好");
+        assert_eq!(loaded[1].role, ChatRole::Assistant);
+        assert_eq!(loaded[1].content, "你好！");
+        assert!(dir.join(".chat.json").exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

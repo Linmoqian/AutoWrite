@@ -27,13 +27,13 @@ pub async fn select_novel_dir(app: tauri::AppHandle, state: State<'_, AppState>)
         .to_path_buf();
     let dir_str = dir.to_string_lossy().to_string();
     allow_image_assets(&app, &dir)?;
-    *state.novel_dir.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir);
-    // 切换小说目录时清空副驾驶聊天历史（方案 A：内存态按目录隔离）。
-    state
+    *state.novel_dir.lock().unwrap_or_else(|e| e.into_inner()) = Some(dir.clone());
+    // 切换小说目录时加载该小说已落盘的聊天历史（P1：按小说隔离、跨会话保留）。
+    let loaded = super::chat::load_chat_history(&dir);
+    *state
         .chat_history
         .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clear();
+        .unwrap_or_else(|e| e.into_inner()) = loaded;
     let config_path = state
         .config_path
         .lock()

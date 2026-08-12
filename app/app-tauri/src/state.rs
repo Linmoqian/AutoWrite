@@ -8,7 +8,7 @@ pub struct AppState {
     pub novel_dir: Mutex<Option<PathBuf>>,
     pub config_path: Mutex<PathBuf>,
     pub outline_generation: Mutex<OutlineGenerationStatus>,
-    /// 副驾驶聊天历史（按当前 novel_dir 维度，切目录时清空）。MVP 内存态，重启丢失。
+    /// 副驾驶聊天历史（按当前 novel_dir 维度，切目录时按小说加载）。P1 已落盘 `novel_dir/.chat.json`，跨会话保留。
     pub chat_history: Mutex<Vec<ChatMessage>>,
     /// 副驾驶流式并发守卫：同一时刻只允许一个流式对话，防连点竞态。
     pub chat_running: Mutex<bool>,

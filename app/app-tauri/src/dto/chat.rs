@@ -1,7 +1,7 @@
 //! 副驾驶聊天 DTO（IPC 视图，对齐前端 `types/index.ts`，camelCase）。
 
 use crate::state::ChatMessage;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// IPC 视图：单条聊天消息。
 #[derive(Debug, Clone, Serialize)]
@@ -14,8 +14,8 @@ pub struct ChatMessageDto {
     pub created_at: String,
 }
 
-/// 消息角色（lowercase 序列化，对齐前端 `"user" | "assistant"`）。
-#[derive(Debug, Clone, Serialize)]
+/// 消息角色（lowercase 序列化/反序列化，对齐前端 `"user" | "assistant"`）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatRole {
     User,
