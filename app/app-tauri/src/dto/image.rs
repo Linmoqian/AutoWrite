@@ -16,7 +16,7 @@ pub struct ImageResultDto {
     pub kind: ImageKind,
     pub prompt: String,
     pub filename: String,
-    pub ref_text: Option<String>,
+    pub ref_text: String,
     pub created_at: String,
 }
 
@@ -32,7 +32,9 @@ impl From<ImageResult> for ImageResultDto {
             kind: r.kind,
             prompt: r.prompt,
             filename,
-            ref_text: r.ref_id,
+            // SPEC 6.3 / 前端 `ImageResult.refText` 为必填 string；领域 `ref_id` 为
+            // Option，这里兜底空串以对齐契约（封面/角色/场景实际均带 ref）。
+            ref_text: r.ref_id.unwrap_or_default(),
             created_at: r.created,
         }
     }

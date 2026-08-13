@@ -55,8 +55,9 @@ pub struct ImageConfigDto {
 #[serde(rename_all = "camelCase")]
 pub struct LoraEntryDto {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub weight: Option<f64>,
+    /// SPEC 6.3 `LoraConfig.weight` 为必填 number；领域 `LoraEntry.weight` 为 Option，
+    /// 序列化时兜底 1.0（默认满权重）以对齐契约。
+    pub weight: f64,
 }
 
 /// IPC 视图：提示词。仅暴露前端编辑的 4 个，其余（extract_*）保留领域默认值。
@@ -108,7 +109,7 @@ impl From<AppConfig> for AppConfigDto {
                     .into_iter()
                     .map(|e| LoraEntryDto {
                         name: e.name,
-                        weight: e.weight,
+                        weight: e.weight.unwrap_or(1.0),
                     })
                     .collect(),
                 size: c.image_size,
@@ -153,7 +154,7 @@ impl AppConfigDto {
                 .into_iter()
                 .map(|e| crate::domain::config::LoraEntry {
                     name: e.name,
-                    weight: e.weight,
+                    weight: Some(e.weight),
                 })
                 .collect(),
         };
